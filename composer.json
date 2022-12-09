@@ -1,12 +1,12 @@
 {
-    "name": "parabellumkoval/products-for-backpack",
+    "name": "backpack/store",
     "description": "Implement Products API & MYSQL for dackpack",
     "keywords": [
         "parabellumKoval",
         "laravel",
-        "products-for-backpack"
+        "products"
     ],
-    "homepage": "https://github.com/parabellumkoval/products-for-backpack",
+    "homepage": "https://github.com/parabellumkoval/products",
     "license": "MIT",
     "authors": [
         {
@@ -16,9 +16,7 @@
         }
     ],
     "require": {
-        "php": "^8.1",
-        "spatie/laravel-package-tools": "^1.13.0",
-        "illuminate/contracts": "^9.0"
+        "php": "^8.0"
     },
     "require-dev": {
         "laravel/pint": "^1.0",
@@ -34,13 +32,13 @@
     },
     "autoload": {
         "psr-4": {
-            "ParabellumKoval\\Product\\": "src",
-            "ParabellumKoval\\Product\\Database\\Factories\\": "database/factories"
+            "Backpack\\Store\\": "src",
+            "Backpack\\Store\\Database\\Factories\\": "database/factories"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "ParabellumKoval\\Product\\Tests\\": "tests"
+            "Backpack\\Store\\Tests\\": "tests"
         }
     },
     "scripts": {
@@ -60,10 +58,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "ParabellumKoval\\Product\\ProductServiceProvider"
+                "Backpack\\Store\\StoreServiceProvider"
             ],
             "aliases": {
-                "Product": "ParabellumKoval\\Product\\Facades\\Product"
+                "Product": "Backpack\\Store\\Facades\\Product"
             }
         }
     },
