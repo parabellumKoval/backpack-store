@@ -11,6 +11,10 @@ class StoreServiceProvider extends ServiceProvider
 {
   public function boot()
   {
+    $this->publishes([
+      __DIR__.'/config/store.php' => config_path('/backpack/store.php'),
+    ]);
+
     // Migrations
     $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace ParabellumKoval\Product\app\Http\Controllers\Admin;
+namespace Backpack\Store\app\Http\Controllers\Admin;
 
 use Aimix\Shop\app\Http\Requests\AttributeRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;

@@ -61,7 +61,7 @@
                 "Backpack\\Store\\StoreServiceProvider"
             ],
             "aliases": {
-                "Product": "Backpack\\Store\\Facades\\Product"
+                "Product": "Backpack\\Store\\Facades\\Store"
             }
         }
     },

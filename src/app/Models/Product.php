@@ -8,8 +8,13 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 
+// FACTORY
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Backpack\Store\database\factories\ProductFactory;
+
 class Product extends Model
 {
+    use HasFactory;
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
@@ -48,6 +53,17 @@ class Product extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+    
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+      return ProductFactory::new();
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -131,7 +147,17 @@ class Product extends Model
     {
       return $this->belongsTo('Backpack\Store\app\Models\Category', 'category_id');
     }
-    
+
+    public function parent()
+    {
+      return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children()
+    {
+      return $this->hasMany(self::class, 'parent_id');
+    }
+
     // public function brand()
     // {
     //   return $this->belongsTo('\Aimix\Shop\app\Models\Brand');
@@ -282,13 +308,13 @@ class Product extends Model
     | MUTATORS
     |--------------------------------------------------------------------------
     */
-    public function setModAttribute($value)
-    {
-      $this->modifications_array = $value;
-    }
+    // public function setModAttribute($value)
+    // {
+    //   $this->modifications_array = $value;
+    // }
         
-    public function setImagesAttribute($value)
-    {
-      $this->images_array = $value;
-    }
+    // public function setImagesAttribute($value)
+    // {
+    //   $this->images_array = $value;
+    // }
 }

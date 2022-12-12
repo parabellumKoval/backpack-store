@@ -9,8 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Attribute extends Model
 {
+    use HasFactory;
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;

@@ -1,16 +1,16 @@
 <?php
 
-namespace ParabellumKoval\Product\Facades;
+namespace Backpack\Store\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \ParabellumKoval\Product\Product
+ * @see \Backpack\Store\Store
  */
-class Product extends Facade
+class Store extends Facade
 {
     protected static function getFacadeAccessor()
     {
-        return \ParabellumKoval\Product\Product::class;
+        return \Backpack\Store\Store::class;
     }
 }

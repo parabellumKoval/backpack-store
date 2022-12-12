@@ -6,13 +6,19 @@ use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 
+// SLUGS
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
+
+// FACTORY
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Backpack\Store\database\factories\CategoryFactory;
 
 // use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 
 class Category extends Model
 {
+    use HasFactory;
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
@@ -43,6 +49,18 @@ class Category extends Model
     |--------------------------------------------------------------------------
     */
     
+
+ 
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+      return CategoryFactory::new();
+    }
+
     public function toArray(){
       return [
         'id' => $this->id,
@@ -90,6 +108,16 @@ class Category extends Model
     public function products()
     {
       return $this->hasMany('Backpack\Store\app\Models\Product');
+    }
+
+    public function parent()
+    {
+      return $this->belongsTo('Backpack\Store\app\Models\Category', 'parent_id');
+    }
+
+    public function children()
+    {
+      return $this->hasMany('Backpack\Store\app\Models\Category', 'parent_id');
     }
     
     

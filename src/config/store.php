@@ -17,5 +17,6 @@ return [
     'enable_product_category_pages' => false,
     'per_page' => 2,
 
-    'user_model' => 'App\Models\User'
+    'user_model' => 'App\Models\User',
+    'category_depth_level' => 3
 ];
