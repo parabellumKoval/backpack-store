@@ -18,7 +18,7 @@ class ProductController extends \App\Http\Controllers\Controller
   protected $product_medium_resource_class;
   protected $product_large_resource_class;
 
-  public function __constructor() {
+  function __construct() {
     $this->product_tiny_resource_class = config('backpack.store.product_tiny_resource', 'Backpack\Store\app\Http\Resources\ProductTinyResource');
     $this->product_small_resource_class = config('backpack.store.product_small_resource', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
     $this->product_medium_resource_class = config('backpack.store.product_medium_resource', 'Backpack\Store\app\Http\Resources\ProductMediumResource');
