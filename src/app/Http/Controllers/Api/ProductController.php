@@ -22,9 +22,9 @@ class ProductController extends \App\Http\Controllers\Controller
         $node_ids = $category->nodeIds;
       }
     }catch(\Exception $e){
-      $node_ids = count($node_ids)? $node_ids: [];
+      $node_ids = isset($node_ids) && count($node_ids)? $node_ids: [];
     }finally {
-      $node_ids = count($node_ids)? $node_ids: [];
+      $node_ids = isset($node_ids) && count($node_ids)? $node_ids: [];
     }
 
     $products = Product::query()
