@@ -34,8 +34,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     ], 'migrations');
 
     $this->publishes([
-        __DIR__.'/routes/backpack/routes.php' => resource_path('/routes/backpack/store/routes.php'),
-        __DIR__.'/routes/api/store.php' => resource_path('/routes/backpack/store/api.php'),
+        __DIR__.'/routes/backpack/routes.php' => resource_path('/routes/backpack/store/backpack.php'),
+        __DIR__.'/routes/api/product.php' => resource_path('/routes/backpack/store/product.php'),
     ], 'routes');
 
   }

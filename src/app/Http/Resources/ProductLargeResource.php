@@ -16,6 +16,8 @@ class ProductLargeResource extends JsonResource
      */
     public function toArray($request)
     {
+      $product_tiny_resource_class = config('backpack.store.product_tiny_resource', 'Backpack\Store\app\Http\Resources\ProductTinyResource');
+
       return [
         'id' => $this->id,
         'name' => $this->name,
@@ -25,7 +27,7 @@ class ProductLargeResource extends JsonResource
         'images' => $this->images,
         'content' => $this->content,
         'category' => $this->category,
-        'modifications' => $this->modifications->count()? ProductTinyResource::collection($this->modifications): null
+        'modifications' => $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
       ];
     }
 }

@@ -12,6 +12,19 @@ use Backpack\Store\app\Http\Resources\ProductLargeResource;
 
 class ProductController extends \App\Http\Controllers\Controller
 { 
+
+  protected $product_tiny_resource_class;
+  protected $product_small_resource_class;
+  protected $product_medium_resource_class;
+  protected $product_large_resource_class;
+
+  public function __constructor() {
+    $this->product_tiny_resource_class = config('backpack.store.product_tiny_resource', 'Backpack\Store\app\Http\Resources\ProductTinyResource');
+    $this->product_small_resource_class = config('backpack.store.product_small_resource', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
+    $this->product_medium_resource_class = config('backpack.store.product_medium_resource', 'Backpack\Store\app\Http\Resources\ProductMediumResource');
+    $this->product_large_resource_class = config('backpack.store.product_large_resource', 'Backpack\Store\app\Http\Resources\ProductLargeResource');
+  }
+
   public function index(Request $request) {
 
     try{
@@ -42,7 +55,7 @@ class ProductController extends \App\Http\Controllers\Controller
     
     $products = $products->paginate($per_page);
 
-    $products = ProductSmallResource::collection($products);
+    $products = $this->product_small_resource_class::collection($products);
 
     return $products;
   }
@@ -50,7 +63,7 @@ class ProductController extends \App\Http\Controllers\Controller
   public function show(Request $request, $slug) {
     $product = Product::where('slug', $slug)->first();
 
-    return new ProductLargeResource($product);
+    return new $this->product_large_resource_class($product);
   }
 
   public function getByIds(Request $request){
