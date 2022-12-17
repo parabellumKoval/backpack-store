@@ -27,7 +27,8 @@ return [
     'enable_product_category_pages' => false,
     'is_modifications_category' => true,
 
-    // PROPUCT PROPERTIES
+    // PROPUCT
+    // PRODUCT -> properties
     // in stock
     'enable_in_stock' => true,
     'enable_in_stock_count' => false, // true = numeric, false = boolean
@@ -46,6 +47,16 @@ return [
 
     // images
     'enable_multiple_product_images' => false, // false = one image per product
+
+    // PRODUCT -> resources
+    'product_tiny_resource' => 'Backpack\Store\app\Http\Resources\ProductTinyResource',
+    
+    // Small product resource used for catalog pages (index route)
+    'product_small_resource' => 'Backpack\Store\app\Http\Resources\ProductSmallResource',
+    'product_medium_resource' => 'Backpack\Store\app\Http\Resources\ProductMediumResource',
+    
+    // Large product resource used for product page (show route)
+    'product_large_resource' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
 
     // BRANDS
     'enable_brands' => false,
