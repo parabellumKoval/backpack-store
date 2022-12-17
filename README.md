@@ -1,84 +1,61 @@
-# Implement Products API & MYSQL for dackpack
+# Backpack-profile
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/parabellumkoval/products-for-backpack.svg?style=flat-square)](https://packagist.org/packages/parabellumkoval/products-for-backpack)
-[![GitHub Tests Action Status](https://img.shields.io/github/workflow/status/parabellumkoval/products-for-backpack/run-tests?label=tests)](https://github.com/parabellumkoval/products-for-backpack/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/workflow/status/parabellumkoval/products-for-backpack/Fix%20PHP%20code%20style%20issues?label=code%20style)](https://github.com/parabellumkoval/products-for-backpack/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/parabellumkoval/products-for-backpack.svg?style=flat-square)](https://packagist.org/packages/parabellumkoval/products-for-backpack)
+[![Build Status](https://travis-ci.org/parabellumKoval/backpack-store.svg?branch=master)](https://travis-ci.org/parabellumKoval/backpack-store)
+[![Coverage Status](https://coveralls.io/repos/github/parabellumKoval/backpack-store/badge.svg?branch=master)](https://coveralls.io/github/parabellumKoval/backpack-store?branch=master)
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+[![Packagist](https://img.shields.io/packagist/v/parabellumKoval/backpack-store.svg)](https://packagist.org/packages/parabellumKoval/backpack-store)
+[![Packagist](https://poser.pugx.org/parabellumKoval/backpack-store/d/total.svg)](https://packagist.org/packages/parabellumKoval/backpack-store)
+[![Packagist](https://img.shields.io/packagist/l/parabellumKoval/backpack-store.svg)](https://packagist.org/packages/parabellumKoval/backpack-store)
 
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/Products for Backpack.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/Products for Backpack)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+This package provides a quick starter kit for implementing a store for Laravel Backpack. Provides a database, CRUD interface, API routes and more.
 
 ## Installation
 
-You can install the package via composer:
-
+Install via composer
 ```bash
-composer require parabellumkoval/products-for-backpack
+composer require parabellumKoval/backpack-store
 ```
 
-You can publish and run the migrations with:
-
+Migrate
 ```bash
-php artisan vendor:publish --tag="products-for-backpack-migrations"
 php artisan migrate
 ```
 
-You can publish the config file with:
+### Publish
 
+#### Configuration File
 ```bash
-php artisan vendor:publish --tag="products-for-backpack-config"
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="config"
 ```
 
-This is the contents of the published config file:
-
-```php
-return [
-];
+#### Views File
+```bash
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="views"
 ```
 
-Optionally, you can publish the views using
-
+#### Migrations File
 ```bash
-php artisan vendor:publish --tag="products-for-backpack-views"
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="migrations"
+```
+
+#### Routes File
+```bash
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="routes"
 ```
 
 ## Usage
 
-```php
-$product = new ParabellumKoval\Product();
-echo $product->echoPhrase('Hello, ParabellumKoval!');
-```
-
-## Testing
-
+### Seeders
 ```bash
-composer test
+php artisan db:seed --class="Backpack\Store\database\seeders\StoreSeeder"
 ```
 
-## Changelog
+## Security
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
+If you discover any security related issues, please email 
+instead of using the issue tracker.
 
 ## Credits
 
-- [parabellumKoval](https://github.com/parabellumKoval)
-- [All Contributors](../../contributors)
-
-## License
-
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+- [](https://github.com/parabellumKoval/backpack-store)
+- [All contributors](https://github.com/parabellumKoval/backpack-store/graphs/contributors)
