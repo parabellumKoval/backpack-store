@@ -9,7 +9,7 @@ namespace Backpack\Store;
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
 
-  const CONFIG_PATH = __DIR__ . '/../config/store.php';
+  const CONFIG_PATH = __DIR__ . '/config/store.php';
 
   public function boot()
   {
