@@ -5,9 +5,8 @@ namespace Backpack\Store;
 // use Spatie\LaravelPackageTools\Package;
 // use Spatie\LaravelPackageTools\PackageServiceProvider;
 // use ParabellumKoval\Product\Commands\ProductCommand;
-use \Illuminate\Support\ServiceProvider;
 
-class StoreServiceProvider extends ServiceProvider
+class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
 
   const CONFIG_PATH = __DIR__ . '/../config/store.php';
