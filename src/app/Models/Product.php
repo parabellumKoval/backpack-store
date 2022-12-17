@@ -5,12 +5,20 @@ namespace Backpack\Store\app\Models;
 use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 
+// SLUGS
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
+
+// TRANSLATIONS
+use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 
 // FACTORY
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\ProductFactory;
+
+
+// REVIEWS
+use Backpack\Reviews\app\Traits\Reviewable;
 
 class Product extends Model
 {
@@ -18,7 +26,8 @@ class Product extends Model
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
-    // use HasTranslations;
+    use HasTranslations;
+    use Reviewable;
 
     /*
     |--------------------------------------------------------------------------
@@ -30,23 +39,20 @@ class Product extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    // protected $fillable = [];
+    //protected $fillable = ['product_id', 'name', 'slug'];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
-      'extras' => 'array'
+      'extras' => 'array',
+      'images' => 'array',
+      'seo' => 'array'
     ];
     protected $fakeColumns = [
-      'sales', 'extras'
+      'seo', 'extras', 'images'
     ];
     
-    protected $translatable = ['name', 'description', 'extras'];
+    protected $translatable = ['name', 'short_name', 'content', 'seo'];
     
-    public $modifications_array = [];
-    
-    public $isModificationRelation = false;
-    public $test = [];
-
     public $images_array = [];
     /*
     |--------------------------------------------------------------------------
@@ -67,13 +73,6 @@ class Product extends Model
     protected static function boot()
     {
         parent::boot();
-        if(config('aimix.aimix.enable_languages')) {
-          $language = session()->has('lang')? session()->get('lang'): 'ru';
-          
-          static::addGlobalScope('language', function (Builder $builder) use ($language) {
-              $builder->where('language_abbr', $language);
-          });
-        }
     }
     
     public function clearGlobalScopes()
@@ -83,32 +82,21 @@ class Product extends Model
     
     public function toArray()
     {
-      $lang = session()->has('lang')? session()->get('lang') : 'ru';
-      
-      $salePercent = $this->baseModification->old_price ? number_format(($this->baseModification->old_price - $this->baseModification->price) * 100 / $this->baseModification->old_price, 0) : null;
-      
       return [
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'category_id' => $this->category_id,
-        'brand_id' => $this->brand_id,
-        'price' => $this->baseModification->price,
-        'old_price' => $this->baseModification->old_price,
-        'sale_percent' => $salePercent,
+        // 'category' => $this->category,
+        'price' => $this->price,
+        'old_price' => $this->old_price,
         'is_active' => $this->is_active,
         'is_hit' => $this->is_hit,
         'rating' => $this->rating,
-        'attrs' => $this->baseModification->getPluckedAttributesArray(),
         'extras' => $this->extras,
-        'image' => url($this->image),
-        'images' => $this->baseModification->images,
-        'link' => $this->link,
-        'amount' => isset($this->amount)? $this->amount : 1,
-        'code' => $this->baseModification->code,
-        'in_stock' => $this->baseModification->in_stock,
-        'description' => nl2br($this->description),
-        
+        'images' => $this->images,
+        'code' => $this->code,
+        'in_stock' => $this->in_stock,
+        'content' => nl2br($this->content),
       ];
     }
     
@@ -123,25 +111,11 @@ class Product extends Model
         ];
     }
     
-    public function getLanguageAttribute(){
-      $locale = $this->locale?: str_replace('-', '_', \Session::get('lang'));
-      $locale_parts = explode('_', $locale);
-      $locale_parts[1] = isset($locale_parts[1])? strtoupper($locale_parts[1]): null;
-      
-      $locale = implode('_', $locale_parts);
-      
-      return $locale;
-    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
     |--------------------------------------------------------------------------
     */
-    // public function modifications()
-    // {
-    //   $this->isModificationRelation = true;
-    //   return $this->hasMany('App\Models\Modification');
-    // }
     
     public function category()
     {
@@ -165,12 +139,12 @@ class Product extends Model
 
     // public function reviews()
     // {
-    //   return $this->hasMany('\Aimix\Review\app\Models\Review');
+    //   return $this->hasMany(config('backpack.store.review_model', '\Backpack\Reviews\app\Models\Review'));
     // }
     
     public function orders()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Order');
+      return $this->belongsToMany('Backpack\Store\app\Models\Order', 'ak_order_product');
     }
     /*
     |--------------------------------------------------------------------------
@@ -186,6 +160,14 @@ class Product extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getImageSrcAttribute() {
+      if(isset($this->images[0]) && isset($this->images[0]['src']))
+        return $this->images[0]['src'];
+      else
+        return null;
+    }
+
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
@@ -193,128 +175,35 @@ class Product extends Model
         }
         return $this->name;
     }
-    
-    public function getSalesAttribute()
-    {
-      return json_decode($this->extras['sales']);
-    }
-    
-    public function getComplectationsAttribute()
-    {
-	    if(!$this->baseModification->count())
-	    	return null;
-	    	
-	    $extras = $this->modifications()->base()->extras;
-	    $complectations = $extras? $this->modifications()->base()->extras['complectations']: null;
-	    	
-      return $complectations;
+
+    public function getIsBaseAttribute() {
+      return !$this->parent? true: false;
     }
 
-    public function getNotBaseModificationsAttribute()
-    {
-/*
-      if($this->locale){
-      	return $this->hasMany('App\Models\Modification')->where('language_abbr', $this->language);
+    public function getBaseAttribute() {
+      if($this->parent)
+        return $this->parent;
+      else
+        return $this;
+    }
+    
+    public function getModificationsAttribute() {
+      if($this->children->count()){
+        $items = $this->children;
+        $collection = $items->prepend($this);
+        return $collection;
+      }else if($this->parent){
+        return $this->parent->children->prepend($this->parent);
       }
-      else{
-	      if($this->hasMany('App\Models\Modification')->where('language_abbr', $this->language)->count()){
-	      	return $this->hasMany('App\Models\Modification')->where('language_abbr', $this->language);
-	      }else
-	      	return $this->hasMany('App\Models\Modification');
-      }
-*/
-     // dd($this->modifications()->where('language_abbr', $this->language)->notBase()->count());
-      return $this->modifications()->where('language_abbr', $this->language)->notBase();
     }
-    
-    public function getBaseModificationAttribute()
-    {
-      return $this->modifications()->base();
-    }
-    
-    public function getBaseAttributesAttribute()
-    {
-      return $this->baseModification->attrs()->important()->get();
-    }
-    public function getFullnameAttribute()
-    {
-      return $this->brand->name . ' ' . $this->name;
-    }
-    
-    public function getPriceAttribute()
-    {
       
-      $price = $this->baseModification->price;
-      $old_price = $this->baseModification->old_price;
-      
-      // foreach($this->notBaseModifications->get() as $mod) {
-      //   if($mod->price && (!$price || $mod->price < $price)) {
-      //     $price = $mod->price;
-      //     $old_price = $mod->old_price;
-      //   }
-      // }
-      
-      return $price;
-    }
-    
-    public function getOldPriceAttribute()
-    {
-      $price = $this->baseModification->price;
-      $old_price = $this->baseModification->old_price;
-      
-      // foreach($this->notBaseModifications->get() as $mod) {
-      //   if($mod->price && (!$price || $mod->price < $price)) {
-      //     $price = $mod->price;
-      //     $old_price = $mod->old_price;
-      //   }
-      // }
-      
-      return $old_price;
-    }
-    
-    public function getLinkAttribute()
-    {
-      $category_slug = $this->category->slug;
-      
-      return url('/catalog/' . $category_slug . '/' . $this->slug);
-    }
-    
-    public function getImagesAttribute()
-    {
-	    if(!$this->baseModification->count())
-	    	return null;
-	    	
-      return $this->baseModification->images;
-    }
-
-
-	public function getMTitleAttribute(){
-		if(!is_array($this->extras))
-			return null;
-		
-		if(isset($this->extras['meta_title']))
-			return $this->extras['meta_title'];
-	}
-
-	public function getMDescriptionAttribute(){
-		if(!is_array($this->extras))
-			return null;
-		
-		if(isset($this->extras['meta_description']))
-			return $this->extras['meta_description'];
-	}    
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
     |--------------------------------------------------------------------------
     */
-    // public function setModAttribute($value)
-    // {
-    //   $this->modifications_array = $value;
-    // }
-        
-    // public function setImagesAttribute($value)
-    // {
-    //   $this->images_array = $value;
+
+    // public function setNameAttribute() {
+    //   dd($this);
     // }
 }

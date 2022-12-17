@@ -6,17 +6,18 @@ Route::group([
     'namespace'  => 'Backpack\Store\app\Http\Controllers\Admin',
 ], function () { // custom admin routes
     Route::crud('product', 'ProductCrudController');
-    Route::crud('prod_category', 'CategoryCrudController');
-    Route::crud('attribute', 'AttributeCrudController');
+    Route::crud('category', 'CategoryCrudController');
     // Route::crud('attribute_group', 'AttributeGroupCrudController');
-    // Route::crud('modification', 'ModificationCrudController');
     // Route::crud('delivery', 'DeliveryCrudController');
     // Route::crud('payment', 'PaymentCrudController');
     Route::crud('order', 'OrderCrudController');
     
-    if(config('aimix.shop.enable_brands')) {
+    if(config('backpack.store.enable_attributes')) {
+      Route::crud('attribute', 'AttributeCrudController');
+    }
+
+    if(config('backpack.store.enable_brands')) {
       Route::crud('brand', 'BrandCrudController');
     }
     
-    Route::post('modification/remove/{id}', 'ModificationCrudController@removeModification');
 }); // this should be the absolute last line of this file

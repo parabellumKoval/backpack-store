@@ -1,6 +1,6 @@
 <?php
 
-namespace Backpack\Store\Models;
+namespace Backpack\Store\app\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
@@ -24,7 +24,7 @@ class Attribute extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected $table = 'attributes';
+    protected $table = 'ak_attributes';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
@@ -83,7 +83,7 @@ class Attribute extends Model
     */
     public function categories()
     {
-        return $this->belongsToMany('Backpack\Store\Models\Category');
+        return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_attribute_category');
     }
     
     /*

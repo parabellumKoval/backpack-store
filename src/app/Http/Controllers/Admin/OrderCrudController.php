@@ -2,21 +2,19 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
-use Aimix\Shop\app\Http\Requests\OrderRequest;
+use Backpack\Store\app\Http\Requests\OrderRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 use Carbon\Carbon;
 
-use Aimix\Shop\app\Models\Payment;
-use Aimix\Shop\app\Models\Delivery;
-use Aimix\Account\app\Models\Usermeta;
-use Aimix\Account\app\Models\Transaction;
-use App\User;
+use app\Models\User;
+//use Aimix\Account\app\Models\Transaction;
+//use App\User;
 
 use Illuminate\Support\Facades\Hash;
-use Aimix\Shop\app\Models\Order;
-use Aimix\Shop\app\Notifications\OrderCreated;
+use Backpack\Store\app\Models\Order;
+use Backpack\Store\app\Notifications\OrderCreated;
 
 use Illuminate\Support\Facades\Mail;
 
@@ -55,7 +53,7 @@ class OrderCrudController extends CrudController
 
     public function setup()
     {
-        $this->crud->setModel('Aimix\Shop\app\Models\Order');
+        $this->crud->setModel('Backpack\Store\app\Models\Order');
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
         $this->crud->setEntityNameStrings('заказ', 'Заказы');
         
@@ -97,7 +95,6 @@ class OrderCrudController extends CrudController
         $this->crud->addColumn([
           'name' => 'price',
           'label' => 'Сумма',
-          // 'suffix' => ' руб'
           'prefix' => '$'
         ]);
     }
@@ -125,7 +122,6 @@ class OrderCrudController extends CrudController
         $this->crud->addField([
           'name' => 'price',
           'label' => 'Сумма заказа',
-          // 'suffix' => ' руб',
           'prefix' => '$',
           'attributes' => [
             'readonly' => true
@@ -182,27 +178,9 @@ class OrderCrudController extends CrudController
         ]);
         
         $this->crud->addColumn([
-          'name' => 'delivery_id',
-          'label' => 'Способ доставки',
-          'type' => 'select',
-          'entity' => 'delivery',
-          'attribute' => 'name',
-          'model' => 'Aimix\Shop\app\Models\Delivery',
-        ]);
-        
-       $this->crud->addColumn([
-          'name' => 'payment_id',
-          'label' => 'Способ оплаты',
-          'type' => 'select',
-          'entity' => 'payment',
-          'attribute' => 'name',
-          'model' => 'Aimix\Shop\app\Models\Payment',
-        ]);
-        
-        $this->crud->addColumn([
           'name' => 'info',
           'label' => 'Информация о заказе',
-          'type' => 'order_info_alt'
+          'type' => 'order_info'
         ]);
     }
     

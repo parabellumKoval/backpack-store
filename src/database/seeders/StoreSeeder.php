@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\Sequence;
 
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Attribute;
 
 class StoreSeeder extends Seeder
@@ -22,24 +23,21 @@ class StoreSeeder extends Seeder
       $this->createCategoriesTree();
 
       $this->createProducts();
-
-      // foreach($categories as $category){
-      //   $this->createCategoriesTree($category, 1);
-      // }
-        //$categories = Category::factory(3)->create();
-
-        //config('backpack.store.category_depth_level')
-
-        // foreach($categories as $category){
-        //   Product::factory()
-        //     ->count(3)
-        //     ->for($category)
-        //     ->suspended()
-        //     ->create();
-        // }
         
+      $this->createOrders();
+    }
 
-
+    private function createOrders() {
+      Order::factory()
+          ->count(10)
+          ->hasAttached(
+            Product::factory()->count(3),
+            [
+              'amount' => rand(1,10),
+              'value' => rand(100, 9999)
+            ]
+          )
+          ->create();
     }
 
     private function createProducts() {
@@ -52,9 +50,6 @@ class StoreSeeder extends Seeder
             ->has(Product::factory()->count(3)->state(function (array $attributes, Product $product){
               return ['category_id' => $product->category->id];
             }), 'children')
-            // ->state([
-            //   'parent_id' => Product::where('category_id', $category->id)->inRandomOrder()->first(),
-            // ])
             ->suspended()
             ->create();
       }

@@ -2,12 +2,12 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
-use Aimix\Shop\app\Http\Requests\AttributeRequest;
+use Backpack\Store\app\Http\Requests\AttributeRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
-use Aimix\Shop\app\Models\Category;
-use Aimix\Shop\app\Models\Attribute;
+use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Attribute;
 
 
 /**
@@ -28,7 +28,7 @@ class AttributeCrudController extends CrudController
 
     public function setup()
     {
-        $this->crud->setModel('Aimix\Shop\app\Models\Attribute');
+        $this->crud->setModel('Backpack\Store\app\Models\Attribute');
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/attribute');
         $this->crud->setEntityNameStrings('атрибут', 'атрибуты');
         

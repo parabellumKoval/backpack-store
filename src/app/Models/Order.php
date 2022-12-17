@@ -1,13 +1,18 @@
 <?php
 
-namespace Backpack\Store\Models;
+namespace Backpack\Store\app\Models;
 
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 
+// FACTORY
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Backpack\Store\database\factories\OrderFactory;
+
 class Order extends Model
 {
     use CrudTrait;
+    use HasFactory;
 
     /*
     |--------------------------------------------------------------------------
@@ -15,7 +20,7 @@ class Order extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected $table = 'orders';
+    protected $table = 'ak_orders';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
@@ -31,7 +36,15 @@ class Order extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
-
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+      return OrderFactory::new();
+    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -39,13 +52,13 @@ class Order extends Model
     */
     public function products()
     {
-      return $this->belongsToMany('Backpack\Store\Models\Product');
+      return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product');
     }
 
-    // public function user()
-    // {
-    //   return $this->belongsTo('Aimix\Account\app\Models\Usermeta');
-    // }
+    public function user()
+    {
+      return $this->belongsTo(config('backpack.store.user_model', 'app\Models\User'));
+    }
     
     // public function transactions() {
     //   return $this->hasMany('Aimix\Account\app\Models\Transaction');

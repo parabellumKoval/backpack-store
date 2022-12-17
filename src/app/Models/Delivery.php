@@ -1,6 +1,6 @@
 <?php
 
-namespace Aimix\Shop\app\Models;
+namespace Backpack\Store\app\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;

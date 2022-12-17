@@ -1,8 +1,9 @@
 {
-    "name": "backpack/store",
+    "name": "parabellumkoval/backpack-store",
     "description": "Implement Products API & MYSQL for dackpack",
     "keywords": [
         "parabellumKoval",
+        "backpack",
         "laravel",
         "products"
     ],

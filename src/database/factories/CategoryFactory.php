@@ -24,7 +24,13 @@ class CategoryFactory extends Factory
       return [
         'name' => $this->faker->sentence(),
         'slug' => $this->faker->uuid(),
-        'lang' => config('app.locale', 'en'),
+        'images' => [
+          [
+            'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+            'alt' => 'alt',
+            'title' => 'title'
+          ]
+        ],
       ];
     }
 }

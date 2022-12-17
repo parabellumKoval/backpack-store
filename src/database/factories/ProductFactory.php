@@ -7,12 +7,12 @@ use Backpack\Store\app\Models\Product;
 
 class ProductFactory extends Factory
 {
-  /**
-   * The name of the factory's corresponding model.
-   *
-   * @var string
-   */
-  protected $model = Product::class;
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = Product::class;
 
     /**
      * Define the model's default state.
@@ -21,10 +21,10 @@ class ProductFactory extends Factory
      */
     public function definition()
     {
+
       return [
         'name' => $this->faker->sentence(),
         'slug' => $this->faker->uuid(),
-        'lang' => config('app.locale', 'en'),
         'code' => $this->faker->regexify('[A-Z]{5}[0-4]{3}'),
         'price' => $this->faker->randomFloat(2, 0, 100000),
         'old_price' => $this->faker->randomElement(
@@ -33,12 +33,17 @@ class ProductFactory extends Factory
             null
           ]
         ),
-        'images' => json_encode(
+        'images' => [
           [
-            $this->faker->imageUrl(640, 480, 'Post', true), 
-            $this->faker->imageUrl(640, 480, 'Post', true)
+            'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+            'alt' => 'alt',
+            'title' => 'title'
+          ],[
+            'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+            'alt' => 'alt 2',
+            'title' => 'title 2'
           ]
-        ),
+        ],
         'content' => $this->faker->text(),
         'is_active' => $this->faker->randomElement([0,1]),
         'in_stock' => $this->faker->randomElement([0,1]),

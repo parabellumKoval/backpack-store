@@ -1,6 +1,6 @@
 <?php
 
-namespace Aimix\Shop\app\Models;
+namespace Backpack\Store\app\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
@@ -21,7 +21,7 @@ class Brand extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected $table = 'brands';
+    protected $table = 'ak_brands';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
@@ -37,13 +37,6 @@ class Brand extends Model
     protected static function boot()
     {
         parent::boot();
-        if(config('aimix.aimix.enable_languages')) {
-            $language = session()->has('lang')? session()->get('lang'): 'ru';
-            
-            static::addGlobalScope('language', function (Builder $builder) use ($language) {
-                $builder->where('language_abbr', $language);
-            });
-        }
     }
     
     public function clearGlobalScopes()

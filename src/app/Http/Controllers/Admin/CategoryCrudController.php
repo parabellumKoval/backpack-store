@@ -2,7 +2,7 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
-use Aimix\Shop\app\Http\Requests\CategoryRequest;
+use Backpack\Store\app\Http\Requests\CategoryRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
@@ -21,51 +21,44 @@ class CategoryCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
     
-    private $languages = 'ru';
 
     public function setup()
     {
-        $this->crud->setModel('Aimix\Shop\app\Models\Category');
-        $this->crud->setRoute(config('backpack.base.route_prefix') . '/prod_category');
+        $this->crud->setModel('Backpack\Store\app\Models\Category');
+        $this->crud->setRoute(config('backpack.base.route_prefix') . '/category');
         $this->crud->setEntityNameStrings('категорию', 'категории');
-        
-        if(config('aimix.aimix.enable_languages')) {
-          $this->languages = Language::getActiveLanguagesNames();
-          
-          $this->crud->query = $this->crud->query->withoutGlobalScopes();
-          $this->crud->model->clearGlobalScopes();
-        }
     }
 
     protected function setupListOperation()
     {
         // TODO: remove setFromDb() and manually define Columns, maybe Filters
-        // $this->crud->setFromDb();
-        if(config('aimix.aimix.enable_languages')) {
-          $this->crud->addFilter([
-            'name'  => 'language',
-            'type'  => 'select2',
-            'label' => 'Язык'
-          ], function () {
-            return $this->languages;
-          }, function ($value) { // if the filter is active
-            $this->crud->addClause('where', 'language_abbr', $value);
-          });
-          
-          $this->crud->addColumn([
-            'name' => 'language_abbr',
-            'label' => 'Язык',
-          ]);
-        }
+        // $this->crud->setFromDb(); 
+        $this->crud->addColumn([
+          'name' => 'imageSrc',
+          'label' => 'Фото',
+          'type' => 'image',
+          'height' => '50px',
+          'width'  => '50px',
+        ]);
         
+        $this->crud->addColumn([
+          'name' => 'id',
+          'label' => 'ID',
+        ]);
+
         $this->crud->addColumn([
           'name' => 'name',
           'label' => 'Название',
         ]);
         
         $this->crud->addColumn([
-          'name' => 'image',
-          'label' => 'Изображение',
+          'name' => 'parent',
+          'label' => 'Род. категория',
+        ]);
+        
+        $this->crud->addColumn([
+          'name' => 'depth',
+          'label' => 'Уровень',
         ]);
     }
 
@@ -75,55 +68,83 @@ class CategoryCrudController extends CrudController
 
         // TODO: remove setFromDb() and manually define Fields
         // $this->crud->setFromDb();
-      if(config('aimix.aimix.enable_languages')) {
-        $this->crud->addField([
-          'name' => 'language_abbr',
-          'label' => 'Язык',
-          'type' => 'select_from_array',
-          'options' => $this->languages
-        ]);
-      }
         
         $this->crud->addFields([
           [
+            'name' => 'is_active',
+            'label' => 'Активна',
+            'type' => 'boolean',
+            'default' => '1',
+            'tab' => 'Основное'
+          ],
+          [
             'name' => 'name',
             'label' => 'Название',
-            'type' => 'text'
+            'type' => 'text',
+            'tab' => 'Основное'
           ],
           [
             'name' => 'slug',
             'label' => 'URL',
-            'prefix' => url('/').'/',
-            'hint' => 'По умолчанию будет сгенерирован из названия.'
+            'hint' => 'По умолчанию будет сгенерирован из названия.',
+            'tab' => 'Основное'
           ],
           [
-            'name' => 'image',
-            'label' => 'Изображение',
-            'type' => 'browse',
+            'name' => 'parent',
+            'label' => 'Родительская категория',
+            'type' => 'relationship',
+            'tab' => 'Основное'
           ],
           [
-            'name' => 'description',
+            'name' => 'content',
             'label' => 'Описание',
-            'type' => 'ckeditor'
+            'type' => 'ckeditor',
+            'tab' => 'Основное'
+          ],
+          [
+            'name'  => 'images',
+            'label' => 'Изображения',
+            'type'  => 'repeatable',
+            'fields' => [
+              [
+                'name' => 'src',
+                'label' => 'Изображение',
+                'type' => 'browse'
+              ],
+              [
+                'name' => 'alt',
+                'label' => 'alt'
+              ],
+              [
+                'name' => 'title',
+                'label' => 'title'
+              ]
+            ],
+            'new_item_label'  => 'Добавить изобрежение',
+            'init_rows' => 1,
+            'tab' => 'Изображения'
           ],
           [
             'name' => 'h1',
             'label' => 'H1 заголовок',
             'fake' => true,
-			'store_in' => 'extras'
+			      'store_in' => 'seo',
+            'tab' => 'SEO'
           ],
           [
             'name' => 'meta_title',
             'label' => 'Meta title',
             'fake' => true,
-			'store_in' => 'extras'
+			      'store_in' => 'seo',
+            'tab' => 'SEO'
           ],
           [
             'name' => 'meta_description',
             'label' => 'Meta description',
             'type' => 'textarea',
             'fake' => true,
-			'store_in' => 'extras'
+			      'store_in' => 'seo',
+            'tab' => 'SEO'
           ],
         ]);
     }

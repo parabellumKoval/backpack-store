@@ -8,6 +8,8 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use Backpack\Store\app\Models\Category;
 // use Aimix\Shop\app\Models\Brand;
 
+use Backpack\Store\app\Http\Controllers\Admin\Base\ProductCrudBase;
+
 // use Backpack\LangFileManager\app\Models\Language;
 
 /**
@@ -15,21 +17,19 @@ use Backpack\Store\app\Models\Category;
  * @package App\Http\Controllers\Admin
  * @property-read CrudPanel $crud
  */
-class ProductCrudController extends CrudController
+class ProductCrudController extends ProductCrudBase
 {
+    use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\InlineCreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
-    
-    private $languages = ['ru'];
+
     
     private $categories;
     private $brands;
-    private $categories_by_lang;
-    private $current_category;
-    private $current_language;
     
     public function setup()
     {
@@ -37,23 +37,24 @@ class ProductCrudController extends CrudController
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
         $this->crud->setEntityNameStrings('товар', 'товары');
         
-        if(config('aimix.shop.enable_brands')) {
+        if(config('backpack.store.enable_brands')) {
           $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
         }
-        $this->current_category = \Request::input('category_id')? \Request::input('category_id') : null;
 
-        // if(config('aimix.aimix.enable_languages')) {
-        //   $this->languages = Language::getActiveLanguagesNames();
+        // $this->current_category = \Request::input('category_id')? \Request::input('category_id') : null;
 
-        //   $this->current_language = \Request::input('language_abbr')? \Request::input('language_abbr') : null;
-        // }
-          $this->crud->query = $this->crud->query->withoutGlobalScopes();
+        
+        // $this->crud->query = $this->crud->query->withoutGlobalScopes();
           
-          $this->crud->model->clearGlobalScopes();
+        // $this->crud->model->clearGlobalScopes();
         
-        $this->categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
+        // $this->categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
         
-        $this->crud->model->clearGlobalScopes();
+        // $this->crud->model->clearGlobalScopes();
+    }
+    protected function fetchOrder()
+    {
+        return $this->fetch(\Backpack\Store\app\Models\Order::class);
     }
 
     protected function setupListOperation()
@@ -70,35 +71,31 @@ class ProductCrudController extends CrudController
           $this->crud->addClause('where', 'category_id', $value);
         });
         
-      if(config('aimix.shop.enable_brands')) {
-        $this->crud->addFilter([
-          'name' => 'brand_id',
-          'label' => 'Производитель',
-          'type' => 'select2'
-        ], function(){
-          return $this->brands;
-        }, function($value){
-          $this->crud->addClause('where', 'brand_id', $value);
-        });
-      }
-      
-        if(config('aimix.aimix.enable_languages')) {
+        if(config('backpack.store.enable_brands')) {
           $this->crud->addFilter([
-            'name'  => 'language',
-            'type'  => 'select2',
-            'label' => 'Язык'
-          ], function () {
-            return $this->languages;
-          }, function ($value) { // if the filter is active
-            $this->crud->addClause('where', 'language_abbr', $value);
+            'name' => 'brand_id',
+            'label' => 'Производитель',
+            'type' => 'select2'
+          ], function(){
+            return $this->brands;
+          }, function($value){
+            $this->crud->addClause('where', 'brand_id', $value);
           });
-          
-          $this->crud->addColumn([
-            'name' => 'language_abbr',
-            'label' => 'Язык',
-          ]);
         }
         
+        $this->crud->addColumn([
+          'name' => 'imageSrc',
+          'label' => 'Фото',
+          'type' => 'image',
+          'height' => '50px',
+          'width'  => '50px',
+        ]);
+
+        $this->crud->addColumn([
+          'name' => 'id',
+          'label' => 'ID'
+        ]);
+
         $this->crud->addColumn([
           'name' => 'name',
           'label' => 'Название'
@@ -116,194 +113,236 @@ class ProductCrudController extends CrudController
           }),
         ]);
         
-      if(config('aimix.shop.enable_brands')) {
-        $this->crud->addColumn([
-          'name' => 'brand_id',
-          'label' => 'Производитель',
-          'type' => 'select',
-          'entity' => 'brand',
-          'attribute' => 'name',
-          'model' => 'Aimix\Shop\app\Models\Brand',
-        ]);
-      }
+        if(config('backpack.store.enable_brands')) {
+          $this->crud->addColumn([
+            'name' => 'brand_id',
+            'label' => 'Производитель',
+            'type' => 'select',
+            'entity' => 'brand',
+            'attribute' => 'name',
+            'model' => 'Aimix\Shop\app\Models\Brand',
+          ]);
+        }
 
-    if(config('aimix.shop.enable_product_rating')) {
-      $this->crud->addColumn([
-        'name' => 'rating',
-        'label' => 'Рейтинг',
-      ]);
-    }
+        $this->crud->addColumn([
+          'name' => 'is_active',
+          'label' => 'Вкл',
+          'type' => 'check'
+        ]);
     }
 
     protected function setupCreateOperation()
     {
         $this->crud->setValidation(ProductRequest::class);
-        $this->categories_by_lang = Category::withoutGlobalScopes();
-        $language_in_url = (boolean) $this->current_language;
 
-        if(\Route::current()->parameter('id'))
-          $this->current_language = $this->crud->getEntry(\Route::current()->parameter('id'))->language_abbr;
+        // CURRENT MODEL
+        if($this->crud->getCurrentOperation() === 'update')
+          $entry = $this->crud->getEntry(\Route::current()->parameter('id'));
+        else
+          $entry = null;
 
-        $this->current_language = \Request::input('language_abbr')? \Request::input('language_abbr') : $this->current_language;
-
-        if(config('aimix.aimix.enable_languages')) {
-          if($this->current_language) {
-            $this->categories_by_lang = $this->categories_by_lang->where('language_abbr', $this->current_language);
-          } else {
-            $this->categories_by_lang = $this->categories_by_lang->where('language_abbr', array_key_first($this->languages));
-          }
-        }
-
-        $this->categories_by_lang = $this->categories_by_lang->pluck('name', 'id')->toArray();
-
-        $this->crud->attributes = Category::withoutGlobalScopes()->find(array_key_first($this->categories_by_lang))->attributes->keyBy('id');
-
-        $this->crud->attributes = \Route::current()->parameter('id') && !$language_in_url? Category::withoutGlobalScopes()->find($this->crud->getEntry(\Route::current()->parameter('id'))->category_id)->attributes : $this->crud->attributes;
-
-        if($this->current_category)
-          $this->crud->attributes = Category::withoutGlobalScopes()->find($this->current_category)->attributes->keyBy('id');
-
-        // TODO: remove setFromDb() and manually define Fields
-        // $this->crud->setFromDb();
-      if(config('aimix.aimix.enable_languages')) {
         $this->crud->addField([
-          'name' => 'language_abbr',
-          'label' => 'Язык',
-          'type' => 'select2_from_array',
-          'options' => $this->languages,
-          'value' => $this->current_language ?? $this->current_language,
-          'attributes' => [
-            'onchange' => 'window.location.search += "&language_abbr=" + this.value'
-          ]
+          'name' => 'parent_id',
+          'type' => 'hidden',
+          'value' => \Request::get('parent_id') ?? null
         ]);
-      }
+        
+        $this->crud->addField([
+          'name' => 'modifications',
+          'label' => 'Модификации',
+          'type' => 'modification_switcher',
+          'tab' => 'Основное'
+        ]);
 
+
+        // IS ACTIVE
         $this->crud->addField([
           'name' => 'is_active',
           'label' => 'Активен',
           'type' => 'boolean',
           'default' => '1',
+          'tab' => 'Основное'
         ]);
         
+        // NAME
         $this->crud->addField([
           'name' => 'name',
           'label' => 'Название',
-          'type' => 'text'
+          'type' => 'text',
+          'tab' => 'Основное'
         ]);
+
+        // SHORT NAME FOR MODIFICATIONS
+        if($entry && !$entry->isBase || \Request::get('parent_id')) {
+          $this->crud->addField([
+            'name' => 'short_name',
+            'label' => 'Краткое название модификации',
+            'type' => 'text',
+            'tab' => 'Основное'
+          ]);
+        }
         
+        // SLUG
         $this->crud->addField([
           'name' => 'slug',
           'label' => 'URL',
-          'prefix' => url('/products').'/',
-          'hint' => 'По умолчанию будет сгенерирован из названия.'
+          'hint' => 'По умолчанию будет сгенерирован из названия.',
+          'tab' => 'Основное'
         ]);
         
-        $this->crud->addField([
-          'name' => 'image',
-          'label' => 'Изображение',
-          'type' => 'browse',
-          'hint' => 'Изображение, которое будет отображаться в каталоге'
-        ]);
-        
-      if(config('aimix.shop.enable_multiple_product_images')) {
-        $this->crud->addField([
-          'name' => 'images',
-          'label' => 'Изображения',
-          'type' => 'browse_multiple',
-        ]);
-      }
-        
-        // $this->crud->addField([
-        //   'name' => 'category_id',
-        //   'label' => 'Категория',
-        //   'type' => 'select2',
-        //   'entity' => 'category',
-        //   'attribute' => 'name',
-        //   'model' => 'Aimix\Shop\app\Models\Category',
-        //   'value' => $this->current_category,
-        //   'attributes' => [
-        //     'onchange' => 'window.location.search += "&category_id=" + this.value'
-        //   ]
-        // ]);
+        // CATEGORY
+        $category_attributes = [];
+
+        // disable if product is not base but modification of other product
+        if($entry && !$entry->isBase || \Request::get('parent_id')) {
+          $category_attributes['disabled'] = 'disabled';
+        }
 
         $this->crud->addField([
           'name' => 'category_id',
           'label' => 'Категория',
-          'type' => 'select2_from_array',
-          'value' => $this->current_category ?? $this->current_category,
-          'options' => $this->categories_by_lang,
-          'attributes' => [
-            'onchange' => 'window.location.search += "&category_id=" + this.value'
-          ],
-          
-        ]);
-        
-      if(config('aimix.shop.enable_brands')) {
-        $this->crud->addField([
-          'name' => 'brand_id',
-          'label' => 'Производитель',
           'type' => 'select2',
-          'entity' => 'brand',
+          'entity' => 'category',
           'attribute' => 'name',
-          'model' => 'Aimix\Shop\app\Models\Brand',
+          'model' => 'Backpack\Store\app\Models\Category',
+          'tab' => 'Основное',
+          'attributes' => $category_attributes
         ]);
-      }
+
+        // PRICE
+        if(config('backpack.store.enable_product_price')) {
+          $this->crud->addField([
+            'name' => 'price',
+            'label' => 'Цена',
+            'type' => 'number',
+            'prefix' => '$',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-6'
+            ],
+            'tab' => 'Основное'
+          ]);
+        }
+
+        // OLD PRICE
+        if(config('backpack.store.enable_product_old_price')) {
+          $this->crud->addField([
+            'name' => 'old_price',
+            'label' => 'Старая цена',
+            'type' => 'number',
+            'prefix' => '$',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-6'
+            ],
+            'tab' => 'Основное'
+          ]);
+        }
         
-      if(config('aimix.shop.enable_is_hit')) {
+        // DESCRIPTION
         $this->crud->addField([
-          'name' => 'is_hit',
-          'label' => 'Хит',
-          'type' => 'boolean',
-        ]);
-      }
-        
-      if(config('aimix.shop.enable_product_promotions')) {
-        $this->crud->addField([
-          'name' => 'sales',
-          'label' => 'Акции',
-          'fake' => true,
-          'type' => 'table',
-          'store_in' => 'extras',
-          'entity_singular' => 'акцию',
-          'columns' => [
-            'discount' => 'Скидка, руб.',
-            'desc' => 'Описание',
-          ]
-        ]);
-      }
-        
-        $this->crud->addField([
-          'name' => 'description',
+          'name' => 'content',
           'label' => 'Описание',
           'type' => 'ckeditor',
           'attributes' => [
             'rows' => 7
-          ]
+          ],
+          'tab' => 'Основное'
         ]);
+
+        // BRAND
+        if(config('backpack.store.enable_brands')) {
+          $this->crud->addField([
+            'name' => 'brand_id',
+            'label' => 'Производитель',
+            'type' => 'select2',
+            'entity' => 'brand',
+            'attribute' => 'name',
+            'model' => 'Aimix\Shop\app\Models\Brand',
+            'tab' => 'Основное'
+          ]);
+        }
         
+        // IS HIT
+        if(config('backpack.store.enable_is_hit')) {
+          $this->crud->addField([
+            'name' => 'is_hit',
+            'label' => 'Хит',
+            'type' => 'boolean',
+            'tab' => 'Основное'
+          ]);
+        }
+        
+        // SALES
+        if(config('backpack.store.enable_product_promotions')) {
+          $this->crud->addField([
+            'name' => 'sales',
+            'label' => 'Акции',
+            'fake' => true,
+            'type' => 'table',
+            'store_in' => 'extras',
+            'entity_singular' => 'акцию',
+            'columns' => [
+              'discount' => 'Скидка, руб.',
+              'desc' => 'Описание',
+            ],
+            'tab' => 'Основное'
+          ]);
+        }
+        
+        // IMAGES
         $this->crud->addField([
-          'name' => 'mod',
-          'label' => 'Модификации',
-          'type' => 'modification',
+          'name'  => 'images',
+          'label' => 'Изображения',
+          'type'  => 'repeatable',
+          'fields' => [
+            [
+              'name' => 'src',
+              'label' => 'Изображение',
+              'type' => 'browse'
+            ],
+            [
+              'name' => 'alt',
+              'label' => 'alt'
+            ],
+            [
+              'name' => 'title',
+              'label' => 'title'
+            ]
+          ],
+          'new_item_label'  => 'Добавить изобрежение',
+          'init_rows' => 1,
+          'tab' => 'Изображения'
         ]);
         
         
-        // --  --
-		$this->crud->addField([
-		    'name' => 'meta_title',
-		    'label' => "Meta Title", 
-		    'type' => 'text',
-		    'fake' => true, 
-		    'store_in' => 'extras'
-		]);
-		
-		$this->crud->addField([
-		    'name' => 'meta_description',
-		    'label' => "Meta Description", 
-		    'type' => 'textarea',
-		    'fake' => true, 
-		    'store_in' => 'extras'
-		]);
+        // META TITLE
+        $this->crud->addField([
+            'name' => 'meta_title',
+            'label' => "Meta Title", 
+            'type' => 'text',
+            'fake' => true, 
+            'store_in' => 'seo',
+            'tab' => 'SEO'
+        ]);
+        
+        // META DESCRIPTION
+        $this->crud->addField([
+            'name' => 'meta_description',
+            'label' => "Meta Description", 
+            'type' => 'textarea',
+            'fake' => true, 
+            'store_in' => 'seo',
+            'tab' => 'SEO'
+        ]);
+
+
+        if(method_exists($this, 'setupOrderFields'))
+          $this->setupOrderFields();
+
+        if(method_exists($this, 'setupReviewFields'))
+          $this->setupReviewFields();
+
+
+        // parent::setupCreateOperation();
     }
 
     protected function setupUpdateOperation()

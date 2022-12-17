@@ -13,6 +13,7 @@ class StoreServiceProvider extends ServiceProvider
   {
     $this->publishes([
       __DIR__.'/config/store.php' => config_path('/backpack/store.php'),
+      __DIR__.'/resources/views' => resource_path('views'),
     ]);
 
     // Migrations
@@ -20,6 +21,7 @@ class StoreServiceProvider extends ServiceProvider
 
     // Routes
     $this->loadRoutesFrom(__DIR__.'/routes/backpack/routes.php');
+    $this->loadRoutesFrom(__DIR__.'/routes/api/product.php');
   
   }
 

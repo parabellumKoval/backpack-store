@@ -10,11 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 
+// TRANSLATIONS
+use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
+
 // FACTORY
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\CategoryFactory;
-
-// use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 
 class Category extends Model
 {
@@ -22,7 +23,7 @@ class Category extends Model
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
-    // use HasTranslations;
+    use HasTranslations;
 
     /*
     |--------------------------------------------------------------------------
@@ -37,12 +38,14 @@ class Category extends Model
     // protected $fillable = [];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $fakeColumns = ['extras'];
+    protected $fakeColumns = ['seo', 'extras', 'images'];
     protected $casts = [
-	    'extras' => 'array'
+	    'seo' => 'array',
+	    'extras' => 'array',
+      'images' => 'array'
     ];
 
-    protected $translatable = ['name', 'description', 'extras'];
+    protected $translatable = ['name', 'content', 'seo'];
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -66,7 +69,7 @@ class Category extends Model
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'description' => $this->description,
+        'content' => $this->description,
         'h1' => $this->extras['h1'] ?? null,
         'meta_title' => $this->extras['meta_title'] ?? null,
         'meta_description' => $this->extras['meta_description'] ?? null,
@@ -112,18 +115,18 @@ class Category extends Model
 
     public function parent()
     {
-      return $this->belongsTo('Backpack\Store\app\Models\Category', 'parent_id');
+      return $this->belongsTo(self::class, 'parent_id');
     }
 
     public function children()
     {
-      return $this->hasMany('Backpack\Store\app\Models\Category', 'parent_id');
+      return $this->hasMany(self::class, 'parent_id');
     }
     
     
     public function attributes()
     {
-        return $this->belongsToMany('Backpack\Store\app\Models\Attribute');
+        return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_category');
     }
     /*
     |--------------------------------------------------------------------------
@@ -139,6 +142,14 @@ class Category extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    public function getImageSrcAttribute() {
+      if(isset($this->images[0]) && isset($this->images[0]['src']))
+        return $this->images[0]['src'];
+      else
+        return null;
+    }
+    
+
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
@@ -146,6 +157,23 @@ class Category extends Model
         }
 
         return $this->name;
+    }
+
+
+    public function getNodeIdsAttribute($category){
+			$category = $category? $category: $this;
+			
+			$start_carry = $category === $this? array($category->id): array();
+			
+			return $category->children->reduce(function ($carry, $item) {
+				
+				$carry[] = $item->id;
+				
+				if($item->children)
+					$ids = $this->getNodeIdsAttribute($item);
+				
+			  return array_merge($carry, $ids);
+			}, $start_carry);
     }
     /*
     |--------------------------------------------------------------------------
