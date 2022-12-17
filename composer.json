@@ -59,7 +59,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Backpack\\Store\\StoreServiceProvider"
+                "Backpack\\Store\\ServiceProvider"
             ],
             "aliases": {
                 "Product": "Backpack\\Store\\Facades\\Store"

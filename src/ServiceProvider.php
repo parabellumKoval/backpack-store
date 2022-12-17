@@ -9,20 +9,36 @@ use \Illuminate\Support\ServiceProvider;
 
 class StoreServiceProvider extends ServiceProvider
 {
+
+  const CONFIG_PATH = __DIR__ . '/../config/store.php';
+
   public function boot()
   {
-    $this->publishes([
-      __DIR__.'/config/store.php' => config_path('/backpack/store.php'),
-      __DIR__.'/resources/views' => resource_path('views'),
-    ]);
-
     // Migrations
     $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
 
     // Routes
     $this->loadRoutesFrom(__DIR__.'/routes/backpack/routes.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/product.php');
-  
+    
+
+    $this->publishes([
+      self::CONFIG_PATH => config_path('/backpack/store.php'),
+    ], 'config');
+    
+    $this->publishes([
+        __DIR__.'/resources/views' => resource_path('views'),
+    ], 'views');
+
+    $this->publishes([
+        __DIR__.'/database/migrations' => resource_path('database/migrations'),
+    ], 'migrations');
+
+    $this->publishes([
+        __DIR__.'/routes/backpack/routes.php' => resource_path('/routes/backpack/store/routes.php'),
+        __DIR__.'/routes/api/store.php' => resource_path('/routes/backpack/store/api.php'),
+    ], 'routes');
+
   }
 
     // public function configurePackage(Package $package): void
