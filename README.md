@@ -1,4 +1,4 @@
-# Backpack-profile
+# Backpack-store
 
 [![Build Status](https://travis-ci.org/parabellumKoval/backpack-store.svg?branch=master)](https://travis-ci.org/parabellumKoval/backpack-store)
 [![Coverage Status](https://coveralls.io/repos/github/parabellumKoval/backpack-store/badge.svg?branch=master)](https://coveralls.io/github/parabellumKoval/backpack-store?branch=master)
