@@ -20,6 +20,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->loadRoutesFrom(__DIR__.'/routes/backpack/routes.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/product.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/order.php');
+    $this->loadRoutesFrom(__DIR__.'/routes/api/cart.php');
     
 
     $this->publishes([
@@ -38,6 +39,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/routes/backpack/routes.php' => resource_path('/routes/backpack/store/backpack.php'),
         __DIR__.'/routes/api/product.php' => resource_path('/routes/backpack/store/product.php'),
         __DIR__.'/routes/api/order.php' => resource_path('/routes/backpack/store/order.php'),
+        __DIR__.'/routes/api/cart.php' => resource_path('/routes/backpack/store/cart.php'),
     ], 'routes');
 
   }
