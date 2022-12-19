@@ -13,7 +13,7 @@ return [
     'per_page' => 12,
     
     // USER
-    'user_model' => 'App\Models\User',
+    'user_model' => 'Backpack\Profile\app\Models\Profile',
 
     // REVIEW
     'review_model' => 'Backpack\Reviews\app\Models\Review',
@@ -21,6 +21,7 @@ return [
 
     // ORDER
     'enable_orders_in_product_crud' => true,
+    'order_per_page' => 12,
 
     // CATEGORIES
     'category_depth_level' => 3,

@@ -14,15 +14,14 @@ class CreateAkProductsTable extends Migration
     public function up()
     {
         Schema::create('ak_products', function (Blueprint $table) {
-          $table->bigIncrements('id');
-          $table->string('lang', 3)->nullable();
+          $table->id();
 
           $table->string('code', 20)->nullable();
-          $table->string('name', 255);
+          $table->json('name');
           $table->string('short_name', 255)->nullable();
           $table->string('slug', 255);
-          $table->longtext('content')->nullable();
-          $table->text('excerpt', 500)->nullable();
+          $table->json('content')->nullable();
+          $table->json('excerpt')->nullable();
           $table->json('images')->nullable();
 
           $table->integer('parent_id')->nullable()->default(null);
