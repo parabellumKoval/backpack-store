@@ -16,11 +16,9 @@ class CreateAkAttributesTable extends Migration
         Schema::create('ak_attributes', function (Blueprint $table) {
             $table->id();
 
-            $table->string('lang', 2)->nullable();
-
-            $table->string('name', 255);
+            $table->json('name');
             $table->string('slug', 255);
-            $table->text('content', 1000)->nullable();
+            $table->json('content')->nullable();
             $table->string('si', 50)->nullable();
             $table->longtext('default_value')->nullable();
             $table->json('values')->nullable();

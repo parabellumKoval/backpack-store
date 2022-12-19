@@ -14,10 +14,9 @@ class CreateAkProductCategoriesTable extends Migration
     public function up()
     {
         Schema::create('ak_product_categories', function (Blueprint $table) {
-          $table->bigIncrements('id');
-  
-          $table->string('lang', 3)->nullable();
-          $table->string('name', 255);
+          $table->id();
+
+          $table->json('name', 255);
           $table->string('slug', 255);
           $table->longtext('content')->nullable();
           $table->text('excerpt', 500)->nullable();
