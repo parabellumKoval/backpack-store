@@ -27,6 +27,7 @@ return [
     'category_depth_level' => 3,
     'enable_product_category_pages' => false,
     'is_modifications_category' => true,
+    'category_per_page' => 12,
 
     // PROPUCT
     // PRODUCT -> properties

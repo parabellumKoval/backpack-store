@@ -69,10 +69,7 @@ class Category extends Model
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'content' => $this->description,
-        'h1' => $this->extras['h1'] ?? null,
-        'meta_title' => $this->extras['meta_title'] ?? null,
-        'meta_description' => $this->extras['meta_description'] ?? null,
+        'children' => $this->children
       ];    
     }
     
@@ -136,6 +133,11 @@ class Category extends Model
     public function scopeNoEmpty($query){
       
       return $query->has('products');
+    }
+
+    public function scopeActive($query){
+      
+      return $query->where('is_active', 1);
     }
     /*
     |--------------------------------------------------------------------------
