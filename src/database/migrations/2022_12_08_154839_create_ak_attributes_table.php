@@ -31,7 +31,7 @@ class CreateAkAttributesTable extends Migration
 
             $table->json('extras')->nullable();
             
-            $table->integer('parent_id')->default(0)->nullable();
+            $table->foreignId('parent_id')->default(0)->nullable();
             $table->integer('lft')->default(0)->nullable();
             $table->integer('rgt')->default(0)->nullable();
             $table->integer('depth')->default(0)->nullable();

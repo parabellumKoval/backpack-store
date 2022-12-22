@@ -24,10 +24,10 @@ class CreateAkProductsTable extends Migration
           $table->json('excerpt')->nullable();
           $table->json('images')->nullable();
 
-          $table->integer('parent_id')->nullable()->default(null);
+          $table->foreignId('parent_id')->nullable()->default(null);
           
-          $table->integer('category_id')->default('0');
-          $table->integer('brand_id')->default('0');
+          $table->foreignId('category_id')->default('0');
+          $table->foreignId('brand_id')->default('0');
 
           $table->double('price', 8, 2)->nullable();
           $table->double('old_price', 8, 2)->nullable();

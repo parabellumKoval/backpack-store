@@ -17,7 +17,7 @@ class CreateAkOrdersTable extends Migration
         Schema::create('ak_orders', function (Blueprint $table) {
             $table->id();
             
-            $table->integer('user_id')->nullable();
+            $table->foreignId('user_id')->nullable();
             $table->string('code', 6);
             $table->string('status', 30)->default('new');
             $table->boolean('is_paid')->default(0);
