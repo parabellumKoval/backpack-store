@@ -16,8 +16,8 @@ class CreateAkOrderProductTable extends Migration
         Schema::create('ak_order_product', function (Blueprint $table) {
             $table->id();
             
-            $table->integer('order_id');
-            $table->integer('product_id');
+            $table->foreignId('order_id');
+            $table->foreignId('product_id');
             $table->integer('amount')->default(1);
             $table->longtext('value')->nullable();
             

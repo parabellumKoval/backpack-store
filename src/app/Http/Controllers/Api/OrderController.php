@@ -66,7 +66,8 @@ class OrderController extends \App\Http\Controllers\Controller
       'address.apartment' => 'required|string|min:2|max:255',
       'address.zip' => 'required|string|min:2|max:255',
       'user.id' => 'nullable|integer',
-      'user.name' => 'required|string|min:2|max:100',
+      'user.firstname' => 'required|string|min:2|max:100',
+      'user.lastname' => 'required|string|min:2|max:100',
       'user.email' => 'required|email',
       'user.phone' => 'nullable|string',
     ]);
