@@ -49,14 +49,26 @@ class OrderFactory extends Factory
           'products' => [
             [
               'name' => $this->faker->sentence(),
+              'slug' => $this->faker->uuid(),
               'amount' => $this->faker->randomDigit(),
               'price' => $this->faker->randomFloat(2, 0, 1000),
               'old_price' => $this->faker->randomFloat(2, 0, 1000),
+              'image' => [
+                'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+                'alt' => 'alt',
+                'title' => 'title'
+              ],
             ],[
               'name' => $this->faker->sentence(),
+              'slug' => $this->faker->uuid(),
               'amount' => $this->faker->randomDigit(),
               'price' => $this->faker->randomFloat(2, 0, 1000),
               'old_price' => $this->faker->randomFloat(2, 0, 1000),
+              'image' => [
+                'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+                'alt' => 'alt',
+                'title' => 'title'
+              ],
             ]
           ]
         ],

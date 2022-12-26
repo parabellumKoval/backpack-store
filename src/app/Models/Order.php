@@ -74,6 +74,14 @@ class Order extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    public function getProductsAnywayAttribute() {
+      if(isset($this->info['products']) && $this->info['products'] && count($this->info['products']))
+        return $this->info['products'];
+      elseif($this->products)
+        return $this->products;
+      else [];
+    }
+
     public function getStatusStringAttribute(){
 	    if($this->status == 'new' || $this->status == 'pending' || $this->status == 'paid' || $this->status == 'sent')
 	    	return '<span class="icon-sent order-history-icon"></span><span class="text">'.$this->status.'</span>';

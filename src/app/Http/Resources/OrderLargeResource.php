@@ -4,7 +4,7 @@ namespace Backpack\Store\app\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProductCartResource extends JsonResource
+class OrderLargeResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,15 +16,14 @@ class ProductCartResource extends JsonResource
     {
       return [
         'id' => $this->id,
-        'name' => $this->name,
-        'slug' => $this->slug,
         'code' => $this->code,
-        'short_name' => $this->short_name,
-        'in_stock' => $this->in_stock,
         'price' => $this->price,
-        'old_price' => $this->old_price,
-        'image' => count($this->images)? $this->images[0]: null,
-        'amount' => $this->amount
+        'status' => $this->status,
+        'is_paid' => $this->is_paid,
+        'user' => $this->user,
+        'info' => $this->info,
+        'products' => $this->productsAnyway,
+        'created_at' => $this->created_at,
       ];
     }
 }
