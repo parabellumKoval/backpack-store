@@ -11,6 +11,7 @@ use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
 
 use Backpack\Store\app\Http\Resources\ProductCartResource;
+use Backpack\Store\app\Http\Resources\OrderLargeResource;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
@@ -20,7 +21,6 @@ class OrderController extends \App\Http\Controllers\Controller
     $orders = Order::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
-              ->active()
               ->when(request('user_id'), function($query) {
                 $query->where('ak_orders.user_id', request('user_id'));
               })
@@ -37,8 +37,9 @@ class OrderController extends \App\Http\Controllers\Controller
     $per_page = request('per_page', config('backpack.store.order_per_page', 12));
     
     $orders = $orders->paginate($per_page);
+    $orders = OrderLargeResource::collection($orders);
 
-    return response()->json($orders);
+    return $orders;
   }
 
   public function show(Request $request, $id) {
