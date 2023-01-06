@@ -11,6 +11,9 @@ return [
 
     // CATALOG
     'per_page' => 12,
+
+    // GUARD
+    'auth_guard' => 'profile',
     
     // USER
     'user_model' => 'Backpack\Profile\app\Models\Profile',
