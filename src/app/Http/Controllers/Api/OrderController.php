@@ -93,7 +93,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $data = $request->only(['user', 'products', 'address', 'delivery', 'payment', 'provider']);
 
     $validator = Validator::make($data, [
-      'products' => 'required',
+      'products' => 'required|array',
       'payment' => 'required|string|min:2|max:255',
       'delivery' => 'required|string|min:2|max:255',
       'address.country' => 'required|string|min:2|max:255',
