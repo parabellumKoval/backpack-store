@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
@@ -15,8 +16,33 @@ use Backpack\Store\app\Http\Resources\OrderLargeResource;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
-
   public function index(Request $request) {
+
+    $profile = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
+
+    $orders = Order::query()
+              ->select('ak_orders.*')
+              ->distinct('ak_orders.id')
+              ->where('user_id', $profile->id)
+              ->when(request('status'), function($query) {
+                $query->where('ak_orders.category_id', request('status'));
+              })
+              ->when(request('is_paid'), function($query) {
+                $query->where('ak_orders.is_paid', request('is_paid'));
+              })
+              ->when(request('price'), function($query) {
+                $query->where('ak_orders.price', request('price'));
+              });
+    
+    $per_page = request('per_page', config('backpack.store.order_per_page', 12));
+    
+    $orders = $orders->paginate($per_page);
+    $orders = OrderLargeResource::collection($orders);
+
+    return $orders;
+  }
+
+  public function all(Request $request) {
 
     $orders = Order::query()
               ->select('ak_orders.*')

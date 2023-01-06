@@ -16,9 +16,13 @@ use Backpack\Store\app\Http\Controllers\Api\OrderController;
 |
 */
 
-Route::prefix('api/orders')->controller(OrderController::class)->group(function () {
+$guard = config('backpack.store.auth_guard', 'profile');
+
+Route::prefix('api/orders')->controller(OrderController::class)->group(function () use($guard) {
   
-  Route::get('', 'index');
+  Route::get('', 'index')->middleware(['api', "auth:${guard}"]);
+
+  Route::get('/all', 'all');
 
   Route::get('/{slug}', 'show');
 
