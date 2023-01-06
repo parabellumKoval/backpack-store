@@ -90,7 +90,7 @@ class OrderController extends \App\Http\Controllers\Controller
   }
 
   public function create(Request $request){
-    $data = $request->only(['user', 'products', 'address', 'delivery', 'payment']);
+    $data = $request->only(['user', 'products', 'address', 'delivery', 'payment', 'provider']);
 
     $validator = Validator::make($data, [
       'products' => 'required',
@@ -102,11 +102,8 @@ class OrderController extends \App\Http\Controllers\Controller
       'address.street' => 'required|string|min:2|max:255',
       'address.apartment' => 'required|string|min:2|max:255',
       'address.zip' => 'required|string|min:2|max:255',
-      'user.id' => 'nullable|integer',
-      'user.firstname' => 'required|string|min:2|max:100',
-      'user.lastname' => 'required|string|min:2|max:100',
-      'user.email' => 'required|email',
-      'user.phone' => 'nullable|string',
+      'user' => 'required_if:provider,data',
+      'provider' => 'required|in:auth,data'
     ]);
 
     if ($validator->fails()) {
@@ -119,15 +116,18 @@ class OrderController extends \App\Http\Controllers\Controller
 
       return response()->json($errors_array, 400);
     }
-    
-    if(isset($data['user']['id'])) {
-      try {
-        $user_model = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile')::findOrFail($data['user']['id']);
-      }catch(ModelNotFoundException $e) {
-        return response()->json($e->getMessage(), 404);
+
+    // GET USER MODEL IF AUTHED
+    if($data['provider'] === 'auth') {
+
+      if(!Auth::guard(config('backpack.store.auth_guard', 'profile'))->check()){
+        return response()->json('User not authenticated', 401);
       }
+
+      $user_model = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
     }
 
+    // GET PRODUCTS COLLECTION
     $products = Product::whereIn('id', array_keys($data['products']))->get();
 
     if(!$products || !$products->count()) {
@@ -141,9 +141,16 @@ class OrderController extends \App\Http\Controllers\Controller
       $info['address'][$key] = $item;
     }
 
-    // User
-    foreach($data['user'] as $key => $item) {
-      $info['user'][$key] = $item;
+    // User data
+    if(isset($data['user']) && is_array($data['user']))
+    {
+      foreach($data['user'] as $key => $item) {
+        $info['user'][$key] = $item;
+      }
+    }
+    else
+    {
+      $info['user'] = $data['user'];
     }
 
     // Products
