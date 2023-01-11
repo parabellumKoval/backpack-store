@@ -5,6 +5,8 @@ namespace Backpack\Store\app\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 use Backpack\Store\app\Http\Resources\ProductTinyResource;
+use Backpack\Store\app\Http\Resources\AttributeSmallResource;
+use Backpack\Store\app\Http\Resources\CategoryTinyResource;
 
 class ProductLargeResource extends JsonResource
 {
@@ -23,11 +25,14 @@ class ProductLargeResource extends JsonResource
         'name' => $this->name,
         'slug' => $this->slug,
         'price' => $this->price,
+        'code' => $this->code,
         'old_price' => $this->old_price,
+        'rating' => $this->rating,
         'images' => $this->images,
         'content' => $this->content,
-        'category' => $this->category,
-        'modifications' => $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
+        'category' => $this->category? new CategoryTinyResource($this->category): null,
+        'attrs' => $this->attrs && $this->attrs->count()? AttributeSmallResource::collection($this->attrs): null,
+        'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
       ];
     }
 }

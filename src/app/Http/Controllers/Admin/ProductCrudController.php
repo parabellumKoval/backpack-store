@@ -41,11 +41,18 @@ class ProductCrudController extends ProductCrudBase
           $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
         }
 
-        // $this->current_category = \Request::input('category_id')? \Request::input('category_id') : null;
-
         
-        // $this->crud->query = $this->crud->query->withoutGlobalScopes();
+        // CURRENT MODEL
+        if($this->crud->getCurrentOperation() === 'update')
+          $this->entry = $this->crud->getEntry(\Route::current()->parameter('id'));
+        else
+          $this->entry = null;
+        
           
+        $this->opr = $this->crud->getCurrentOperation();
+
+        // $this->crud->query = $this->crud->query->withoutGlobalScopes();
+        
         // $this->crud->model->clearGlobalScopes();
         
         // $this->categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
@@ -135,12 +142,14 @@ class ProductCrudController extends ProductCrudBase
     {
         $this->crud->setValidation(ProductRequest::class);
 
-        // CURRENT MODEL
-        if($this->crud->getCurrentOperation() === 'update')
-          $entry = $this->crud->getEntry(\Route::current()->parameter('id'));
-        else
-          $entry = null;
+        // SET CATEGORY MODEL
+        $this->setCategory();
 
+        // SET ATTRIBUTES MODEL 
+        if(in_array($this->opr, ['create', 'update']))
+          $this->attrs = $this->category? $this->category->attributes: [];
+
+        
         $this->crud->addField([
           'name' => 'parent_id',
           'type' => 'hidden',
@@ -173,7 +182,7 @@ class ProductCrudController extends ProductCrudBase
         ]);
 
         // SHORT NAME FOR MODIFICATIONS
-        if($entry && !$entry->isBase || \Request::get('parent_id')) {
+        if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
           $this->crud->addField([
             'name' => 'short_name',
             'label' => 'Краткое название модификации',
@@ -191,10 +200,47 @@ class ProductCrudController extends ProductCrudBase
         ]);
         
         // CATEGORY
-        $category_attributes = [];
+        $category_attributes = [
+          'onchange' => "
+            reload_page(event);
+
+            function reload_page(event) {
+              const value = event.target.value
+              url = insertParam('category_id', value)
+            };
+
+            function insertParam(key, value) {
+              key = encodeURIComponent(key);
+              value = encodeURIComponent(value);
+          
+              // kvp looks like ['key1=value1', 'key2=value2', ...]
+              var kvp = document.location.search.substr(1).split('&');
+              let i=0;
+          
+              for(; i<kvp.length; i++){
+                  if (kvp[i].startsWith(key + '=')) {
+                      let pair = kvp[i].split('=');
+                      pair[1] = value;
+                      kvp[i] = pair.join('=');
+                      break;
+                  }
+              }
+          
+              if(i >= kvp.length){
+                  kvp[kvp.length] = [key,value].join('=');
+              }
+          
+              // can return this or...
+              let params = kvp.join('&');
+          
+              // reload page with new params
+              document.location.search = params;
+          }
+          "
+        ];
 
         // disable if product is not base but modification of other product
-        if($entry && !$entry->isBase || \Request::get('parent_id')) {
+        if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
           $category_attributes['disabled'] = 'disabled';
         }
 
@@ -206,6 +252,7 @@ class ProductCrudController extends ProductCrudBase
           'attribute' => 'name',
           'model' => 'Backpack\Store\app\Models\Category',
           'tab' => 'Основное',
+          'value' => \Request::get('category_id')? \Request::get('category_id'): Category::first()->id,
           'attributes' => $category_attributes
         ]);
 
@@ -314,6 +361,77 @@ class ProductCrudController extends ProductCrudBase
         ]);
         
         
+        // ATTRIBUTES
+
+        $this->crud->addField([
+          'name' => 'props',
+          'type' => 'hidden',
+        ]);
+
+        if(config('backpack.store.enable_attributes', false) && isset($this->attrs)) {
+
+          $attr_fields = [];
+
+          foreach($this->attrs as $index => $attribute) {
+            $id = $attribute->id;
+            $values = json_decode($attribute->values);
+            $model_attribute = $this->entry->attrs()->find($attribute->id);
+            
+            $value = $model_attribute? $model_attribute->pivot->value: null;
+            
+            $attr_fields[$index] = [
+              'name' => "props[{$id}]",
+              'label' => $attribute->name,
+              'tab' => 'Характеристики'
+            ];
+
+            if($attribute->type === 'checkbox')
+            {
+              $value = json_decode($value);
+
+              $attr_fields[$index] = array_merge(
+                $attr_fields[$index],
+                [
+                  'type' => 'select_from_array',
+                  'allows_multiple' => true,
+                  'options' => $values,
+                  'value' => $value,
+                ]
+              );
+            }
+            else if($attribute->type === 'radio')
+            {
+              $attr_fields[$index] = array_merge(
+                $attr_fields[$index],
+                [
+                  'type' => 'select_from_array',
+                  'options' => $values,
+                  'value' => $value,
+                ]
+              );
+            }
+            else if($attribute->type === 'number')
+            {
+              $attr_fields[$index] = array_merge(
+                $attr_fields[$index],
+                [
+                  'type' => 'number',
+                  'attributes' => [
+                    'min' => $values->min,
+                    'max' => $values->max,
+                    'step' => $values->step,
+                  ],
+                  'value' => $value,
+                ]
+              );
+            }
+          }
+
+          foreach($attr_fields as $attr_field) {
+            $this->crud->addField($attr_field);
+          }
+        }
+
         // META TITLE
         $this->crud->addField([
             'name' => 'meta_title',
@@ -335,11 +453,11 @@ class ProductCrudController extends ProductCrudBase
         ]);
 
 
-        if(method_exists($this, 'setupOrderFields'))
-          $this->setupOrderFields();
+        // if(method_exists($this, 'setupOrderFields'))
+        //   $this->setupOrderFields();
 
-        if(method_exists($this, 'setupReviewFields'))
-          $this->setupReviewFields();
+        // if(method_exists($this, 'setupReviewFields'))
+        //   $this->setupReviewFields();
 
 
         // parent::setupCreateOperation();
@@ -347,8 +465,35 @@ class ProductCrudController extends ProductCrudBase
 
     protected function setupUpdateOperation()
     {
-        $this->setupCreateOperation();
+      $this->setupCreateOperation();
 
         // $this->crud->attributes = $this->current_category? Category::withoutGlobalScopes()->find($this->current_category)->attributes: ($this->crud->getEntry(\Route::current()->parameter('id'))? $this->crud->getEntry(\Route::current()->parameter('id'))->category->attributes : null);
+    }
+
+    public function setCategory()
+    {
+      $query_category_id = \Request::input('category_id');
+
+      if($query_category_id)
+      {
+        $this->category = Category::find($query_category_id);
+      }
+      else if($this->opr === 'create') 
+      {
+        $this->category = null;
+      }
+      else if($this->opr === 'update') 
+      {
+        $this->category = $this->entry->category;
+      }
+      else 
+      {
+        $this->category = null;
+      }
+
+      if(!$this->category)
+      {
+        $this->category = Category::first();
+      }
     }
 }

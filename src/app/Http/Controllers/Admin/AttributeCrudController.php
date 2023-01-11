@@ -134,6 +134,13 @@ class AttributeCrudController extends CrudController
         ]);
       }
 
+      $this->crud->addField([
+        'name' => 'values',
+        'type' => 'hidden',
+        'value' => null
+      ]);
+
+
         $this->crud->addField([
           'name' => 'type',
           'label' => 'Тип значения',

@@ -39,16 +39,16 @@ class Product extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    //protected $fillable = ['product_id', 'name', 'slug'];
+    protected $fillable = ['props'];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
-      'seo' => 'array'
+      //'seo' => 'array'
     ];
     protected $fakeColumns = [
-      'seo', 'extras', 'images'
+      'meta_description', 'meta_title', 'seo', 'extras', 'images'
     ];
     
     protected $translatable = ['name', 'short_name', 'content', 'seo'];
@@ -146,6 +146,11 @@ class Product extends Model
     {
       return $this->belongsToMany('Backpack\Store\app\Models\Order', 'ak_order_product');
     }
+    
+    public function attrs()
+    {
+        return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value');
+    }
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -188,22 +193,49 @@ class Product extends Model
     }
     
     public function getModificationsAttribute() {
-      if($this->children->count()){
-        $items = $this->children;
-        $collection = $items->prepend($this);
-        return $collection;
-      }else if($this->parent){
-        return $this->parent->children->prepend($this->parent);
+      if($this->children->count())
+      {
+        $children = clone $this->children;
+        return $children->prepend($this);
+      }
+      else if($this->parent)
+      {
+        $parent_children = clone $this->parent->children;
+        return $parent_children->prepend($this->parent);
       }
     }
+    
+    public function getPropsAttribute() {
+      // $attributes = $this->attrs;
+      // $props = [];
       
+      // foreach($attributes as $attribute){
+      //   $values = json_decode($attribute->values);
+      //   $props[$attribute->id] = $values[$attribute->pivot->value];
+      // }
+
+      // return $props;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
     |--------------------------------------------------------------------------
     */
 
-    // public function setNameAttribute() {
-    //   dd($this);
-    // }
+
+    public function setPropsAttribute($attributes) {
+      $this->attrs()->detach();
+
+      if(!$attributes)
+        return;
+
+      //dd($attributes);
+      foreach($attributes as $attr_key => $value) {
+        $clear_value = is_array($value)? array_filter($value, fn($i) => $i !== null): trim($value);
+        $serialized_value = is_array($clear_value)? json_encode(array_values($clear_value)): $clear_value;
+        
+        $this->attrs()->attach($attr_key, ['value' => $serialized_value]);
+      }
+    }
 }
