@@ -60,22 +60,12 @@ class ProductController extends \App\Http\Controllers\Controller
                 }
               })
               ->when(request('q'), function($query) {
-                $query->where('ak_products.name', 'like', '%' . request('q') . '%')
-                      ->orWhere('ak_products.short_name', 'like', '%' . request('q') . '%')
-                      ->orWhere('ak_products.code', 'like', '%' . request('q') . '%');
+                $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
+                      ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower(request('q')) . '%')
+                      ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
               })
               ->orderBy('created_at', 'desc');
-    
-    // if(request('attrs')){
-    //   $attrs = request('attrs');
-
-    //   foreach($attrs as $attr_id => $attr_value){
-    //     // $products = $products->whereHas('attrs', function(Builder $attr_query) use($attr_id, $attr_value) {
-    //     //   $attr_query->where('attribute_id', $attr_id)->whereJsonContains('value', $attr_value);
-    //     // });
-    //   }
-    // }      
-              
+                  
     
     $per_page = request('per_page', config('backpack.store.per_page', 12));
     
