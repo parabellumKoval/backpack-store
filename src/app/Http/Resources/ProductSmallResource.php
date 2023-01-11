@@ -22,9 +22,10 @@ class ProductSmallResource extends JsonResource
         'slug' => $this->slug,
         'price' => $this->price,
         'old_price' => $this->old_price,
+        'rating' => $this->rating,
         'image' => count($this->images)? $this->images[0]: null,
         'excerpt' => substr(strip_tags($this->content), 0, 500).'...',
-        'modifications' => $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
+        'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
       ];
     }
 }

@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 
+// TRANSLATIONS
+use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Attribute extends Model
@@ -17,6 +20,7 @@ class Attribute extends Model
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
+    use HasTranslations;
 
     /*
     |--------------------------------------------------------------------------
@@ -34,6 +38,8 @@ class Attribute extends Model
     protected $casts = [
       'values' => 'object'
     ];
+
+    protected $translatable = ['name', 'values', 'content', 'default_value', 'si'];
 
     /*
     |--------------------------------------------------------------------------
@@ -63,7 +69,6 @@ class Attribute extends Model
         'is_active' => $this->is_active,
         'in_filters' => $this->in_filters,
         'in_properties' => $this->in_properties,
-        'human_value' => $this->humanValue,
       ];
     }
     
@@ -76,6 +81,17 @@ class Attribute extends Model
         ];
     }
 
+    public function getCurrentLang() {
+      $lang = request()->query('locale');
+
+      //dd($lang);
+
+      if(!$lang) {
+        $lang = config('app.locale', 'en');
+      }
+
+      return $lang;
+    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -111,6 +127,7 @@ class Attribute extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
@@ -142,86 +159,98 @@ class Attribute extends Model
     
     public function getInputValuesAttribute(){
       $values = array(
-      'color' => null,
-      'number' => [
-        'step' => 0,
-        'min' => '',
-        'max' => ''
-      ],
-      'range' => [
-        'step' => 0,
-        'min' => '',
-        'max' => ''
-      ],
-      'datetime' => [
-        'datetime' => null,
-        'date' => null,
-        'daterange' => null,
-      ],
-      'select' => null,  
-        );
-        
-        if($this->type == 'range')
-        {
-          if(isset($this->values->step))
-          $values['range']['step'] = $this->values->step;
-          
-          if(isset($this->values->min))
-          $values['range']['min'] = $this->values->min;
-          
-          if(isset($this->values->max))
-          $values['range']['max'] = $this->values->max;
-          
-        }elseif($this->type == 'color')
-        {
-          $values['color'] = $this->values;
+          'color' => null,
+          'number' => [
+            'step' => 0,
+            'min' => '',
+            'max' => ''
+          ],
+          'range' => [
+            'step' => 0,
+            'min' => '',
+            'max' => ''
+          ],
+          'datetime' => [
+            'datetime' => null,
+            'date' => null,
+            'daterange' => null,
+          ],
+          'select' => null,  
+      );
 
-        }elseif($this->type == 'number')
-        {
-          if(isset($this->values->step))
-          $values['number']['step'] = $this->values->step;
-          
-          if(isset($this->values->min))
-          $values['number']['min'] = $this->values->min;
-          
-          if(isset($this->values->max))
-          $values['number']['max'] = $this->values->max;
-          
-        }elseif($this->type == 'datetime')
-        {
-          if(isset($this->values) && $this->values == 'datetime')
-          $values['datetime']['datetime'] = 'selected="selected"';
-          
-          if(isset($this->values) && $this->values == 'date')
-          $values['datetime']['date'] = 'selected="selected"';
-          
-          if(isset($this->values) && $this->values == 'daterange')
-          $values['datetime']['daterange'] = 'selected="selected"';
-          
-        }elseif($this->type == 'select' || $this->type == 'checkbox' || $this->type == 'radio')
-        {
-          if(isset($this->values))
-          $values['select'] = $this->values;
-          
-        }
-        return $values;
+      $this_values = json_decode($this->values);
+        
+      if($this->type == 'range')
+      {
+        if(isset($this_values->step))
+        $values['range']['step'] = $this_values->step;
+        
+        if(isset($this_values->min))
+        $values['range']['min'] = $this_values->min;
+        
+        if(isset($this_values->max))
+        $values['range']['max'] = $this_values->max;
+        
+      }elseif($this->type == 'color')
+      {
+        $values['color'] = $this_values;
+
+      }elseif($this->type == 'number')
+      {
+        if(isset($this_values->step))
+        $values['number']['step'] = $this_values->step;
+        
+        if(isset($this_values->min))
+        $values['number']['min'] = $this_values->min;
+        
+        if(isset($this_values->max))
+        $values['number']['max'] = $this_values->max;
+        
+      }elseif($this->type == 'datetime')
+      {
+        if(isset($this_values) && $this_values == 'datetime')
+        $values['datetime']['datetime'] = 'selected="selected"';
+        
+        if(isset($this_values) && $this_values == 'date')
+        $values['datetime']['date'] = 'selected="selected"';
+        
+        if(isset($this_values) && $this_values == 'daterange')
+        $values['datetime']['daterange'] = 'selected="selected"';
+        
+      }elseif($this->type == 'select' || $this->type == 'checkbox' || $this->type == 'radio')
+      {
+        if(isset($this_values))
+        $values['select'] = $this_values;
+        
       }
+
+        return $values;
+    }
       
-      public function getPivotValueAttribute(){
-        if(!$this->pivot || !$this->pivot->value)
-          return null;
-          
-          return $this->pivot->value;
+    public function getPivotValueAttribute(){
+      if(!$this->pivot || $this->pivot->value === null)
+        return null;
+      
+      $this_values = json_decode($this->values);
+
+      if($this->type === 'checkbox') 
+      {
+        $indexes = json_decode($this->pivot->value);
+
+        $human_value = array_map(fn($index) => isset($this_values[$index])? $this_values[$index]: null, $indexes);
+      }
+      elseif($this->type === 'radio')
+      {
+        $index = $this->pivot->value;
+        $human_value = isset($this_values[$index])? $this_values[$index]: null;
+      }
+      else 
+      {
+        $human_value = $this->pivot->value;
       }
         
-      public function getHumanValueAttribute()
-      {
-        // return $this->pivotValue !== null? ($this->pivotValue . ' ' . $this->si) : null;
-        return $this->pivotValue !== null? ($this->pivotValue . $this->si) : null;
-      }
-    
-    
-    
+      return $human_value;
+    }
     
     
     
@@ -240,9 +269,20 @@ class Attribute extends Model
     //   $this->attributes['value'] = $attr_value;
       
     // }
+
+    // public function setValuesAttribute($value) {
+    //   $this->setTranslation('values', 'en', json_encode($value));
+    //   //dd($value);
+    // }
+
     public function setTypeAttribute($value){
-    
       $this->attributes['type'] = $value['type'];
-      $this->attributes['values'] = isset($value['values']) ? json_encode($value['values']) : null;
+      //$this->attributes['values'] = isset($value['values']) ? json_encode($value['values']) : null;
+
+      if(isset($value['values'])) {
+        //$this->setTranslation('values', $this->getCurrentLang(), json_encode($value['values']));
+        //dd($value['values']);
+        //$this->values = $value['values'];
+      }
     }
 }
