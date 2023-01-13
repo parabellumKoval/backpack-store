@@ -30,7 +30,7 @@ class ProductLargeResource extends JsonResource
         'rating' => $this->rating,
         'images' => $this->images,
         'content' => $this->content,
-        'category' => $this->category? new CategoryTinyResource($this->category): null,
+        'categories' => $this->categories && $this->categories->count()? CategoryTinyResource::collection($this->categories): null,
         'attrs' => $this->attrs && $this->attrs->count()? AttributeSmallResource::collection($this->attrs): null,
         'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
       ];

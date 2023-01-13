@@ -86,7 +86,8 @@ class Product extends Model
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        // 'category' => $this->category,
+        'category' => $this->category,
+        'categories' => $this->categories,
         'price' => $this->price,
         'old_price' => $this->old_price,
         'is_active' => $this->is_active,
@@ -116,6 +117,11 @@ class Product extends Model
     | RELATIONS
     |--------------------------------------------------------------------------
     */
+    
+    public function categories()
+    {
+      return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_category_product');
+    }
     
     public function category()
     {
