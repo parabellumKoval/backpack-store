@@ -43,6 +43,8 @@ class ProductController extends \App\Http\Controllers\Controller
     $products = Product::query()
               ->select('ak_products.*')
               ->distinct('ak_products.id')
+              ->base()
+              ->active()
               ->when(request('category_id'), function($query) use($node_ids){
                 $query->whereIn('ak_products.category_id', $node_ids);
               })

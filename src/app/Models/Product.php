@@ -160,11 +160,20 @@ class Product extends Model
     {
       return $query->where('is_active', 1);
     }
+
+    public function scopeBase($query)
+    {
+      return $query->where('parent_id', null);
+    }
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getImageAttribute() {
+      return $this->images && count($this->images)? $this->images[0]: null;
+    }
 
     public function getImageSrcAttribute() {
       if(isset($this->images[0]) && isset($this->images[0]['src']))
