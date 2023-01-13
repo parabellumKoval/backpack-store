@@ -4,6 +4,8 @@ namespace Backpack\Store\app\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
+use Backpack\Store\app\Http\Resources\AttributeSmallResource;
+
 class ProductTinyResource extends JsonResource
 {
     /**
@@ -20,6 +22,7 @@ class ProductTinyResource extends JsonResource
         'short_name' => $this->short_name,
         'slug' => $this->slug,
         'price' => $this->price,
+        'attrs' => $this->attrs && $this->attrs->count()? AttributeSmallResource::collection($this->attrs): null,
       ];
     }
 }

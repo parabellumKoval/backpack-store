@@ -45,11 +45,11 @@ class ProductController extends \App\Http\Controllers\Controller
               ->distinct('ak_products.id')
               ->base()
               ->active()
-              ->when(request('category_id'), function($query) use($node_ids){
-                $query->whereIn('ak_products.category_id', $node_ids);
-              })
-              ->when(request('category_slug'), function($query) use($node_ids){
-                $query->whereIn('ak_products.category_id', $node_ids);
+              ->when((request('category_id') || request('category_slug')), function($query) use($node_ids){
+                $query->leftJoin('ak_category_product as cp', 'cp.product_id', '=', 'ak_products.id');
+
+                $query->whereIn('ak_products.category_id', $node_ids)
+                      ->orWhereIn('cp.category_id', $node_ids);
               })
               ->when(request('attrs'), function($query) {
                 $attrs = request('attrs');
