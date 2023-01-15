@@ -146,6 +146,18 @@ class CategoryCrudController extends CrudController
 			      'store_in' => 'seo',
             'tab' => 'SEO'
           ],
+          [
+            'name' => 'params',
+            'label' => 'Параметры',
+            'type' => 'table',
+            'columns'  => [
+              'key'  => 'Ключ',
+              'value'  => 'Значение',
+            ],
+            'fake' => true,
+			      'store_in' => 'extras',
+            'tab' => 'Дополнительно'
+          ],
         ]);
     }
 

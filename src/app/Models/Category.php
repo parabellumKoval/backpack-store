@@ -38,14 +38,15 @@ class Category extends Model
     // protected $fillable = [];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $fakeColumns = ['seo', 'extras', 'images'];
+    protected $fakeColumns = ['seo', 'extras', 'images', 'params'];
     protected $casts = [
-	    'seo' => 'array',
-	    'extras' => 'array',
+	    //'seo' => 'array',
+	    'params' => 'array',
+	    //'extras' => 'array',
       'images' => 'array'
     ];
 
-    protected $translatable = ['name', 'content', 'seo'];
+    protected $translatable = ['name', 'content', 'seo', 'extras'];
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -144,6 +145,14 @@ class Category extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    public function getSeoToArrayAttribute() {
+      return !empty($this->seo)? json_decode($this->seo): null;
+    }
+
+    public function getExtrasToArrayAttribute() {
+      return !empty($this->extras)? json_decode($this->extras): null;
+    }
+
     public function getImageSrcAttribute() {
       if(isset($this->images[0]) && isset($this->images[0]['src']))
         return $this->images[0]['src'];

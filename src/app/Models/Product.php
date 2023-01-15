@@ -252,6 +252,10 @@ class Product extends Model
       // return $props;
     }
 
+    public function getSeoToArrayAttribute() {
+      return !empty($this->seo)? json_decode($this->seo): null;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

@@ -20,12 +20,10 @@ class CategoryLargeResource extends JsonResource
         'slug' => $this->slug,
         'content' => $this->content,
         'excerpt' => $this->excerpt,
-        'extras' => $this->extras,
+        'extras' => $this->extrasToArray,
         'images' => $this->images,
         'children' => $this->children,
-        'h1' => $this->seo['h1'] ?? null,
-        'meta_title' => $this->seo['meta_title'] ?? null,
-        'meta_description' => $this->seo['meta_description'] ?? null,
+        'seo' => $this->seoToArray
       ];
     }
 }
