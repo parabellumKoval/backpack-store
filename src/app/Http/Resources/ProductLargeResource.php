@@ -28,11 +28,13 @@ class ProductLargeResource extends JsonResource
         'code' => $this->code,
         'old_price' => $this->old_price,
         'rating' => $this->rating,
+        'reviews_rating_detailes' => $this->reviewsRatingDetailes,
         'images' => $this->images,
         'content' => $this->content,
         'categories' => $this->categories && $this->categories->count()? CategoryTinyResource::collection($this->categories): null,
         'attrs' => $this->attrs && $this->attrs->count()? AttributeSmallResource::collection($this->attrs): null,
-        'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null
+        'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null,
+        'seo' => $this->seoToArray
       ];
     }
 }
