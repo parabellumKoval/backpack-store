@@ -142,11 +142,6 @@ class Product extends Model
     // {
     //   return $this->belongsTo('\Aimix\Shop\app\Models\Brand');
     // }
-
-    // public function reviews()
-    // {
-    //   return $this->hasMany(config('backpack.store.review_model', '\Backpack\Reviews\app\Models\Review'));
-    // }
     
     public function orders()
     {
@@ -176,6 +171,31 @@ class Product extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getReviewsRatingDetailesAttribute() {
+      $reviews = $this->reviews;
+
+      //return  $reviews;
+      $rating_1 = $reviews->where('rating', 1)->count();
+      $rating_2 = $reviews->where('rating', 2)->count();
+      $rating_3 = $reviews->where('rating', 3)->count();
+      $rating_4 = $reviews->where('rating', 4)->count();
+      $rating_5 = $reviews->where('rating', 5)->count();
+
+      
+      return [
+        'reviews_count' => $reviews->count(),
+        'rating_count' => $reviews->where('rating', '!==', null)->count(),
+        'rating' => round($this->rating, 1),
+        'rating_detailes' => [
+          'rating_5' => $rating_5,
+          'rating_4' => $rating_4,
+          'rating_3' => $rating_3,
+          'rating_2' => $rating_2,
+          'rating_1' => $rating_1
+        ]
+      ];
+    }
 
     public function getImageAttribute() {
       return $this->images && count($this->images)? $this->images[0]: null;
@@ -245,11 +265,13 @@ class Product extends Model
       if(!$attributes)
         return;
 
-      //dd($attributes);
       foreach($attributes as $attr_key => $value) {
         $clear_value = is_array($value)? array_filter($value, fn($i) => $i !== null): trim($value);
         $serialized_value = is_array($clear_value)? json_encode(array_values($clear_value)): $clear_value;
         
+        if(empty($serialized_value))
+          continue;
+
         $this->attrs()->attach($attr_key, ['value' => $serialized_value]);
       }
     }

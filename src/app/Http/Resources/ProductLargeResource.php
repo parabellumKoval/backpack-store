@@ -28,6 +28,7 @@ class ProductLargeResource extends JsonResource
         'code' => $this->code,
         'old_price' => $this->old_price,
         'rating' => $this->rating,
+        'reviews_rating_detailes' => $this->reviewsRatingDetailes,
         'images' => $this->images,
         'content' => $this->content,
         'categories' => $this->categories && $this->categories->count()? CategoryTinyResource::collection($this->categories): null,
