@@ -39,7 +39,7 @@ class Product extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['props', 'price', 'old_price', 'is_active'];
+    protected $fillable = ['props', 'price', 'old_price', 'is_active', 'code'];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [

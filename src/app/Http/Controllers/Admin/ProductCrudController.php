@@ -291,6 +291,13 @@ class ProductCrudController extends ProductCrudBase
           ],
           'tab' => 'Основное'
         ]);
+
+        // CODE
+        $this->crud->addField([
+          'name' => 'code',
+          'label' => 'Артикул',
+          'tab' => 'Основное'
+        ]);
         
         
         // IMAGES
