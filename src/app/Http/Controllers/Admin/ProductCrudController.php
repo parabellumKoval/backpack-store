@@ -25,7 +25,7 @@ class ProductCrudController extends ProductCrudBase
     use \Backpack\CRUD\app\Http\Controllers\Operations\InlineCreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
     
     private $categories;
@@ -114,29 +114,6 @@ class ProductCrudController extends ProductCrudBase
           'label' => 'Название'
         ]);
         
-        $this->crud->addColumn([
-          'name' => 'category_id',
-          'label' => 'Категория',
-          'type' => 'select',
-          'entity' => 'category',
-          'attribute' => 'name',
-          'model' => 'Aimix\Shop\app\Models\Category',
-          'options'   => (function ($query) {
-              return $query->withoutGlobalScopes()->get();
-          }),
-        ]);
-        
-        if(config('backpack.store.enable_brands')) {
-          $this->crud->addColumn([
-            'name' => 'brand_id',
-            'label' => 'Производитель',
-            'type' => 'select',
-            'entity' => 'brand',
-            'attribute' => 'name',
-            'model' => 'Aimix\Shop\app\Models\Brand',
-          ]);
-        }
-
         $this->crud->addColumn([
           'name' => 'is_active',
           'label' => 'Вкл',
@@ -272,32 +249,37 @@ class ProductCrudController extends ProductCrudBase
         ]);
 
         // PRICE
-        if(config('backpack.store.enable_product_price')) {
-          $this->crud->addField([
-            'name' => 'price',
-            'label' => 'Цена',
-            'type' => 'number',
-            'prefix' => '$',
-            'wrapper'   => [ 
-              'class' => 'form-group col-md-6'
-            ],
-            'tab' => 'Основное'
-          ]);
-        }
+        $this->crud->addField([
+          'name' => 'price',
+          'label' => 'Цена',
+          'type' => 'number',
+          'prefix' => '$',
+          'wrapper'   => [ 
+            'class' => 'form-group col-md-6'
+          ],
+          'attributes' => [
+            'step' => 0.01,
+            'min' => 0
+          ],
+          'tab' => 'Основное'
+        ]);
 
         // OLD PRICE
-        if(config('backpack.store.enable_product_old_price')) {
-          $this->crud->addField([
-            'name' => 'old_price',
-            'label' => 'Старая цена',
-            'type' => 'number',
-            'prefix' => '$',
-            'wrapper'   => [ 
-              'class' => 'form-group col-md-6'
-            ],
-            'tab' => 'Основное'
-          ]);
-        }
+        $this->crud->addField([
+          'name' => 'old_price',
+          'label' => 'Старая цена',
+          'type' => 'number',
+          'prefix' => '$',
+          'wrapper'   => [ 
+            'class' => 'form-group col-md-6'
+          ],
+          'attributes' => [
+            'step' => 0.01,
+            'min' => 0
+          ],
+          'tab' => 'Основное'
+        ]);
+        
         
         // DESCRIPTION
         $this->crud->addField([
@@ -309,46 +291,7 @@ class ProductCrudController extends ProductCrudBase
           ],
           'tab' => 'Основное'
         ]);
-
-        // BRAND
-        if(config('backpack.store.enable_brands')) {
-          $this->crud->addField([
-            'name' => 'brand_id',
-            'label' => 'Производитель',
-            'type' => 'select2',
-            'entity' => 'brand',
-            'attribute' => 'name',
-            'model' => 'Aimix\Shop\app\Models\Brand',
-            'tab' => 'Основное'
-          ]);
-        }
         
-        // IS HIT
-        if(config('backpack.store.enable_is_hit')) {
-          $this->crud->addField([
-            'name' => 'is_hit',
-            'label' => 'Хит',
-            'type' => 'boolean',
-            'tab' => 'Основное'
-          ]);
-        }
-        
-        // SALES
-        if(config('backpack.store.enable_product_promotions')) {
-          $this->crud->addField([
-            'name' => 'sales',
-            'label' => 'Акции',
-            'fake' => true,
-            'type' => 'table',
-            'store_in' => 'extras',
-            'entity_singular' => 'акцию',
-            'columns' => [
-              'discount' => 'Скидка, руб.',
-              'desc' => 'Описание',
-            ],
-            'tab' => 'Основное'
-          ]);
-        }
         
         // IMAGES
         $this->crud->addField([
@@ -377,11 +320,6 @@ class ProductCrudController extends ProductCrudBase
         
         
         // ATTRIBUTES
-        $this->crud->addField([
-          'name' => 'props',
-          'type' => 'hidden',
-        ]);
-
         $this->setAttributesFields();
 
         // META TITLE
@@ -425,6 +363,13 @@ class ProductCrudController extends ProductCrudBase
     public function setAttributesFields() {
     
       if(config('backpack.store.enable_attributes', false) && isset($this->attrs) && $this->entry) {
+        
+        $this->crud->addField([
+          'name' => 'props',
+          'type' => 'hidden',
+          'value' => null
+        ]);
+
 
         $attr_fields = [];
 
