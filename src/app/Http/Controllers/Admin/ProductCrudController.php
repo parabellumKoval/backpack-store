@@ -280,7 +280,6 @@ class ProductCrudController extends ProductCrudBase
           'tab' => 'Основное'
         ]);
         
-        
         // DESCRIPTION
         $this->crud->addField([
           'name' => 'content',
@@ -318,6 +317,16 @@ class ProductCrudController extends ProductCrudBase
             [
               'name' => 'title',
               'label' => 'title'
+            ],
+            [
+              'name' => 'size',
+              'type' => 'radio',
+              'label' => 'Размер',
+              'options' => [
+                'cover' => 'Cover',
+                'contain' => 'Contain'
+              ],
+              'inline' => true
             ]
           ],
           'new_item_label'  => 'Добавить изобрежение',
