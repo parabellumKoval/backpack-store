@@ -57,12 +57,9 @@ class Order extends Model
 
     public function user()
     {
-      return $this->belongsTo(config('backpack.store.user_model', 'app\Models\User'));
+      return $this->belongsTo(config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'));
     }
     
-    // public function transactions() {
-    //   return $this->hasMany('Aimix\Account\app\Models\Transaction');
-    // }
     /*
     |--------------------------------------------------------------------------
     | SCOPES

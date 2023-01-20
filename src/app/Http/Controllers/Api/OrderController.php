@@ -16,11 +16,18 @@ use Backpack\Store\app\Http\Resources\OrderLargeResource;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
+
+  private $order_model = '';
+
+  public function __construct() {
+    $this->order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+  }
+
   public function index(Request $request) {
 
     $profile = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
 
-    $orders = Order::query()
+    $orders = $this->order_model::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
               ->where('user_id', $profile->id)
@@ -44,7 +51,7 @@ class OrderController extends \App\Http\Controllers\Controller
 
   public function all(Request $request) {
 
-    $orders = Order::query()
+    $orders = $this->order_model::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
               ->when(request('user_id'), function($query) {
@@ -71,7 +78,7 @@ class OrderController extends \App\Http\Controllers\Controller
   public function show(Request $request, $id) {
 
     try {
-      $order = Order::findOrFail($id);
+      $order = $this->order_model::findOrFail($id);
     }catch(ModelNotFoundException $e) {
       return response()->json($e->getMessage(), 404);
     }
@@ -166,7 +173,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $info['payment'] = $data['payment'];
 
 
-    $order = Order::create([
+    $order = $this->order_model::create([
       'user_id' => isset($user_model)? $user_model->id: null,
       'code' => random_int(100000, 999999),
       'price' => round($products->reduce(function($carry, $item) {
