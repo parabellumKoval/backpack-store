@@ -145,12 +145,13 @@ class Product extends Model
     
     public function orders()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Order', 'ak_order_product');
+      $order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+      return $this->belongsToMany($order_model, 'ak_order_product');
     }
     
     public function attrs()
     {
-        return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value');
+      return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value');
     }
     /*
     |--------------------------------------------------------------------------

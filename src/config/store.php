@@ -23,6 +23,7 @@ return [
     'enable_reviews_in_product_crud' => true,
 
     // ORDER
+    'order_model' => 'Backpack\Store\app\Models\Order',
     'enable_orders_in_product_crud' => true,
     'order_per_page' => 12,
 
