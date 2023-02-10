@@ -23,7 +23,7 @@ class ProductCartResource extends JsonResource
         'in_stock' => $this->in_stock,
         'price' => $this->price,
         'old_price' => $this->old_price,
-        'image' => count($this->images) ?? null,
+        'image' => $this->image,
         'amount' => $this->amount
       ];
     }
