@@ -199,7 +199,12 @@ class Product extends Model
     }
 
     public function getImageAttribute() {
-      return $this->images && count($this->images)? $this->images[0]: null;
+      $image = $this->images && count($this->images)? $this->images[0]: null;
+
+      if(!$image && $this->parent)
+        $image = $this->parent->image;
+
+      return $image;
     }
 
     public function getImageSrcAttribute() {
