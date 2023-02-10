@@ -97,7 +97,7 @@ class OrderController extends \App\Http\Controllers\Controller
   }
 
   public function create(Request $request){
-    $data = $request->only(['user', 'products', 'address', 'delivery', 'payment', 'provider']);
+    $data = $request->only(['user', 'products', 'address', 'delivery', 'payment', 'provider', 'bonusesUsed']);
 
     $validator = Validator::make($data, [
       'products' => 'required|array',
@@ -172,6 +172,8 @@ class OrderController extends \App\Http\Controllers\Controller
     // Payment
     $info['payment'] = $data['payment'];
 
+    // Bonuses used
+    $info['bonusesUsed'] = $data['bonusesUsed'];
 
     $order = $this->order_model::create([
       'user_id' => isset($user_model)? $user_model->id: null,
