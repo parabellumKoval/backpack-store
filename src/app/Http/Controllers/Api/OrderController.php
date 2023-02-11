@@ -196,9 +196,16 @@ class OrderController extends \App\Http\Controllers\Controller
       throw new Exception('The ID of the base record was not pass.');
   
     $base = Order::findOrFail($request->id);
+    
+    $order = $base->replicate();
 
     try {
-      $order = $base->replicate();
+      $order->code = random_int(100000, 999999);
+
+      $info = $order->info;
+      $info['bonusesUsed'] = 0;
+      $order->info = $info;
+      
       $order->save();
     }catch(\Exception $e) {
       throw new Exception('An error has occurred. Failed to create reorder');
