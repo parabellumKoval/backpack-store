@@ -39,7 +39,8 @@ class OrderController extends \App\Http\Controllers\Controller
               })
               ->when(request('price'), function($query) {
                 $query->where('ak_orders.price', request('price'));
-              });
+              })
+              ->orderBy('created_at', 'desc');
     
     $per_page = request('per_page', config('backpack.store.order_per_page', 12));
     
@@ -205,7 +206,7 @@ class OrderController extends \App\Http\Controllers\Controller
       $info = $order->info;
       $info['bonusesUsed'] = 0;
       $order->info = $info;
-      
+
       $order->save();
     }catch(\Exception $e) {
       throw new Exception('An error has occurred. Failed to create reorder');
