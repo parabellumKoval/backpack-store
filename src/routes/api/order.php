@@ -23,11 +23,14 @@ Route::prefix('api/orders')->controller(OrderController::class)->group(function 
   Route::post('/get', 'index')->middleware(['api', "auth:${guard}"]);
 
   Route::get('', 'index')->middleware(['api', "auth:${guard}"]);
+  
+  Route::post('/copy', 'copy')->middleware(['api', "auth:${guard}"]);
 
   Route::get('/all', 'all');
 
   Route::get('/{slug}', 'show');
 
   Route::post('', 'create')->middleware('api');
+
 
 });

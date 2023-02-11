@@ -190,4 +190,20 @@ class OrderController extends \App\Http\Controllers\Controller
 
     return response()->json($order); 
   }
+
+  public function copy(Request $request) {
+    if(!$request->id)
+      throw new Exception('The ID of the base record was not pass.');
+  
+    $base = Order::findOrFail($request->id);
+
+    try {
+      $order = $base->replicate();
+      $order->save();
+    }catch(\Exception $e) {
+      throw new Exception('An error has occurred. Failed to create reorder');
+    }
+
+    return $order;
+  }
 }
