@@ -40,15 +40,15 @@
       @endif
 
       <p><strong>{{ $product['name'] ?? '' }}</strong> {{ $product['short_name'] ?? '' }}</p>
-      <p>Цена: <strong>{{ $product['price'] }} руб</strong></p>
+      <p>Цена: <strong>{{ $product['price'] }} $</strong></p>
       @if($product['old_price'])
-      <p>Старая цена: <strong>{{ $product['old_price'] }} руб</strong></p>
+      <p>Старая цена: <strong>{{ $product['old_price'] }} $</strong></p>
       @endif
       <p>Количество: <strong>{{ $product['amount'] }} шт</strong></p>
-      <p>Сумма: <strong>{{ $product['price'] * $product['amount'] }} руб</strong></p>
+      <p>Сумма: <strong>{{ $product['price'] * $product['amount'] }} $</strong></p>
     </div>
     <br>
   @endforeach
 
-  <h4>Сумма заказа: <strong>{{ $entry->price }} руб</strong></h4>
+  <h4>Сумма заказа: <strong>{{ $entry->price }} $</strong></h4>
 </span>
