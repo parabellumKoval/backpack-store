@@ -133,6 +133,12 @@ class OrderController extends \App\Http\Controllers\Controller
       }
 
       $user_model = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
+      $user_data = $user_model->infoData;
+    }
+    elseif($data['provider'] === 'data') {
+      if(isset($data['user']) && is_array($data['user'])) {
+        $user_data = $data['user'];
+      }
     }
 
     // GET PRODUCTS COLLECTION
@@ -150,16 +156,7 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     // User data
-    if(isset($data['user']) && is_array($data['user']))
-    {
-      foreach($data['user'] as $key => $item) {
-        $info['user'][$key] = $item;
-      }
-    }
-    else
-    {
-      $info['user'] = $data['user'];
-    }
+    $info['user'] = $user_data;
 
     // Products
     foreach($products as $key => $product) {
