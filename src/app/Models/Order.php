@@ -88,6 +88,23 @@ class Order extends Model
 	    	return '<span class="icon-delivered order-history-icon"></span><span class="text" style="color: #ACDA53;">delivered</span>';
     }
     
+    public function getAddressStringAttribute(){
+      if(!isset($this->info['address']) || !count($this->info['address']))
+        return null;
+      
+      return implode(', ', $this->info['address']);
+    }
+
+    public function getUserStringAttribute() {
+      if(!isset($this->info['user'])  || !count($this->info['user']))
+        return null;
+
+      $arr = array_filter($this->info['user'], function($item) {
+        return !empty($item);
+      });
+        
+      return implode(', ', $arr);
+    }
     
     /*
     |--------------------------------------------------------------------------
