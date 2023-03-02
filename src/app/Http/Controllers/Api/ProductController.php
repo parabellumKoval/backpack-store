@@ -78,6 +78,23 @@ class ProductController extends \App\Http\Controllers\Controller
     return $products;
   }
 
+  public function random(Request $request) {
+    $limit = request('limit') ?? 4;
+    
+    $products = Product::base()
+                ->active()
+                ->when(request('not_id'), function($query) {
+                  $query->where('id', '!=', request('not_id'));
+                })
+                ->inRandomOrder()
+                ->limit($limit)
+                ->get();
+
+    $products = $this->product_small_resource_class::collection($products);
+
+    return $products;
+  }
+
   public function show(Request $request, $slug) {
     $product = Product::where('slug', $slug)->first();
 
