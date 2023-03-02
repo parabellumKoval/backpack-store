@@ -19,6 +19,8 @@ use Backpack\Store\app\Http\Controllers\Api\ProductController;
 Route::prefix('api/products')->controller(ProductController::class)->group(function () {
   
   Route::get('', 'index');
+  
+  Route::get('/random', 'random');
 
   Route::get('/{slug}', 'show');
 
