@@ -18,8 +18,8 @@ use Backpack\Store\app\Http\Controllers\Api\CategoryController;
 
 Route::prefix('api/categories')->controller(CategoryController::class)->group(function () {
   
-  Route::get('', 'index');
+  Route::get('', 'index')->middleware('api');
 
-  Route::get('/{slug}', 'show');
+  Route::get('/{slug}', 'show')->middleware('api');
 
 });
