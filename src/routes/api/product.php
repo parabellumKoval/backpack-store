@@ -18,10 +18,10 @@ use Backpack\Store\app\Http\Controllers\Api\ProductController;
 
 Route::prefix('api/products')->controller(ProductController::class)->group(function () {
   
-  Route::get('', 'index');
+  Route::get('', 'index')->middleware('api');
   
-  Route::get('/random', 'random');
+  Route::get('/random', 'random')->middleware('api');
 
-  Route::get('/{slug}', 'show');
+  Route::get('/{slug}', 'show')->middleware('api');
 
 });
