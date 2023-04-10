@@ -96,8 +96,7 @@ class ProductController extends \App\Http\Controllers\Controller
   }
 
   public function show(Request $request, $slug) {
-    $product = Product::where('slug', $slug)->first();
-
+    $product = Product::where('slug', $slug)->firstOrFail();
     return new $this->product_large_resource_class($product);
   }
 
