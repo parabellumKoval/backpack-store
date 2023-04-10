@@ -18,7 +18,7 @@ class CategorySmallResource extends JsonResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'children' => $this->children
+        'children' => $this->children()->orderBy('lft')->get()
       ];
     }
 }

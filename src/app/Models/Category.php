@@ -74,19 +74,19 @@ class Category extends Model
       ];    
     }
     
-    protected static function boot()
-    {
+    // protected static function boot()
+    // {
 
-        parent::boot();
+    //     parent::boot();
 
-        if(config('aimix.aimix.enable_languages')) {
-          $language = session()->has('lang')? session()->get('lang'): 'ru';
+    //     if(config('aimix.aimix.enable_languages')) {
+    //       $language = session()->has('lang')? session()->get('lang'): 'ru';
           
-          static::addGlobalScope('language', function (Builder $builder) use ($language) {
-              $builder->where('language_abbr', $language);
-          });
-        }
-    }
+    //       static::addGlobalScope('language', function (Builder $builder) use ($language) {
+    //           $builder->where('language_abbr', $language);
+    //       });
+    //     }
+    // }
     
     public function clearGlobalScopes()
     {
@@ -132,13 +132,15 @@ class Category extends Model
     |--------------------------------------------------------------------------
     */
     public function scopeNoEmpty($query){
-      
       return $query->has('products');
     }
 
     public function scopeActive($query){
-      
       return $query->where('is_active', 1);
+    }
+
+    public function scopeRoot($query){
+      return $query->where('parent_id', NULL);
     }
     /*
     |--------------------------------------------------------------------------

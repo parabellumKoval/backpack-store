@@ -17,7 +17,9 @@ class CategoryController extends \App\Http\Controllers\Controller
     $categories = Category::query()
               ->select('ak_product_categories.*')
               ->distinct('ak_product_categories.id')
-              ->active();
+              ->root()
+              ->active()
+              ->orderBy('lft');
     
     $per_page = request('per_page', config('backpack.store.category_per_page', 12));
     

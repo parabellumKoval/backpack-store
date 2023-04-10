@@ -1,5 +1,6 @@
 @php
   $products = $entry->info['products'];
+  $bonusesUsed = $entry->info['bonusesUsed'] ?? 0;
   $info = \Illuminate\Support\Arr::except($entry->info, ['products']);
 @endphp
 
@@ -51,4 +52,6 @@
   @endforeach
 
   <h4>Сумма заказа: <strong>{{ $entry->price }} $</strong></h4>
+  <h4>Использовано бонусов: <strong>{{ $bonusesUsed }} $</strong></h4>
+  <h4>Итого сумма заказа: <strong>{{ $entry->price - $bonusesUsed }} $</strong></h4>
 </span>
