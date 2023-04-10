@@ -20,6 +20,7 @@ class CategoryCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ReorderOperation;
     
 
     public function setup()
@@ -29,6 +30,15 @@ class CategoryCrudController extends CrudController
         $this->crud->setEntityNameStrings('категорию', 'категории');
     }
 
+    protected function setupReorderOperation()
+    {
+        // define which model attribute will be shown on draggable elements 
+        $this->crud->set('reorder.label', 'name');
+        // define how deep the admin is allowed to nest the items
+        // for infinite levels, set it to 0
+        $this->crud->set('reorder.max_level', 2);
+    }
+    
     protected function setupListOperation()
     {
         // TODO: remove setFromDb() and manually define Columns, maybe Filters
