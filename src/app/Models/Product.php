@@ -122,11 +122,6 @@ class Product extends Model
     {
       return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_category_product');
     }
-    
-    public function category()
-    {
-      return $this->belongsTo('Backpack\Store\app\Models\Category', 'category_id');
-    }
 
     public function parent()
     {
@@ -172,6 +167,11 @@ class Product extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    
+    public function getCategoryAttribute()
+    {
+      return !empty($this->categories)? $this->categories[0]: null;
+    }
 
     public function getReviewsRatingDetailesAttribute() {
       $reviews = $this->reviews;
