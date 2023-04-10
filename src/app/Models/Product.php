@@ -170,7 +170,7 @@ class Product extends Model
     
     public function getCategoryAttribute()
     {
-      return !empty($this->categories)? $this->categories[0]: null;
+      return !empty($this->categories) && $this->categories->count()? $this->categories[0]: null;
     }
 
     public function getReviewsRatingDetailesAttribute() {
