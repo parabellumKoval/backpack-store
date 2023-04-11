@@ -46,10 +46,10 @@ class Attribute extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
-    // public function clearGlobalScopes()
-    // {
-    //     static::$globalScopes = [];
-    // }
+    public function clearGlobalScopes()
+    {
+        static::$globalScopes = [];
+    }
     
     public function toArray()
     {
