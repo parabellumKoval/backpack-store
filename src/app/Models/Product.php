@@ -20,6 +20,9 @@ use Backpack\Store\database\factories\ProductFactory;
 // REVIEWS
 use Backpack\Reviews\app\Traits\Reviewable;
 
+// PIVOT
+use Backpack\Store\app\Models\AttributeProduct;
+
 class Product extends Model
 {
     use HasFactory;
@@ -70,15 +73,15 @@ class Product extends Model
       return ProductFactory::new();
     }
 
-    protected static function boot()
-    {
-        parent::boot();
-    }
+    // protected static function boot()
+    // {
+    //     parent::boot();
+    // }
     
-    public function clearGlobalScopes()
-    {
-        static::$globalScopes = [];
-    }
+    // public function clearGlobalScopes()
+    // {
+    //     static::$globalScopes = [];
+    // }
     
     public function toArray()
     {
@@ -146,7 +149,7 @@ class Product extends Model
     
     public function attrs()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value');
+      return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value')->using(AttributeProduct::class);
     }
     /*
     |--------------------------------------------------------------------------
@@ -270,7 +273,7 @@ class Product extends Model
 
 
     public function setPropsAttribute($attributes) {
-      $this->attrs()->detach();
+      //$this->attrs()->detach();
 
       if(!$attributes)
         return;
@@ -282,7 +285,10 @@ class Product extends Model
         if(empty($serialized_value))
           continue;
 
-        $this->attrs()->attach($attr_key, ['value' => $serialized_value]);
+        //$this->attrs()->attach($attr_key, ['value' => $serialized_value]);
+        $this->attrs()->syncWithoutDetaching([
+          $attr_key => ['value' => $serialized_value]
+        ]);
       }
     }
 }

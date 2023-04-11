@@ -41,6 +41,9 @@ class ProductCrudController extends ProductCrudBase
           $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
         }
 
+        // SET LOCALE
+        $this->setLocale();
+
         // SET OPERATION
         $this->setOperation();
 
@@ -377,6 +380,7 @@ class ProductCrudController extends ProductCrudBase
     }
 
     public function setAttributesFields() {
+      //dd($this->attrs[0]->name);
     
       if(config('backpack.store.enable_attributes', false) && isset($this->attrs) && $this->entry) {
         
@@ -561,5 +565,10 @@ class ProductCrudController extends ProductCrudBase
 
     private function setOperation() {
       $this->opr = $this->crud->getCurrentOperation();
+    }
+
+    private function setLocale() {
+      if(\Request::query('locale'))
+        app()->setLocale(\Request::query('locale'));
     }
 }
