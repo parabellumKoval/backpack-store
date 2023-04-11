@@ -33,7 +33,7 @@
 <div id="conf-all-wrapper" class="form-group col-sm-12" data-current-type="">
 	
 <div class="panel panel-default">
-  
+
   <!-- SELECT TYPE -->
   <div class="panel-heading">
     <label>{!! $field['label'] !!}</label>
@@ -94,7 +94,7 @@
 			    @foreach($inputValues['select'] as $key => $value)
 				    <div class="form-inline select-item">
 					    <div class="input-group" style="width:75%">
-						    <input type="text" name="type[values][]" value="{{ $value }}" class="form-control" style="display:inline-block; width: 100%">
+						    <input type="text" name="values[]" value="{{ $value }}" class="form-control" style="display:inline-block; width: 100%">
 					    </div>
 					    <div class="input-group">
 						    <a href="/" class="btn btn-default option-remove" ><i class="fa fa-trash"></i> Удалить</a>
@@ -112,8 +112,8 @@
 
 				    <div class="form-inline select-item d-flex justify-content-between">
 					    <div class="input-group d-flex justify-content-between" style="width:75%">
-						    <input type="text" name="type[values][{{ $key }}][name]" value="{{ $value->name }}" class="form-control" style="width: 75%" placeholder="Название цвета" disabled>
-								<input type="color" name="type[values][{{ $key }}][code]" value="{{ $value->code }}" class="form-control" style="width: 20%" disabled>
+						    <input type="text" name="values[{{ $key }}][name]" value="{{ $value->name }}" class="form-control" style="width: 75%" placeholder="Название цвета" disabled>
+								<input type="color" name="values[{{ $key }}][code]" value="{{ $value->code }}" class="form-control" style="width: 20%" disabled>
 					    </div>
 					    <div class="input-group">
 						    <a href="/" class="btn btn-default option-remove" ><i class="fa fa-trash"></i> Удалить</a>
@@ -145,13 +145,13 @@
       @if($inputValues['number'])
           <div class="form-inline select-item justify-content-between">
             <div class="input-group" style="width:30%">
-              <input type="number" name="type[values][min]" value="{{ $inputValues['number']['min'] }}" class="form-control" style="display:inline-block; width: 100%" placeholder="Минимум">
+              <input type="number" name="values[min]" value="{{ $inputValues['number']['min'] }}" class="form-control" style="display:inline-block; width: 100%" placeholder="Минимум">
             </div>
             <div class="input-group" style="width:30%">
-              <input type="number" name="type[values][step]" value="{{ $inputValues['number']['step'] }}" step="0.001" class="form-control" style="display:inline-block; width: 100%" placeholder="Шаг">
+              <input type="number" name="values[step]" value="{{ $inputValues['number']['step'] }}" step="0.001" class="form-control" style="display:inline-block; width: 100%" placeholder="Шаг">
             </div>
             <div class="input-group" style="width:30%">
-              <input type="number" name="type[values][max]" value="{{ $inputValues['number']['max'] }}" class="form-control" style="display:inline-block; width: 100%" placeholder="Максимум">
+              <input type="number" name="values[max]" value="{{ $inputValues['number']['max'] }}" class="form-control" style="display:inline-block; width: 100%" placeholder="Максимум">
             </div>
           </div>	
       @endif
@@ -349,11 +349,11 @@
 				var selectItem = $('.select-template[data-field-type="' + fieldType + '"]').clone().removeClass('select-template').addClass('select-item');
 
 				if(fieldType == 'color') {
-					$(selectItem).find('.option-add').removeClass('option-add btn-primary').addClass('option-remove btn-default').html('<i class="fa fa-trash"></i> Удалить').end().find('input[type="text"]').attr('name', 'type[values][' + optionsLength + '][name]').end().find('input[type="color"]').attr('name', 'type[values][' + optionsLength + '][code]').end().find('.error-p').remove();
+					$(selectItem).find('.option-add').removeClass('option-add btn-primary').addClass('option-remove btn-default').html('<i class="fa fa-trash"></i> Удалить').end().find('input[type="text"]').attr('name', 'values[' + optionsLength + '][name]').end().find('input[type="color"]').attr('name', 'values[' + optionsLength + '][code]').end().find('.error-p').remove();
 					
 					$('.conf-field-wrapper[data-field-type = "color"]').append(selectItem);
 				} else {
-					$(selectItem).find('.option-add').removeClass('option-add btn-primary').addClass('option-remove btn-default').html('<i class="fa fa-trash"></i> Удалить').end().find('input').attr('name', 'type[values][]').end().find('.error-p').remove();
+					$(selectItem).find('.option-add').removeClass('option-add btn-primary').addClass('option-remove btn-default').html('<i class="fa fa-trash"></i> Удалить').end().find('input').attr('name', 'values[]').end().find('.error-p').remove();
 					
 					$('.conf-field-wrapper[data-field-type = "select"]').append(selectItem);
 				}

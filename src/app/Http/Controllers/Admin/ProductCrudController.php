@@ -446,6 +446,16 @@ class ProductCrudController extends ProductCrudBase
               ]
             );
           }
+          else if($attribute->type === 'string')
+          {
+            $attr_fields[$index] = array_merge(
+              $attr_fields[$index],
+              [
+                'type' => 'text',
+                'value' => $value,
+              ]
+            );
+          }
         }
 
         foreach($attr_fields as $attr_field) {
