@@ -17,17 +17,17 @@ use Backpack\Store\app\Http\Resources\OrderLargeResource;
 class OrderController extends \App\Http\Controllers\Controller
 { 
 
-  private $order_model = '';
+  private $ORDER_MODEL = '';
 
   public function __construct() {
-    $this->order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+    $this->ORDER_MODEL = config('backpack.store.ORDER_MODEL', 'Backpack\Store\app\Models\Order');
   }
 
   public function index(Request $request) {
 
     $profile = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
 
-    $orders = $this->order_model::query()
+    $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
               ->where('user_id', $profile->id)
@@ -52,7 +52,7 @@ class OrderController extends \App\Http\Controllers\Controller
 
   public function all(Request $request) {
 
-    $orders = $this->order_model::query()
+    $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
               ->when(request('user_id'), function($query) {
@@ -79,7 +79,7 @@ class OrderController extends \App\Http\Controllers\Controller
   public function show(Request $request, $id) {
 
     try {
-      $order = $this->order_model::findOrFail($id);
+      $order = $this->ORDER_MODEL::findOrFail($id);
     }catch(ModelNotFoundException $e) {
       return response()->json($e->getMessage(), 404);
     }
@@ -98,32 +98,69 @@ class OrderController extends \App\Http\Controllers\Controller
   }
 
   public function create(Request $request){
-    $data = $request->only(['user', 'products', 'address', 'delivery', 'payment', 'provider', 'bonusesUsed']);
 
-    $validator = Validator::make($data, [
-      'products' => 'required|array',
-      'payment' => 'required|string|min:2|max:255',
-      'delivery' => 'required|string|min:2|max:255',
-      'address.country' => 'required|string|min:2|max:255',
-      'address.city' => 'required|string|min:2|max:255',
-      'address.state' => 'required|string|min:2|max:255',
-      'address.street' => 'required|string|min:2|max:255',
-      'address.apartment' => 'required|string|min:2|max:255',
-      'address.zip' => 'required|string|min:2|max:255',
-      'user' => 'required_if:provider,data',
-      'provider' => 'required|in:auth,data'
-    ]);
+    // Get only allowed fields
+    $data = $request->only($this->ORDER_MODEL::getFieldKeys());
+
+    // Apply validation rules to data
+    $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
 
     if ($validator->fails()) {
-      $errors = $validator->errors()->toArray();
-      $errors_array = [];
-
-      foreach($errors as $key => $error){
-        $this->assignArrayByPath($errors_array, $key, $error);
-      }
-
-      return response()->json($errors_array, 400);
+      return response()->json($validator->errors(), 400);
     }
+
+    // if ($validator->fails()) {
+    //   $errors = $validator->errors()->toArray();
+    //   $errors_array = [];
+
+    //   foreach($errors as $key => $error){
+    //     $this->assignArrayByPath($errors_array, $key, $error);
+    //   }
+
+    //   return response()->json($errors_array, 400);
+    // }
+
+    // Create new empty Order 
+    $order = new Order;
+
+    // Set common fields
+    foreach($data as $field_name => $field_value){
+      $field = $this->ORDER_MODEL::$fields[$field_name] ?? $this->ORDER_MODEL::$fields[$field_name.'.*'];
+      
+      if(isset($field['hidden']) && $field['hidden'])
+        continue;
+
+      if(isset($field['store_in'])) {
+        $field_old_value = $order->{$field['store_in']};
+        $field_old_value[$field_name] = $field_value;
+        $order->{$field['store_in']} = $field_old_value;
+      }else {
+        $order->{$field_name} = $field_value;
+      }
+    }
+
+    // Generate order code
+    $order->code = random_int(100000, 999999);
+
+    // Get products collection
+    $products = Product::whereIn('id', array_keys($data['products']))->get();
+
+    if(!$products || !$products->count()) {
+      return response()->json("There are no products found in cart or products does not exist in the database.", 404);
+    }
+
+    // Set products to info
+    foreach($products as $key => $product) {
+      $product->amount = $data['products'][$product->id];
+      $info = $order->info;
+      $info['products'][$key] = new ProductCartResource($product);
+      $order->info = $info;
+    }
+
+    // Set order total price
+    $order->price = round($products->reduce(function($carry, $item) {
+      return $carry + $item->price * $item->amount;
+    }, 0), 2);
 
     // GET USER MODEL IF AUTHED
     if($data['provider'] === 'auth') {
@@ -134,59 +171,26 @@ class OrderController extends \App\Http\Controllers\Controller
 
       $user_model = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
       $user_data = $user_model->infoData;
+
+      // add user data to info field (json)
+      $info = $order->info;
+      $info['user'] = $user_dat;
+      $order->info = $info;
+
+      $order->user_id = isset($user_model)? $user_model->id: null;
     }
-    elseif($data['provider'] === 'data') {
-      if(isset($data['user']) && is_array($data['user'])) {
-        $user_data = $data['user'];
+
+    try {
+      $order->save();
+
+      foreach($products as $product) {
+        $order->products()->attach($product, ['amount' => $data['products'][$product->id]]);
       }
+    }catch(\Exception $e){
+      return response()->json($e->getMessage(), 400);
     }
 
-    // GET PRODUCTS COLLECTION
-    $products = Product::whereIn('id', array_keys($data['products']))->get();
-
-    if(!$products || !$products->count()) {
-      return response()->json("There are no products found in cart or products does not exist in the database.", 404);
-    }
-
-    $info = [];
-
-    // Address
-    foreach($data['address'] as $key => $item) {
-      $info['address'][$key] = $item;
-    }
-
-    // User data
-    $info['user'] = $user_data;
-
-    // Products
-    foreach($products as $key => $product) {
-      $product->amount = $data['products'][$product->id];
-      $info['products'][$key] = new ProductCartResource($product);
-    }
-
-    // Delivery
-    $info['delivery'] = $data['delivery'];
-
-    // Payment
-    $info['payment'] = $data['payment'];
-
-    // Bonuses used
-    $info['bonusesUsed'] = $data['bonusesUsed'];
-
-    $order = $this->order_model::create([
-      'user_id' => isset($user_model)? $user_model->id: null,
-      'code' => random_int(100000, 999999),
-      'price' => round($products->reduce(function($carry, $item) {
-        return $carry + $item->price * $item->amount;
-      }, 0), 2),
-      'info' => $info
-    ]);
-
-    foreach($products as $product) {
-      $order->products()->attach($product, ['amount' => $data['products'][$product->id]]);
-    }
-
-    return response()->json($order); 
+    return response()->json($order);
   }
 
   public function copy(Request $request) {

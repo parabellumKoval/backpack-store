@@ -31,6 +31,73 @@ class Order extends Model
       'info' => 'array'
     ];
 
+
+    public static $fields = [
+      'provider' => [
+        'rules' => 'required|in:auth,data,outer',
+        'store_in' => 'info'
+      ],
+
+      'payment' => [
+        'rules' => 'array:method,status',
+        'store_in' => 'info',
+        'method' => [
+          'rules' => 'required|in:liqpay,cash'
+        ]
+      ],
+      
+      'delivery' => [
+        'rules' => 'array:city,address,zip,method,warehouse',
+        'store_in' => 'info',
+        'method' => [
+          'rules' => 'required|in:address,warehouse,pickup'
+        ],
+        'warehouse' => [
+          'rules' => 'required_if:delivery.method,warehouse|string|min:1|max:500'
+        ],
+        'city' => [
+          'rules' => 'required_if:delivery.method,address,warehouse|string|min:2|max:255'
+        ],
+        'address' => [
+          'rules' => 'required_if:delivery.method,address|string|min:2|max:255'
+        ],
+        'zip' => [
+          'rules' => 'required_if:delivery.method,address|string|min:5|max:255'
+        ],
+      ],
+      
+      'products' => [
+        'rules' => 'required|array',
+        'hidden' => true,
+      ],
+      
+      'bonusesUsed' => [
+        'rules' => 'nullable|numeric',
+        'store_in' => 'info'
+      ],
+
+      'user' => [
+        'rules' => 'array:uid,firstname,lastname,phone,email',
+        'store_in' => 'info',
+        'uid' => [
+          'rules' => 'nullable|string|min:2|max:200'
+        ],
+        'firstname' => [
+          'rules' => 'required_if:provider,data|string|min:2|max:150'
+        ],
+        'lastname' => [
+          'rules' => 'nullable|string|min:2|max:150'
+        ],
+        'phone' => [
+          'rules' => 'required_if:provider,data|string|min:2|max:80'
+        ],
+        'email' => [
+          'rules' => 'required_if:provider,data|email|min:2|max:150'
+        ],
+      ]
+    ];
+
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -45,6 +112,57 @@ class Order extends Model
     {
       return OrderFactory::new();
     }
+
+    /** 
+     *  Get validation rules from fields array
+     * @param Array|String $fields
+     * @return Array
+    */
+    public static function getRules($fields = null, $type = 'fields') {
+      $node = $fields? $fields: static::$$type;
+
+      $rules = [];
+      
+      if(is_string($node)) {
+        return $node;
+      }
+
+      if(is_array($node)) {
+        
+        foreach($node as $field => $value) {
+          if(in_array($field, ['store_in']))
+            continue;
+          
+          $selfRules = static::getRules($value);
+
+          if(is_array($selfRules))
+            foreach($selfRules as $k => $v) {
+              if($k === 'rules') {
+                $rules[$field] = $v;
+              }else {
+                $name = implode('.', [$field, $k]);
+                $rules[$name] = $v;
+              }
+            }
+          else
+            $rules[$field] = $selfRules;
+        }
+
+      }
+
+      return $rules;
+    }
+
+    public static function getFieldKeys($type = 'fields') {
+      $keys = array_keys(static::$$type);
+      $keys = array_map(function($item) {
+        return preg_replace('/[\*\.]/u', '', $item);
+      }, $keys);
+
+      return $keys;
+    }
+
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
