@@ -34,15 +34,11 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     ], 'views');
 
     $this->publishes([
-        __DIR__.'/database/migrations' => resource_path('database/migrations'),
+        __DIR__.'/database/migrations' => database_path('migrations'),
     ], 'migrations');
 
     $this->publishes([
-        __DIR__.'/routes/backpack/routes.php' => resource_path('/routes/backpack/store/backpack.php'),
-        __DIR__.'/routes/api/product.php' => resource_path('/routes/backpack/store/product.php'),
-        __DIR__.'/routes/api/order.php' => resource_path('/routes/backpack/store/order.php'),
-        __DIR__.'/routes/api/cart.php' => resource_path('/routes/backpack/store/cart.php'),
-        __DIR__.'/routes/api/category.php' => resource_path('/routes/backpack/store/category.php'),
+        __DIR__.'/routes' => base_path('routes')
     ], 'routes');
 
   }
