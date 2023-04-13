@@ -28,7 +28,7 @@ Route::prefix('api/orders')->controller(OrderController::class)->group(function 
 
   Route::get('/all', 'all');
 
-  Route::get('/{slug}', 'show');
+  Route::get('/{code}', 'show');
 
   Route::post('', 'create')->middleware('api');
 

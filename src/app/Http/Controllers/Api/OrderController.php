@@ -76,10 +76,10 @@ class OrderController extends \App\Http\Controllers\Controller
     return $orders;
   }
 
-  public function show(Request $request, $id) {
+  public function show(Request $request, $code) {
 
     try {
-      $order = $this->ORDER_MODEL::findOrFail($id);
+      $order = $this->ORDER_MODEL::where('code', $code)->firstOrFail();
     }catch(ModelNotFoundException $e) {
       return response()->json($e->getMessage(), 404);
     }
@@ -106,19 +106,15 @@ class OrderController extends \App\Http\Controllers\Controller
     $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
 
     if ($validator->fails()) {
-      return response()->json($validator->errors(), 400);
+      $errors = $validator->errors()->toArray();
+      $errors_array = [];
+
+      foreach($errors as $key => $error){
+        $this->assignArrayByPath($errors_array, $key, $error);
+      }
+
+      return response()->json($errors_array, 400);
     }
-
-    // if ($validator->fails()) {
-    //   $errors = $validator->errors()->toArray();
-    //   $errors_array = [];
-
-    //   foreach($errors as $key => $error){
-    //     $this->assignArrayByPath($errors_array, $key, $error);
-    //   }
-
-    //   return response()->json($errors_array, 400);
-    // }
 
     // Create new empty Order 
     $order = new Order;
