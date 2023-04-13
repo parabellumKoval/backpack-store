@@ -125,7 +125,8 @@ class OrderController extends \App\Http\Controllers\Controller
 
     // Set common fields
     foreach($data as $field_name => $field_value){
-      $field = $this->ORDER_MODEL::$fields[$field_name] ?? $this->ORDER_MODEL::$fields[$field_name.'.*'];
+      $config_fields = $this->ORDER_MODEL::getFields();
+      $field = $config_fields[$field_name] ?? $config_fields[$field_name.'.*'];
       
       if(isset($field['hidden']) && $field['hidden'])
         continue;

@@ -32,70 +32,7 @@ class Order extends Model
     ];
 
 
-    public static $fields = [
-      'provider' => [
-        'rules' => 'required|in:auth,data,outer',
-        'store_in' => 'info'
-      ],
-
-      'payment' => [
-        'rules' => 'array:method,status',
-        'store_in' => 'info',
-        'method' => [
-          'rules' => 'required|in:liqpay,cash'
-        ]
-      ],
-      
-      'delivery' => [
-        'rules' => 'array:city,address,zip,method,warehouse',
-        'store_in' => 'info',
-        'method' => [
-          'rules' => 'required|in:address,warehouse,pickup'
-        ],
-        'warehouse' => [
-          'rules' => 'required_if:delivery.method,warehouse|string|min:1|max:500'
-        ],
-        'city' => [
-          'rules' => 'required_if:delivery.method,address,warehouse|string|min:2|max:255'
-        ],
-        'address' => [
-          'rules' => 'required_if:delivery.method,address|string|min:2|max:255'
-        ],
-        'zip' => [
-          'rules' => 'required_if:delivery.method,address|string|min:5|max:255'
-        ],
-      ],
-      
-      'products' => [
-        'rules' => 'required|array',
-        'hidden' => true,
-      ],
-      
-      'bonusesUsed' => [
-        'rules' => 'nullable|numeric',
-        'store_in' => 'info'
-      ],
-
-      'user' => [
-        'rules' => 'array:uid,firstname,lastname,phone,email',
-        'store_in' => 'info',
-        'uid' => [
-          'rules' => 'nullable|string|min:2|max:200'
-        ],
-        'firstname' => [
-          'rules' => 'required_if:provider,data|string|min:2|max:150'
-        ],
-        'lastname' => [
-          'rules' => 'nullable|string|min:2|max:150'
-        ],
-        'phone' => [
-          'rules' => 'required_if:provider,data|string|min:2|max:80'
-        ],
-        'email' => [
-          'rules' => 'required_if:provider,data|email|min:2|max:150'
-        ],
-      ]
-    ];
+    public static $fields = null;
 
 
     /*
@@ -103,6 +40,7 @@ class Order extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+
     /**
      * Create a new factory instance for the model.
      *
@@ -113,13 +51,24 @@ class Order extends Model
       return OrderFactory::new();
     }
 
+
+    public static function getFields($type = 'fields') {
+      $fields = config("backpack.store.order.{$type}");
+      
+      if(!$fields)
+        throw new \Exception('Please set fields in backpack.store.order config');
+      else
+        return $fields;
+    }
+
     /** 
      *  Get validation rules from fields array
      * @param Array|String $fields
      * @return Array
     */
     public static function getRules($fields = null, $type = 'fields') {
-      $node = $fields? $fields: static::$$type;
+      //$node = $fields? $fields: static::$$type;
+      $node = $fields? $fields: config("backpack.store.order.{$type}");
 
       $rules = [];
       
@@ -154,7 +103,8 @@ class Order extends Model
     }
 
     public static function getFieldKeys($type = 'fields') {
-      $keys = array_keys(static::$$type);
+      //$keys = array_keys(static::$$type);
+      $keys = array_keys(config("backpack.store.order.{$type}"));
       $keys = array_map(function($item) {
         return preg_replace('/[\*\.]/u', '', $item);
       }, $keys);
