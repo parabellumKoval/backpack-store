@@ -119,9 +119,23 @@ class OrderController extends \App\Http\Controllers\Controller
   }
 
   public function create(Request $request){
+    
+    // Get only allowed fields
+    $data = $request->only($this->ORDER_MODEL::getFieldKeys());
 
-    // Get Valid data
-    $data = $this->validateData($request);
+    // Apply validation rules to data
+    $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
+
+    if ($validator->fails()) {
+      $errors = $validator->errors()->toArray();
+      $errors_array = [];
+
+      foreach($errors as $key => $error){
+        $this->assignArrayByPath($errors_array, $key, $error);
+      }
+
+      return response()->json($errors_array, 400);
+    }
 
     // Create new empty Order 
     $order = new Order;
