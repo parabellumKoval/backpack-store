@@ -31,7 +31,7 @@ Route::prefix('api/orders')->controller(OrderController::class)->group(function 
   Route::get('/{code}', 'show');
 
   Route::post('', 'create')->middleware('api');
-  
-  Route::post('/validate', 'validate')->middleware('api');
+
+  Route::post('/validate', 'validateData')->middleware('api');
 
 });

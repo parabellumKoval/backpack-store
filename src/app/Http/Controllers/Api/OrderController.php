@@ -97,7 +97,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $arr = $value;
   }
 
-  public function validate(Request $request) {
+  public function validateData(Request $request) {
     // Get only allowed fields
     $data = $request->only($this->ORDER_MODEL::getFieldKeys());
 
@@ -121,7 +121,7 @@ class OrderController extends \App\Http\Controllers\Controller
   public function create(Request $request){
 
     // Get Valid data
-    $data = $this->validate($request);
+    $data = $this->validateData($request);
 
     // Create new empty Order 
     $order = new Order;
