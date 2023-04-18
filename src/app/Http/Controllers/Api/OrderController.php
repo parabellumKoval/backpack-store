@@ -72,7 +72,8 @@ class OrderController extends \App\Http\Controllers\Controller
               })
               ->when(request('price'), function($query) {
                 $query->where('ak_orders.price', request('price'));
-              });
+              })
+              ->orderBy('created_at', 'desc');
     
     $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
