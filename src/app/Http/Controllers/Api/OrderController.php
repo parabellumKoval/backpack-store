@@ -42,7 +42,7 @@ class OrderController extends \App\Http\Controllers\Controller
               })
               ->orderBy('created_at', 'desc');
     
-    $per_page = request('per_page', config('backpack.store.order_per_page', 12));
+    $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
     $orders = OrderLargeResource::collection($orders);
@@ -55,20 +55,26 @@ class OrderController extends \App\Http\Controllers\Controller
     $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
-              ->when(request('user_id'), function($query) {
-                $query->where('ak_orders.user_id', request('user_id'));
+              ->when(request('orderable_id'), function($query) {
+                $query->where('ak_orders.orderable_id', request('orderable_id'));
+              })
+              ->when(request('orderable_type'), function($query) {
+                $query->where('ak_orders.orderable_type', request('orderable_type'));
               })
               ->when(request('status'), function($query) {
                 $query->where('ak_orders.category_id', request('status'));
               })
-              ->when(request('is_paid'), function($query) {
-                $query->where('ak_orders.is_paid', request('is_paid'));
+              ->when(request('pay_status'), function($query) {
+                $query->where('ak_orders.pay_status', request('pay_status'));
+              })
+              ->when(request('delivery_status'), function($query) {
+                $query->where('ak_orders.delivery_status', request('delivery_status'));
               })
               ->when(request('price'), function($query) {
                 $query->where('ak_orders.price', request('price'));
               });
     
-    $per_page = request('per_page', config('backpack.store.order_per_page', 12));
+    $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
     $orders = OrderLargeResource::collection($orders);
@@ -160,6 +166,15 @@ class OrderController extends \App\Http\Controllers\Controller
     // Generate order code
     $order->code = random_int(100000, 999999);
 
+    // Generate order code
+    $order->status = config('backpack.store.order.status.default', 'new');
+    
+    // Generate order code
+    $order->pay_status = config('backpack.store.order.pay_status.default', 'waiting');
+    
+    // Generate order code
+    $order->delivery_status = config('backpack.store.order.delivery_status.default', 'waiting');
+
     // Get products collection
     $products = Product::whereIn('id', array_keys($data['products']))->get();
 
@@ -208,7 +223,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return response()->json($e->getMessage(), 400);
     }
 
-    return response()->json($order);
+    return response()->json(new OrderLargeResource($order));
   }
 
   public function copy(Request $request) {

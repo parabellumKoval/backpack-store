@@ -20,18 +20,24 @@ $guard = config('backpack.store.auth_guard', 'profile');
 
 Route::prefix('api/orders')->controller(OrderController::class)->group(function () use($guard) {
   
-  Route::post('/get', 'index')->middleware(['api', "auth:${guard}"]);
 
+  // GET orders list with pagination for authed user
+  Route::post('/get', 'index')->middleware(['api', "auth:${guard}"]);
   Route::get('', 'index')->middleware(['api', "auth:${guard}"]);
   
+  // Clone exists order
   Route::post('/copy', 'copy')->middleware(['api', "auth:${guard}"]);
 
+  // GET orders list with pagination by params
   Route::get('/all', 'all');
 
+  // Get One order by code
   Route::get('/{code}', 'show');
 
+  // Create new order
   Route::post('', 'create')->middleware('api');
 
+  // Validate order without creation
   Route::post('/validate', 'validateData')->middleware('api');
 
 });

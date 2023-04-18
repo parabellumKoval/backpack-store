@@ -25,9 +25,35 @@ return [
     // ORDER
     'order_model' => 'Backpack\Store\app\Models\Order',
     'enable_orders_in_product_crud' => true,
-    'order_per_page' => 12,
+    
     'order' => [
+      'per_page' => 12,
+
+      // Common order statuses
+      'status' => [
+        'default' => 'new',
+        'values' => ['new', 'canceled', 'failed', 'completed']
+      ],
+      // Payment statuses
+      'pay_status' => [
+        'default' => 'waiting',
+        'values' => ['waiting', 'failed', 'paied']
+      ],
+      // Delivery statuses 
+      'delivery_status' => [
+        'default' => 'waiting',
+        'values' => ['waiting', 'sent', 'failed', 'delivered', 'pickedup']
+      ],
+      // Validation fields
       'fields' => [
+        'orderable_id' => [
+          'rules' => 'nullable|uuid',
+        ],
+
+        'orderable_type' => [
+          'rules' => 'nullable|max:255',
+        ],
+
         'provider' => [
           'rules' => 'required|in:auth,data,outer',
           'store_in' => 'info'
@@ -72,11 +98,8 @@ return [
         ],
   
         'user' => [
-          'rules' => 'array:uid,firstname,lastname,phone,email',
+          'rules' => 'array:firstname,lastname,phone,email',
           'store_in' => 'info',
-          'uid' => [
-            'rules' => 'nullable|string|min:2|max:200'
-          ],
           'firstname' => [
             'rules' => 'required_if:provider,data|string|min:2|max:150'
           ],

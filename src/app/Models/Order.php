@@ -123,10 +123,14 @@ class Order extends Model
       return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product');
     }
 
-    public function user()
+    public function orderable()
     {
-      return $this->belongsTo(config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'));
+      return $this->morphTo();
     }
+    // public function user()
+    // {
+    //   return $this->belongsTo(config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'));
+    // }
     
     /*
     |--------------------------------------------------------------------------
@@ -139,6 +143,22 @@ class Order extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUserAttribute() {
+      if(isset($this->info['user']) && $this->info['user'] && count($this->info['user']))
+        return $this->info['user'];
+    }
+
+    public function getDeliveryAttribute() {
+      if(isset($this->info['delivery']) && $this->info['delivery'] && count($this->info['delivery']))
+        return $this->info['delivery'];
+    }
+
+    public function getPaymentAttribute() {
+      if(isset($this->info['payment']) && $this->info['payment'] && count($this->info['payment']))
+        return $this->info['payment'];
+    }
+
     public function getProductsAnywayAttribute() {
       if(isset($this->info['products']) && $this->info['products'] && count($this->info['products']))
         return $this->info['products'];

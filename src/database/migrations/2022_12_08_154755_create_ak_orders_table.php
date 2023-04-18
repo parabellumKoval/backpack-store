@@ -16,11 +16,14 @@ class CreateAkOrdersTable extends Migration
     {
         Schema::create('ak_orders', function (Blueprint $table) {
             $table->id();
-            
-            $table->foreignId('user_id')->nullable();
+            $table->nullableUuidMorphs('orderable');
             $table->string('code', 6);
+            // new, canceled, failed, completed
             $table->string('status', 30)->default('new');
-            $table->boolean('is_paid')->default(0);
+            // waiting, failed, paied
+            $table->string('pay_status', 30)->default('waiting');
+            // waiting, sent, failed, delivered, pickedup
+            $table->string('delivery_status', 30)->default('waiting');
             $table->float('price')->default(0);
             $table->json('info')->nullable();
 
