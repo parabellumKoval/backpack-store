@@ -77,24 +77,38 @@ class OrderCrudController extends CrudController
         
         $this->crud->addColumn([
           'name' => 'code',
-          'label' => 'Номер заказа'
+          'label' => '#️⃣'
         ]);
 
         $this->crud->addColumn([
           'name' => 'created_at',
-          'label' => 'Дата заказа',
+          'label' => '🗓',
         ]);
         
         $this->crud->addColumn([
           'name' => 'status',
-          'label' => 'Статус заказа',
+          'label' => '✅',
           'type' => 'select_from_array',
           'options' => $this->status_options
         ]);
         
         $this->crud->addColumn([
+          'name' => 'pay_status',
+          'label' => '💳',
+          'type' => 'select_from_array',
+          'options' => $this->pay_status_options
+        ]);
+        
+        $this->crud->addColumn([
+          'name' => 'delivery_status',
+          'label' => '🛵',
+          'type' => 'select_from_array',
+          'options' => $this->delivery_status_options
+        ]);
+        
+        $this->crud->addColumn([
           'name' => 'price',
-          'label' => 'Сумма',
+          'label' => '💵',
           'prefix' => config('backpack.store.currency.symbol')
         ]);
     }

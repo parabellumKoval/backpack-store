@@ -101,7 +101,7 @@ class ProductCrudController extends ProductCrudBase
         
         $this->crud->addColumn([
           'name' => 'imageSrc',
-          'label' => 'Фото',
+          'label' => '📷',
           'type' => 'image',
           'height' => '50px',
           'width'  => '50px',
@@ -109,7 +109,7 @@ class ProductCrudController extends ProductCrudBase
 
         $this->crud->addColumn([
           'name' => 'id',
-          'label' => 'ID'
+          'label' => '#️⃣'
         ]);
 
         $this->crud->addColumn([
@@ -119,7 +119,7 @@ class ProductCrudController extends ProductCrudBase
         
         $this->crud->addColumn([
           'name' => 'is_active',
-          'label' => 'Вкл',
+          'label' => '✅',
           'type' => 'check'
         ]);
     }
