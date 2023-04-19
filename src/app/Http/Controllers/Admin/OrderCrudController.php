@@ -40,14 +40,9 @@ class OrderCrudController extends CrudController
       ],
     ];
     
-    private $status_options = [
-            'new' => 'Новый',
-            'pending' => 'Ожидание оплаты',
-            'paid' => 'Оплачен',
-            'sent' => 'Отправлен',
-            'delivered' => 'Доставлен',
-            'canceled' => 'Отменён'
-          ];
+    private $status_options;
+    private $pay_status_options;
+    private $delivery_status_options;
           
     private $current_status;
 
@@ -58,6 +53,11 @@ class OrderCrudController extends CrudController
         $this->crud->setEntityNameStrings('заказ', 'Заказы');
         
         $this->current_status = \Request::input('status')? \Request::input('status') : null;
+
+
+        $this->status_options = config('backpack.store.order.status.values');
+        $this->pay_status_options = config('backpack.store.order.pay_status.values');
+        $this->delivery_status_options = config('backpack.store.order.delivery_status.values');
     }
 
     protected function setupListOperation()
@@ -95,7 +95,7 @@ class OrderCrudController extends CrudController
         $this->crud->addColumn([
           'name' => 'price',
           'label' => 'Сумма',
-          'prefix' => '$'
+          'prefix' => config('backpack.store.currency.symbol')
         ]);
     }
 
@@ -122,7 +122,7 @@ class OrderCrudController extends CrudController
         $this->crud->addField([
           'name' => 'price',
           'label' => 'Сумма заказа',
-          'prefix' => '$',
+          'prefix' => config('backpack.store.currency.symbol'),
           'attributes' => [
             'readonly' => true
           ]
@@ -134,18 +134,28 @@ class OrderCrudController extends CrudController
           'type' => 'select2_from_array',
           'options' => $this->status_options
         ]);
+        
+        $this->crud->addField([
+          'name' => 'pay_status',
+          'label' => 'Статус оплаты',
+          'type' => 'select2_from_array',
+          'options' => $this->pay_status_options
+        ]);
+        
+        $this->crud->addField([
+          'name' => 'delivery_status',
+          'label' => 'Статус доставки',
+          'type' => 'select2_from_array',
+          'options' => $this->delivery_status_options
+        ]);
     }
     
     protected function setupShowOperation()
     {
-        $this->crud->setValidation(OrderRequest::class);
+        //$this->crud->setValidation(OrderRequest::class);
 
         // TODO: remove setFromDb() and manually define Fields
         // $this->crud->setFromDb();
-        $this->crud->addColumn([
-          'name' => 'usermeta_id',
-          'label' => 'Пользователь'
-        ]);
         
         $this->crud->addColumn([
           'name' => 'code',
@@ -158,12 +168,6 @@ class OrderCrudController extends CrudController
         ]);
         
         $this->crud->addColumn([
-          'name' => 'is_paid',
-          'label' => 'Оплачено',
-          'type' => 'boolean'
-        ]);
-        
-        $this->crud->addColumn([
           'name' => 'status',
           'label' => 'Статус заказа',
           'type' => 'select_from_array',
@@ -171,10 +175,17 @@ class OrderCrudController extends CrudController
         ]);
         
         $this->crud->addColumn([
-          'name' => 'price',
-          'label' => 'Сумма',
-          // 'suffix' => ' руб'
-          'prefix' => '$'
+          'name' => 'pay_status',
+          'label' => 'Статус оплаты',
+          'type' => 'select_from_array',
+          'options' => $this->pay_status_options
+        ]);
+        
+        $this->crud->addColumn([
+          'name' => 'delivery_status',
+          'label' => 'Статус доставки',
+          'type' => 'select_from_array',
+          'options' => $this->delivery_status_options
         ]);
         
         $this->crud->addColumn([
@@ -296,7 +307,7 @@ class OrderCrudController extends CrudController
       $usermeta->notify(new OrderCreated($order));
       
       // Notify admin
-	  Mail::to(config('settings.noty_email'))->send(new \App\Mail\OrderCreatedAdmin($order));
+	    Mail::to(config('settings.noty_email'))->send(new \App\Mail\OrderCreatedAdmin($order));
       
       return redirect('/')->with('message', __('main.order_success'))->with('type', 'success')->with('localstorage_remove_ref');
     }
@@ -311,7 +322,7 @@ class OrderCrudController extends CrudController
 
       $usermeta->user()->associate($user);
   }
-    public function cloneOrder($id){
+  public function cloneOrder($id){
 		$order = Order::find($id);
 		
 		if(!$order)

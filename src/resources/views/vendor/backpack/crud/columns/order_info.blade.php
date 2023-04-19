@@ -5,24 +5,16 @@
 @endphp
 
 <span>
-  @if($entry->userString)
-    <p>Покупатель: <strong>{{ $entry->userString }}</strong></p>
-  @endif
-  
-  @if($entry->addressString)
-    <p>Адрес: <strong>{{ $entry->addressString }}</strong></p>
+  @if(isset($info['user']))
+    <p>Покупатель: <strong>{{ implode(', ', $info['user']) }}</strong></p>
   @endif
   
   @if(isset($info['payment']))
-    <p>Способ оплаты: <strong>{{ $info['payment'] }}</strong></p>
+    <p>Оплата: <strong>{{ implode(', ', $info['payment']) }}</strong></p>
   @endif
 
   @if(isset($info['delivery']))
-    <p>Способ доставки: <strong>{{ $info['delivery'] }}</strong></p>
-  @endif
-  
-  @if(isset($info['point']))
-    <p>Пункт выдачи: <strong>{{ $info['point'] }}</strong></p>
+    <p>Доставка: <strong>{{ implode(', ', $info['delivery']) }}</strong></p>
   @endif
   
   @if(isset($info['comment']))
@@ -41,17 +33,20 @@
       @endif
 
       <p><strong>{{ $product['name'] ?? '' }}</strong> {{ $product['short_name'] ?? '' }}</p>
-      <p>Цена: <strong>{{ $product['price'] }} $</strong></p>
       @if($product['old_price'])
-      <p>Старая цена: <strong>{{ $product['old_price'] }} $</strong></p>
+      <p>Старая цена: <s>{{ config('backpack.store.currency.symbol') . $product['old_price'] }}</s></p>
       @endif
-      <p>Количество: <strong>{{ $product['amount'] }} шт</strong></p>
-      <p>Сумма: <strong>{{ $product['price'] * $product['amount'] }} $</strong></p>
+      <p>Цена: {{ config('backpack.store.currency.symbol') . $product['price'] }}</p>
+      <p>Количество: {{ $product['amount'] }} шт</p>
+      <p>Сумма: <strong>{{ config('backpack.store.currency.symbol') . ($product['price'] * $product['amount']) }}</strong></p>
     </div>
     <br>
   @endforeach
 
-  <h4>Сумма заказа: <strong>{{ $entry->price }} $</strong></h4>
-  <h4>Использовано бонусов: <strong>{{ $bonusesUsed }} $</strong></h4>
-  <h4>Итого сумма заказа: <strong>{{ $entry->price - $bonusesUsed }} $</strong></h4>
+  <h4>Сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . $entry->price }}</strong></h4>
+
+  @if(config('backpack.order.enable_bonus', false))
+    <h4>Использовано бонусов: <strong>{{ config('backpack.store.currency.symbol') . $bonusesUsed }}</strong></h4>
+    <h4>Итого сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . ($entry->price - $bonusesUsed) }}</strong></h4>
+  @endif
 </span>

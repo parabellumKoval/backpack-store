@@ -1,7 +1,10 @@
 <?php
 
 return [
-    'currency_default' => 'usd',
+    'currency' => [
+      'value' => 'usd',
+      'symbol' => '$',
+    ],
     
     'enable_modifications' => false, // false = only base modification
     'enable_complectations' => false,
@@ -27,6 +30,8 @@ return [
     'enable_orders_in_product_crud' => true,
     
     'order' => [
+      'enable_bonus' => false,
+
       'per_page' => 12,
 
       // Common order statuses
