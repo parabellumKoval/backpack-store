@@ -123,22 +123,11 @@ class AttributeCrudController extends CrudController
           'type' => 'text',
         ]);
 
-      if(config('aimix.shop.enable_attribute_groups')) {
         $this->crud->addField([
-          'name' => 'attribute_group_id',
-          'label' => 'Группа',
-          'type' => 'select2',
-          'entity' => 'AttributeGroup',
-          'attribute' => 'name',
-          'model' => "Aimix\Shop\app\Models\AttributeGroup",
+          'name' => 'values',
+          'type' => 'hidden',
+          'value' => ''
         ]);
-      }
-
-      $this->crud->addField([
-        'name' => 'values',
-        'type' => 'hidden',
-        'value' => null
-      ]);
 
 
         $this->crud->addField([
@@ -165,6 +154,7 @@ class AttributeCrudController extends CrudController
           'name' => 'categories',
           'label' => 'Категории',
           'type' => 'select2_multiple',
+          'select_all' => true,
           'entity' => 'categories',
           'attribute' => 'name',
           'model' => Category::class,

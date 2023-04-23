@@ -419,7 +419,7 @@ class ProductCrudController extends ProductCrudBase
               [
                 'type' => 'select_from_array',
                 'allows_multiple' => true,
-                'options' => $values,
+                'options' => $values ?? [],
                 'value' => $value,
               ]
             );
@@ -430,7 +430,7 @@ class ProductCrudController extends ProductCrudBase
               $attr_fields[$index],
               [
                 'type' => 'select_from_array',
-                'options' => $values,
+                'options' => $values ?? [],
                 'value' => $value,
               ]
             );
@@ -492,8 +492,9 @@ class ProductCrudController extends ProductCrudBase
         return;
       
       foreach($this->categories as $category) {
-        if($category->attributes)
-          $this->attrs = $this->attrs->merge($category->attributes);
+        $cat_attrs = $category->attributes()->where('is_active', true)->get();
+        if($cat_attrs && $cat_attrs->count())
+          $this->attrs = $this->attrs->merge($cat_attrs);
       }
     }
 
