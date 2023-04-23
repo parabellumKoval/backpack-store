@@ -274,7 +274,6 @@ class Product extends Model
 
     public function setPropsAttribute($attributes) {
       //$this->attrs()->detach();
-
       if(!$attributes)
         return;
 
@@ -282,10 +281,12 @@ class Product extends Model
         $clear_value = is_array($value)? array_filter($value, fn($i) => $i !== null): trim($value);
         $serialized_value = is_array($clear_value)? json_encode(array_values($clear_value)): $clear_value;
         
-        if(empty($serialized_value))
-          continue;
+        // if(empty($serialized_value))
+        //   continue;
 
+        //dd($serialized_value);
         //$this->attrs()->attach($attr_key, ['value' => $serialized_value]);
+        //syncWithoutDetaching
         $this->attrs()->syncWithoutDetaching([
           $attr_key => ['value' => $serialized_value]
         ]);

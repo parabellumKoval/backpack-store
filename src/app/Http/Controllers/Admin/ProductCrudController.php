@@ -421,6 +421,7 @@ class ProductCrudController extends ProductCrudBase
                 'allows_multiple' => true,
                 'options' => $values ?? [],
                 'value' => $value,
+                'allows_null' => true
               ]
             );
           }
@@ -432,6 +433,7 @@ class ProductCrudController extends ProductCrudBase
                 'type' => 'select_from_array',
                 'options' => $values ?? [],
                 'value' => $value,
+                'allows_null' => true
               ]
             );
           }
