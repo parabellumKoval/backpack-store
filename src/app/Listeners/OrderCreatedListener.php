@@ -12,6 +12,7 @@ class OrderCreatedListener
      */
     public function __construct()
     {
+
     }
  
     /**
@@ -22,7 +23,6 @@ class OrderCreatedListener
      */
     public function handle(OrderCreated $event)
     {
-      dd($event->order);
-        // Access the order using $event->order...
+      // Access the order using $event->order...
     }
 }

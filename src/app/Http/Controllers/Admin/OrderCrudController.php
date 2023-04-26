@@ -18,6 +18,7 @@ use app\Models\User;
 use Backpack\Store\app\Models\Product;
 
 use Backpack\Store\app\Events\OrderCreated;
+use Backpack\Store\app\Events\ProductAttachedToOrder;
 
 use Backpack\Store\app\Http\Resources\ProductCartResource;
 /**
@@ -57,6 +58,8 @@ class OrderCrudController extends CrudController
           $amount = $product->amount ?? 1;
           $entry->products()->attach($product->id, ['amount' => $amount]);
         }
+
+        ProductAttachedToOrder::dispatch($entry);
       
       });
 
@@ -447,14 +450,11 @@ class OrderCrudController extends CrudController
 
   }
 
-  public function store()
-  {
-    $response = $this->traitStore();
-    
-    //dd($response);
-    //OrderCreated
-    return $response;
-  }
+  // public function store()
+  // {
+  //   $response = $this->traitStore();
+  //   return $response;
+  // }
 
   protected function setupUpdateOperation()
   {
@@ -543,32 +543,4 @@ class OrderCrudController extends CrudController
         'type' => 'order_info'
       ]);
   }
-  
-
-  // public function createNewUser($usermeta, $password){
-  //   $user = new User;
-  //   $user->name = $usermeta->firstname;
-  //   $user->email = $usermeta->email;
-  //   $user->password = Hash::make($password);
-    
-  //   $user->save();
-
-  //   $usermeta->user()->associate($user);
-  // }
-
-  // public function cloneOrder($id){
-	// 	$order = Order::find($id);
-		
-	// 	if(!$order)
-	// 		return back();
-		
-	// 	$new_order = $order->replicate()->fill([
-	// 	    'status' => 'new',
-	// 	    'code' => substr(Carbon::now()->timestamp, -6)
-	// 	]);
-	
-	// 	$new_order->save();
-		
-	// 	return redirect('/account/order-history')->with('message', 'Order was successfully repeated 😊')->with('type', 'success');
-	// }
 }

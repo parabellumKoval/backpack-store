@@ -8,11 +8,16 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 
+// MODELS
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
 
+// RESOURCES
 use Backpack\Store\app\Http\Resources\ProductCartResource;
 use Backpack\Store\app\Http\Resources\OrderLargeResource;
+
+// EVENTS
+use Backpack\Store\app\Events\ProductAttachedToOrder;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
@@ -220,6 +225,10 @@ class OrderController extends \App\Http\Controllers\Controller
       foreach($products as $product) {
         $order->products()->attach($product, ['amount' => $data['products'][$product->id]]);
       }
+
+      // Dispatch event to change product in_stock etc.
+      ProductAttachedToOrder::dispatch($order);
+      
     }catch(\Exception $e){
       return response()->json($e->getMessage(), 400);
     }

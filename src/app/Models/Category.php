@@ -108,7 +108,7 @@ class Category extends Model
     */
     public function products()
     {
-      return $this->hasMany('Backpack\Store\app\Models\Product');
+      return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_category_product');
     }
 
     public function parent()

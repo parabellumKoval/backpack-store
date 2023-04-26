@@ -1,20 +1,24 @@
 @php
-  $products = $entry->info['products'];
+  $products = $entry->info['products'] ?? [];
   $bonusesUsed = $entry->info['bonusesUsed'] ?? 0;
   $info = \Illuminate\Support\Arr::except($entry->info, ['products']);
+
+  $user = isset($info['user'])? array_filter($info['user']): null;
+  $payment = isset($info['payment'])? array_filter($info['payment']): null;
+  $delivery = isset($info['delivery'])? array_filter($info['delivery']): null;
 @endphp
 
 <span>
-  @if(isset($info['user']))
-    <p>Покупатель: <strong>{{ implode(', ', $info['user']) }}</strong></p>
+  @if($user && !empty($user))
+    <p>Покупатель: <strong>{{ implode(', ', $user) }}</strong></p>
   @endif
   
-  @if(isset($info['payment']))
-    <p>Оплата: <strong>{{ implode(', ', $info['payment']) }}</strong></p>
+  @if($payment && !empty($payment))
+    <p>Оплата: <strong>{{ implode(', ', $payment) }}</strong></p>
   @endif
 
-  @if(isset($info['delivery']))
-    <p>Доставка: <strong>{{ implode(', ', $info['delivery']) }}</strong></p>
+  @if($delivery && !empty($delivery))
+    <p>Доставка: <strong>{{ implode(', ', $delivery) }}</strong></p>
   @endif
   
   @if(isset($info['comment']))

@@ -5,8 +5,11 @@ namespace Backpack\Store\app\Http\Controllers\Admin;
 use Backpack\Store\app\Http\Requests\ProductRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+
+use Illuminate\Database\Eloquent\Builder;
+
+// MODELS
 use Backpack\Store\app\Models\Category;
-// use Aimix\Shop\app\Models\Brand;
 
 use Backpack\Store\app\Http\Controllers\Admin\Base\ProductCrudBase;
 
@@ -29,6 +32,7 @@ class ProductCrudController extends ProductCrudBase
 
     
     private $categories;
+    private $filter_categories;
     private $brands;
     
     public function setup()
@@ -36,10 +40,6 @@ class ProductCrudController extends ProductCrudBase
         $this->crud->setModel('Backpack\Store\app\Models\Product');
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
         $this->crud->setEntityNameStrings('товар', 'товары');
-        
-        if(config('backpack.store.enable_brands')) {
-          $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
-        }
 
         // SET LOCALE
         $this->setLocale();
@@ -63,8 +63,12 @@ class ProductCrudController extends ProductCrudBase
         
         // $this->crud->model->clearGlobalScopes();
         
-        // $this->categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
+        $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
         
+        // if(config('backpack.store.enable_brands')) {
+        //   $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
+        // }
+
         // $this->crud->model->clearGlobalScopes();
     }
     protected function fetchOrder()
@@ -76,51 +80,57 @@ class ProductCrudController extends ProductCrudBase
     {
         //remove product modifications from list view
         $this->crud->addClause('base');
-        
+
+        // Filter by category
         $this->crud->addFilter([
-          'name' => 'category_id',
+          'name' => 'category',
           'label' => 'Категория',
           'type' => 'select2',
         ], function(){
-          return $this->categories;
-        }, function($value){
-          $this->crud->addClause('where', 'category_id', $value);
-        });
-        
-        if(config('backpack.store.enable_brands')) {
-          $this->crud->addFilter([
-            'name' => 'brand_id',
-            'label' => 'Производитель',
-            'type' => 'select2'
-          ], function(){
-            return $this->brands;
-          }, function($value){
-            $this->crud->addClause('where', 'brand_id', $value);
+          return $this->filter_categories;
+        }, function($cat_id){
+          $this->crud->query = $this->crud->query->whereHas('categories', function ($query) use ($cat_id) {
+              $query->where('category_id', $cat_id);
           });
-        }
+        });
         
         $this->crud->addColumn([
           'name' => 'imageSrc',
           'label' => '📷',
           'type' => 'image',
-          'height' => '50px',
-          'width'  => '50px',
+          'height' => '60px',
+          'width'  => '40px',
         ]);
 
+        // $this->crud->addColumn([
+        //   'name' => 'id',
+        //   'label' => '#️⃣'
+        // ]);
+        
         $this->crud->addColumn([
-          'name' => 'id',
-          'label' => '#️⃣'
+          'name' => 'is_active',
+          'label' => '✅',
+          'type' => 'check'
+        ]);
+        
+        $this->crud->addColumn([
+          'name' => 'in_stock',
+          'label' => '📦',
+          'type' => 'number'
         ]);
 
         $this->crud->addColumn([
           'name' => 'name',
           'label' => 'Название'
         ]);
-        
+
         $this->crud->addColumn([
-          'name' => 'is_active',
-          'label' => '✅',
-          'type' => 'check'
+          'name' => 'categories',
+          'label' => 'Категории',
+          'type'  => 'model_function',
+          'function_name' => 'getCategoriesString'
+          // 'type' => 'relationship',
+          // 'attribute' => 'id',
         ]);
     }
 
@@ -361,6 +371,15 @@ class ProductCrudController extends ProductCrudBase
             'tab' => 'SEO'
         ]);
 
+
+        $this->crud->addField([
+          'name' => 'in_stock',
+          'label' => "Количество в наличии", 
+          'default' => 1,
+          'type' => 'number',
+          'tab' => 'Склад',
+          'hint' => 'Кол-во товара будет автоматически вычитаться при совершении заказов на сайте.'
+      ]);
 
         // if(method_exists($this, 'setupOrderFields'))
         //   $this->setupOrderFields();

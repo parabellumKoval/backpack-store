@@ -30,6 +30,7 @@ return [
     'enable_orders_in_product_crud' => true,
     
     'order' => [
+
       'enable_bonus' => false,
 
       'per_page' => 12,
@@ -128,6 +129,12 @@ return [
     'category_per_page' => 12,
 
     // PROPUCT
+    'product' => [
+      'in_stock' => [
+        'fixed' => false
+      ]
+    ],
+
     // PRODUCT -> properties
     // in stock
     'enable_in_stock' => true,

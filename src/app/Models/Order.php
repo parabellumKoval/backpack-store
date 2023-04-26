@@ -43,9 +43,9 @@ class Order extends Model
     public static $fields = null;
     public $products_to_synk = null;
 
-    // protected $dispatchesEvents = [
-    //   'created' => OrderCreated::class
-    // ];
+    protected $dispatchesEvents = [
+      'created' => OrderCreated::class
+    ];
 
     /*
     |--------------------------------------------------------------------------
@@ -132,7 +132,7 @@ class Order extends Model
     */
     public function products()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product');
+      return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product')->withPivot('amount');
     }
 
     public function orderable()

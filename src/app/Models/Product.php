@@ -42,7 +42,7 @@ class Product extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['props', 'images', 'price', 'old_price', 'is_active', 'code'];
+    protected $fillable = ['props', 'images', 'price', 'old_price', 'is_active', 'code', 'in_stock'];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
@@ -115,6 +115,18 @@ class Product extends Model
         ];
     }
     
+
+    public function getCategoriesString() {
+      if(!$this->categories || !$this->categories->count())
+        return '-';
+        
+      $cat_links = $this->categories->map(function($item) {
+        $short_name = mb_substr($item->name, 0, 15);
+        return "<a href='/admin/product?category={$item->id}'>{$short_name}</a>";
+      });
+
+      return implode(', ', $cat_links->toArray());
+    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
