@@ -10,10 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
-
 use Backpack\Store\app\Http\Controllers\Admin\Base\ProductCrudBase;
-
-// use Backpack\LangFileManager\app\Models\Language;
 
 /**
  * Class ProductCrudController
@@ -30,6 +27,7 @@ class ProductCrudController extends ProductCrudBase
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
+    use \App\Http\Controllers\Admin\Traits\ProductCrud;
     
     private $categories;
     private $filter_categories;
@@ -37,7 +35,7 @@ class ProductCrudController extends ProductCrudBase
     
     public function setup()
     {
-        $this->crud->setModel('Backpack\Store\app\Models\Product');
+        $this->crud->setModel('Backpack\Store\app\Models\Admin\Product');
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
         $this->crud->setEntityNameStrings('товар', 'товары');
 
@@ -101,11 +99,6 @@ class ProductCrudController extends ProductCrudBase
           'height' => '60px',
           'width'  => '40px',
         ]);
-
-        // $this->crud->addColumn([
-        //   'name' => 'id',
-        //   'label' => '#️⃣'
-        // ]);
         
         $this->crud->addColumn([
           'name' => 'is_active',
@@ -144,12 +137,14 @@ class ProductCrudController extends ProductCrudBase
           'value' => \Request::query('parent_id') ?? null
         ]);
         
-        $this->crud->addField([
-          'name' => 'modifications',
-          'label' => 'Модификации',
-          'type' => 'modification_switcher',
-          'tab' => 'Основное'
-        ]);
+        if(config('backpack.store.product.modifications.enable', true)) {
+          $this->crud->addField([
+            'name' => 'modifications',
+            'label' => 'Модификации',
+            'type' => 'modification_switcher',
+            'tab' => 'Основное'
+          ]);
+        }
 
 
         // IS ACTIVE
@@ -234,20 +229,6 @@ class ProductCrudController extends ProductCrudBase
           $category_attributes = [];
         }
 
-        // $this->crud->addField([
-        //   'name' => 'category_id',
-        //   'label' => 'Категория',
-        //   'type' => 'select2',
-        //   'entity' => 'category',
-        //   'attribute' => 'name',
-        //   'model' => 'Backpack\Store\app\Models\Category',
-        //   'tab' => 'Основное',
-        //   'value' => \Request::get('category_id')? \Request::get('category_id'): Category::first()->id,
-        //   'attributes' => $category_attributes
-        // ]);
-
-
-
         $this->crud->addField([
           'name' => 'categories',
           'label' => 'Категории',
@@ -262,36 +243,40 @@ class ProductCrudController extends ProductCrudBase
         ]);
 
         // PRICE
-        $this->crud->addField([
-          'name' => 'price',
-          'label' => 'Цена',
-          'type' => 'number',
-          'prefix' => '$',
-          'wrapper'   => [ 
-            'class' => 'form-group col-md-6'
-          ],
-          'attributes' => [
-            'step' => 0.01,
-            'min' => 0
-          ],
-          'tab' => 'Основное'
-        ]);
+        if(config('backpack.store.product.price.enable', true)) {
+          $this->crud->addField([
+            'name' => 'price',
+            'label' => 'Цена',
+            'type' => 'number',
+            'prefix' => '$',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-6'
+            ],
+            'attributes' => [
+              'step' => 0.01,
+              'min' => 0
+            ],
+            'tab' => 'Основное'
+          ]);
+        }
 
         // OLD PRICE
-        $this->crud->addField([
-          'name' => 'old_price',
-          'label' => 'Старая цена',
-          'type' => 'number',
-          'prefix' => '$',
-          'wrapper'   => [ 
-            'class' => 'form-group col-md-6'
-          ],
-          'attributes' => [
-            'step' => 0.01,
-            'min' => 0
-          ],
-          'tab' => 'Основное'
-        ]);
+        if(config('backpack.store.product.old_price.enable', true)) {
+          $this->crud->addField([
+            'name' => 'old_price',
+            'label' => 'Старая цена',
+            'type' => 'number',
+            'prefix' => '$',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-6'
+            ],
+            'attributes' => [
+              'step' => 0.01,
+              'min' => 0
+            ],
+            'tab' => 'Основное'
+          ]);
+        }
         
         // DESCRIPTION
         $this->crud->addField([
@@ -305,103 +290,108 @@ class ProductCrudController extends ProductCrudBase
         ]);
 
         // CODE
-        $this->crud->addField([
-          'name' => 'code',
-          'label' => 'Артикул',
-          'tab' => 'Основное'
-        ]);
+        if(config('backpack.store.product.code.enable', true)) {
+          $this->crud->addField([
+            'name' => 'code',
+            'label' => 'Артикул',
+            'tab' => 'Основное'
+          ]);
+        }
         
         
         // IMAGES
-        $this->crud->addField([
-          'name'  => 'images',
-          'label' => 'Изображения',
-          'type'  => 'repeatable',
-          'fields' => [
-            [
-              'name' => 'src',
-              'label' => 'Изображение',
-              'type' => 'browse'
-            ],
-            [
-              'name' => 'alt',
-              'label' => 'alt'
-            ],
-            [
-              'name' => 'title',
-              'label' => 'title'
-            ],
-            [
-              'name' => 'size',
-              'type' => 'radio',
-              'label' => 'Размер',
-              'options' => [
-                'cover' => 'Cover',
-                'contain' => 'Contain'
+        if(config('backpack.store.product.images.enable', true)) {
+          $this->crud->addField([
+            'name'  => 'images',
+            'label' => 'Изображения',
+            'type'  => 'repeatable',
+            'fields' => [
+              [
+                'name' => 'src',
+                'label' => 'Изображение',
+                'type' => 'browse'
               ],
-              'inline' => true
-            ]
-          ],
-          'new_item_label'  => 'Добавить изобрежение',
-          'init_rows' => 1,
-          'tab' => 'Изображения'
-        ]);
+              [
+                'name' => 'alt',
+                'label' => 'alt'
+              ],
+              [
+                'name' => 'title',
+                'label' => 'title'
+              ],
+              [
+                'name' => 'size',
+                'type' => 'radio',
+                'label' => 'Размер',
+                'options' => [
+                  'cover' => 'Cover',
+                  'contain' => 'Contain'
+                ],
+                'inline' => true
+              ]
+            ],
+            'new_item_label'  => 'Добавить изобрежение',
+            'init_rows' => 1,
+            'default' => [],
+            'tab' => 'Изображения'
+          ]);
+        }
         
         
         // ATTRIBUTES
-        $this->setAttributesFields();
+        if(config('backpack.store.attributes.enable', true)){
+          $this->setAttributesFields();
+        }
 
-        // META TITLE
+        // SEO FIELDS
+        if(config('backpack.store.product.seo.enable', true)){
+          $this->crud->addField([
+              'name' => 'meta_title',
+              'label' => "Meta Title", 
+              'type' => 'text',
+              'fake' => true, 
+              'store_in' => 'fields',
+              'tab' => 'SEO'
+          ]);
+
+          $this->crud->addField([
+              'name' => 'meta_description',
+              'label' => "Meta Description", 
+              'type' => 'textarea',
+              'fake' => true, 
+              'store_in' => 'fields',
+              'tab' => 'SEO'
+          ]);
+        }
+
+
         $this->crud->addField([
-            'name' => 'meta_title',
-            'label' => "Meta Title", 
-            'type' => 'text',
-            'fake' => true, 
-            'store_in' => 'seo',
-            'tab' => 'SEO'
+            'name' => 'in_stock',
+            'label' => "Количество в наличии", 
+            'default' => 1,
+            'type' => 'number',
+            'tab' => 'Склад',
+            'hint' => 'Кол-во товара будет автоматически вычитаться при совершении заказов на сайте.'
         ]);
-        
-        // META DESCRIPTION
-        $this->crud->addField([
-            'name' => 'meta_description',
-            'label' => "Meta Description", 
-            'type' => 'textarea',
-            'fake' => true, 
-            'store_in' => 'seo',
-            'tab' => 'SEO'
-        ]);
 
-
-        $this->crud->addField([
-          'name' => 'in_stock',
-          'label' => "Количество в наличии", 
-          'default' => 1,
-          'type' => 'number',
-          'tab' => 'Склад',
-          'hint' => 'Кол-во товара будет автоматически вычитаться при совершении заказов на сайте.'
-      ]);
-
-        // if(method_exists($this, 'setupOrderFields'))
-        //   $this->setupOrderFields();
-
-        // if(method_exists($this, 'setupReviewFields'))
-        //   $this->setupReviewFields();
-
-
-        // parent::setupCreateOperation();
+      $this->createOperation();
     }
 
     protected function setupUpdateOperation()
     {
       $this->setupCreateOperation();
-
-        // $this->crud->attributes = $this->current_category? Category::withoutGlobalScopes()->find($this->current_category)->attributes: ($this->crud->getEntry(\Route::current()->parameter('id'))? $this->crud->getEntry(\Route::current()->parameter('id'))->category->attributes : null);
     }
-
-    public function setAttributesFields() {
-      //dd($this->attrs[0]->name);
     
-      if(config('backpack.store.enable_attributes', false) && isset($this->attrs) && $this->entry) {
+    /**
+     * setAttributesFields
+     * 
+     * Set Attributes create/update fields
+     *
+     * @return void
+     */
+    public function setAttributesFields() {
+    
+      if(isset($this->attrs) && $this->entry) {
         
         $this->crud->addField([
           'name' => 'props',

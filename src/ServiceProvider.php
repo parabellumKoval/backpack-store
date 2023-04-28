@@ -42,6 +42,10 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/routes' => base_path('routes')
     ], 'routes');
 
+
+    $this->publishes([
+        __DIR__.'/app/Traits/Admin' => base_path('app/Http/Controllers/Admin/Traits')
+    ], 'traits');
   }
 
   public function register()

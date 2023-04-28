@@ -48,13 +48,13 @@ class Product extends Model
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
-      //'seo' => 'array'
     ];
+
     protected $fakeColumns = [
-      'meta_description', 'meta_title', 'seo', 'extras', 'images'
+      'meta_description', 'meta_title', 'fields', 'extras', 'images'
     ];
     
-    protected $translatable = ['name', 'short_name', 'content', 'seo'];
+    protected $translatable = ['name', 'short_name', 'content', 'fields'];
     
     public $images_array = [];
     /*
@@ -115,18 +115,6 @@ class Product extends Model
         ];
     }
     
-
-    public function getCategoriesString() {
-      if(!$this->categories || !$this->categories->count())
-        return '-';
-        
-      $cat_links = $this->categories->map(function($item) {
-        $short_name = mb_substr($item->name, 0, 15);
-        return "<a href='/admin/product?category={$item->id}'>{$short_name}</a>";
-      });
-
-      return implode(', ', $cat_links->toArray());
-    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -137,28 +125,47 @@ class Product extends Model
     {
       return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_category_product');
     }
-
+    
+    /**
+     * parent
+     *
+     * Return parent (base) product of modification
+     * 
+     * @return Product
+     */
     public function parent()
     {
       return $this->belongsTo(self::class, 'parent_id');
     }
-
+    
+    /**
+     * children
+     * 
+     * Return children products (modifications) of the base products 
+     *
+     * @return Collection<Product>
+     */
     public function children()
     {
       return $this->hasMany(self::class, 'parent_id');
     }
-
-    // public function brand()
-    // {
-    //   return $this->belongsTo('\Aimix\Shop\app\Models\Brand');
-    // }
-    
+        
+    /**
+     * orders
+     *
+     * @return void
+     */
     public function orders()
     {
       $order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
       return $this->belongsToMany($order_model, 'ak_order_product');
     }
-    
+        
+    /**
+     * attrs
+     *
+     * @return void
+     */
     public function attrs()
     {
       return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value')->using(AttributeProduct::class);
@@ -168,11 +175,43 @@ class Product extends Model
     | SCOPES
     |--------------------------------------------------------------------------
     */
+
+    
+    /**
+     * scopeInStock
+     *
+     * Return only products that stock quantity is 1 or more
+     * 
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopeInStock($query)
+    {
+      return $query->where('in_stock', '>=', 1);
+    }
+
+    /**
+     * scopeActive
+     *
+     * Return only active products
+     * 
+     * @param  mixed $query
+     * @return void
+     */
     public function scopeActive($query)
     {
       return $query->where('is_active', 1);
     }
-
+    
+    /**
+     * scopeBase
+     *
+     * Return only base products (not modifications).
+     * Base products hasn't parent product 
+     * 
+     * @param  mixed $query
+     * @return void
+     */
     public function scopeBase($query)
     {
       return $query->where('parent_id', null);
@@ -211,24 +250,40 @@ class Product extends Model
           'rating_1' => $rating_1
         ]
       ];
-    }
-
+    }    
+    
+    /**
+     * getImageAttribute
+     *
+     * Get first image from images array of the product or get image from parent product if exists 
+     * 
+     * @return Array|null Image is array(src, alt, title, size) 
+     */
     public function getImageAttribute() {
-      $image = $this->images && count($this->images)? $this->images[0]: null;
+      $image = $this->images[0] ?? null;
 
       if(!$image && $this->parent)
         $image = $this->parent->image;
 
       return $image;
     }
-
+    
+    /**
+     * getImageSrcAttribute
+     *
+     * Get src url address from getImageAttribute method
+     * 
+     * @return string|null string is image src url
+     */
     public function getImageSrcAttribute() {
-      if(isset($this->images[0]) && isset($this->images[0]['src']))
-        return $this->images[0]['src'];
-      else
-        return null;
+      return $this->image['src'] ?? null;
     }
-
+    
+    /**
+     * getSlugOrNameAttribute
+     *
+     * @return void
+     */
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
@@ -274,7 +329,12 @@ class Product extends Model
     }
 
     public function getSeoToArrayAttribute() {
-      return !empty($this->seo)? json_decode($this->seo): null;
+      $fields = !empty($this->fields)? json_decode($this->fields): null;
+
+      return [
+        'meta_title' => $fields->meta_title ?? null,
+        'meta_description' => $fields->meta_description ?? null,
+      ];
     }
 
     /*
@@ -283,25 +343,4 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
 
-
-    public function setPropsAttribute($attributes) {
-      //$this->attrs()->detach();
-      if(!$attributes)
-        return;
-
-      foreach($attributes as $attr_key => $value) {
-        $clear_value = is_array($value)? array_filter($value, fn($i) => $i !== null): trim($value);
-        $serialized_value = is_array($clear_value)? json_encode(array_values($clear_value)): $clear_value;
-        
-        // if(empty($serialized_value))
-        //   continue;
-
-        //dd($serialized_value);
-        //$this->attrs()->attach($attr_key, ['value' => $serialized_value]);
-        //syncWithoutDetaching
-        $this->attrs()->syncWithoutDetaching([
-          $attr_key => ['value' => $serialized_value]
-        ]);
-      }
-    }
 }

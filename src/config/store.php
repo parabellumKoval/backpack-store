@@ -6,12 +6,6 @@ return [
       'symbol' => '$',
     ],
     
-    'enable_modifications' => false, // false = only base modification
-    'enable_complectations' => false,
-    'enable_product_promotions' => false,
-    'enable_attribute_groups' => false,
-    'enable_attribute_icon' => false,
-
     // CATALOG
     'per_page' => 12,
 
@@ -130,15 +124,42 @@ return [
 
     // PROPUCT
     'product' => [
+      'seo' => [
+        'enable' => true
+      ],
+
+      'image' => [
+        'enable' => true
+      ],
+
+      'code' => [
+        'enable' => true
+      ],
+
+      'price' => [
+        'enable' => true
+      ],
+      
+      'old_price' => [
+        'enable' => true
+      ],
+      
+      'modifications' => [
+        'enable' => false
+      ],
+
       'in_stock' => [
+        'enable' => true,
         'fixed' => false
       ]
     ],
 
+    // ATTRIBUTES
+    'attributes' => [
+      'enable' => true
+    ],
+
     // PRODUCT -> properties
-    // in stock
-    'enable_in_stock' => true,
-    'enable_in_stock_count' => false, // true = numeric, false = boolean
     
     //is hit
     'enable_is_hit' => false,
@@ -146,14 +167,6 @@ return [
     // rating
     'enable_product_rating' => true,
 
-    // price
-    'enable_product_price' => true,
-
-    // old price
-    'enable_product_old_price' => true,
-
-    // images
-    'enable_multiple_product_images' => false, // false = one image per product
 
     // PRODUCT -> resources
     'product_tiny_resource' => 'Backpack\Store\app\Http\Resources\ProductTinyResource',
@@ -167,7 +180,4 @@ return [
 
     // BRANDS
     'enable_brands' => false,
-
-    // ATTRIBUTES
-    'enable_attributes' => true,
 ];
