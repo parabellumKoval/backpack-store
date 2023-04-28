@@ -31,8 +31,11 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     
     $this->publishes([
         __DIR__.'/resources/views' => resource_path('views'),
-        __DIR__.'/resources/lang' => resource_path('lang'),
     ], 'views');
+    
+    $this->publishes([
+        __DIR__.'/resources/lang' => resource_path('lang'),
+    ], 'langs');
 
     $this->publishes([
         __DIR__.'/database/migrations' => database_path('migrations'),
