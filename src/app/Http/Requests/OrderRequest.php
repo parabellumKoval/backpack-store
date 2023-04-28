@@ -34,7 +34,14 @@ class OrderRequest extends FormRequest
             'telephone' => 'nullable|min:5|max:20',
             'email' => 'nullable|email|min:5|max:255',
             'comment' => 'nullable|max:3000',
-            
+            'productsRelated' => [
+              function ($attribute, $value, $fail) {
+                $decoded_value = json_decode($value);
+                if (!$decoded_value || !count($decoded_value)) {
+                    $fail('The '.$attribute.' is empty.');
+                }
+              }
+            ]
         ];
         
         if($this->input('register')) {

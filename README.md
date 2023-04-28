@@ -23,24 +23,34 @@ php artisan migrate
 
 ### Publish
 
-#### Configuration File
+Configuration File
 ```bash
 php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="config"
 ```
 
-#### Views File
+Views File
 ```bash
 php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="views"
 ```
 
-#### Migrations File
+Languages File
+```bash
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="langs"
+```
+
+Migrations File
 ```bash
 php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="migrations"
 ```
 
-#### Routes File
+Routes File
 ```bash
 php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="routes"
+```
+
+Traits File
+```bash
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="traits"
 ```
 
 ## Usage

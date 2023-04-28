@@ -2,6 +2,7 @@
 
 namespace Backpack\Store;
 
+use Backpack\Store\app\Providers\EventServiceProvider;
 // use Spatie\LaravelPackageTools\Package;
 // use Spatie\LaravelPackageTools\PackageServiceProvider;
 // use ParabellumKoval\Product\Commands\ProductCommand;
@@ -30,21 +31,34 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     
     $this->publishes([
         __DIR__.'/resources/views' => resource_path('views'),
-        __DIR__.'/resources/lang' => resource_path('lang'),
     ], 'views');
+    
+    $this->publishes([
+        __DIR__.'/resources/lang' => resource_path('lang'),
+    ], 'langs');
 
     $this->publishes([
-        __DIR__.'/database/migrations' => resource_path('database/migrations'),
+        __DIR__.'/database/migrations' => database_path('migrations'),
     ], 'migrations');
 
     $this->publishes([
-        __DIR__.'/routes/backpack/routes.php' => resource_path('/routes/backpack/store/backpack.php'),
-        __DIR__.'/routes/api/product.php' => resource_path('/routes/backpack/store/product.php'),
-        __DIR__.'/routes/api/order.php' => resource_path('/routes/backpack/store/order.php'),
-        __DIR__.'/routes/api/cart.php' => resource_path('/routes/backpack/store/cart.php'),
-        __DIR__.'/routes/api/category.php' => resource_path('/routes/backpack/store/category.php'),
+        __DIR__.'/routes' => base_path('routes')
     ], 'routes');
 
+
+    // $this->publishes([
+    //     __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits')
+    // ], 'models');
+
+    $this->publishes([
+        __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
+       __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
+    ], 'traits');
+  }
+
+  public function register()
+  {
+    $this->app->register(EventServiceProvider::class);
   }
 
     // public function configurePackage(Package $package): void

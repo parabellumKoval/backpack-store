@@ -9,7 +9,7 @@ return [
     'color' => 'Цвет',
     'colors' => 'colors'
   ],
-  
+
   "order_status" => [
     "new" => "Новый",
     "canceled" => "Отменен",
