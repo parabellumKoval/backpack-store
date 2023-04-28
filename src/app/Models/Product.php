@@ -328,14 +328,18 @@ class Product extends Model
      * )
      */
     public function getSeoAttribute() {
-      $fields = !empty($this->fields)? json_decode($this->fields): null;
-
+      
       return [
-        'meta_title' => $fields->meta_title ?? null,
-        'meta_description' => $fields->meta_description ?? null,
+        'meta_title' => $this->fieldsDecoded->meta_title ?? null,
+        'meta_description' => $this->fieldsDecoded->meta_description ?? null,
       ];
     }
 
+
+    public function getFieldsDecodedAttribute() {
+      return !empty($this->fields)? json_decode($this->fields): null;
+    }
+    
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
