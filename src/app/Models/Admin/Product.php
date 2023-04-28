@@ -53,7 +53,17 @@ class Product extends BaseProduct
     |--------------------------------------------------------------------------
     */
     
-    
+    public function getPropsAttribute() {
+      // $attributes = $this->attrs;
+      // $props = [];
+      
+      // foreach($attributes as $attribute){
+      //   $values = json_decode($attribute->values);
+      //   $props[$attribute->id] = $values[$attribute->pivot->value];
+      // }
+
+      // return $props;
+    }
 
     /*
     |--------------------------------------------------------------------------

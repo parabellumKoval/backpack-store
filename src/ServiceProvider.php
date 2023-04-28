@@ -43,8 +43,13 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     ], 'routes');
 
 
+    // $this->publishes([
+    //     __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits')
+    // ], 'models');
+
     $this->publishes([
-        __DIR__.'/app/Traits/Admin' => base_path('app/Http/Controllers/Admin/Traits')
+        __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
+       __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
     ], 'traits');
   }
 
