@@ -236,8 +236,11 @@ class Attribute extends Model
       if($this->type === 'checkbox') 
       {
         $indexes = json_decode($this->pivot->value);
-
-        $human_value = array_map(fn($index) => isset($this_values[$index])? $this_values[$index]: null, $indexes);
+        
+        if($indexes && !empty($indexes))
+          $human_value = array_map(fn($index) => isset($this_values[$index])? $this_values[$index]: null, $indexes);
+        else
+          $human_value = null;
       }
       elseif($this->type === 'radio')
       {
