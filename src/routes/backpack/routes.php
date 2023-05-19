@@ -12,7 +12,7 @@ Route::group([
     // Route::crud('payment', 'PaymentCrudController');
     Route::crud('order', 'OrderCrudController');
     
-    if(config('backpack.store.enable_attributes')) {
+    if(config('backpack.store.attributes.enable')) {
       Route::crud('attribute', 'AttributeCrudController');
     }
 
