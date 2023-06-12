@@ -4,8 +4,29 @@
   $info = \Illuminate\Support\Arr::except($entry->info, ['products']);
 
   $user = isset($info['user'])? array_filter($info['user']): null;
-  $payment = isset($info['payment'])? array_filter($info['payment']): null;
-  $delivery = isset($info['delivery'])? array_filter($info['delivery']): null;
+
+  //$payment = isset($info['payment'])? array_filter($info['payment']): null;
+  if(isset($info['payment'])) {
+    if(is_array($info['payment'])) {
+      $payment_items = array_filter($info['payment']);
+      $payment = implode(', ', $payment_items);
+    }else {
+      $payment = $info['payment'];
+    }
+    //$payment = is_array($info['payment'])? array_filter($info['payment']): $info['payment'];
+  }
+
+  if(isset($info['delivery'])) {
+    if(is_array($info['delivery'])) {
+      $delivery_items = array_filter($info['delivery']);
+      $delivery = implode(', ', $delivery_items);
+    }else {
+      $delivery = $info['delivery'];
+    }
+    //$delivery = is_array($info['delivery'])? array_filter($info['delivery']): $info['delivery'];
+  }
+
+  //$delivery = isset($info['delivery'])? array_filter($info['delivery']): null;
 @endphp
 
 <span>
@@ -14,11 +35,11 @@
   @endif
   
   @if($payment && !empty($payment))
-    <p>Оплата: <strong>{{ implode(', ', $payment) }}</strong></p>
+    <p>Оплата: <strong>{{ $payment }}</strong></p>
   @endif
 
   @if($delivery && !empty($delivery))
-    <p>Доставка: <strong>{{ implode(', ', $delivery) }}</strong></p>
+    <p>Доставка: <strong>{{ $delivery }}</strong></p>
   @endif
   
   @if(isset($info['comment']))
@@ -49,7 +70,7 @@
 
   <h4>Сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . $entry->price }}</strong></h4>
 
-  @if(config('backpack.order.enable_bonus', false))
+  @if(config('backpack.store.order.enable_bonus', false))
     <h4>Использовано бонусов: <strong>{{ config('backpack.store.currency.symbol') . $bonusesUsed }}</strong></h4>
     <h4>Итого сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . ($entry->price - $bonusesUsed) }}</strong></h4>
   @endif

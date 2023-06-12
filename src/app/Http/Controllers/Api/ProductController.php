@@ -4,15 +4,16 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 
-use Backpack\Store\app\Models\Product;
+// use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
 
-use Backpack\Store\app\Http\Resources\ProductSmallResource;
-use Backpack\Store\app\Http\Resources\ProductLargeResource;
+// use Backpack\Store\app\Http\Resources\ProductSmallResource;
+// use Backpack\Store\app\Http\Resources\ProductLargeResource;
 
 class ProductController extends \App\Http\Controllers\Controller
 { 
 
+  protected $product_class;
   protected $product_tiny_resource_class;
   protected $product_small_resource_class;
   protected $product_medium_resource_class;
@@ -23,6 +24,7 @@ class ProductController extends \App\Http\Controllers\Controller
     $this->product_small_resource_class = config('backpack.store.product_small_resource', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
     $this->product_medium_resource_class = config('backpack.store.product_medium_resource', 'Backpack\Store\app\Http\Resources\ProductMediumResource');
     $this->product_large_resource_class = config('backpack.store.product_large_resource', 'Backpack\Store\app\Http\Resources\ProductLargeResource');
+    $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
 
   public function index(Request $request) {
@@ -40,7 +42,7 @@ class ProductController extends \App\Http\Controllers\Controller
       $node_ids = isset($node_ids) && count($node_ids)? $node_ids: [];
     }
 
-    $products = Product::query()
+    $products = $this->product_class::query()
               ->select('ak_products.*')
               ->distinct('ak_products.id')
               ->base()
@@ -81,7 +83,7 @@ class ProductController extends \App\Http\Controllers\Controller
   public function random(Request $request) {
     $limit = request('limit') ?? 4;
     
-    $products = Product::base()
+    $products = $this->product_class::base()
                 ->active()
                 ->when(request('not_id'), function($query) {
                   $query->where('id', '!=', request('not_id'));
@@ -96,7 +98,7 @@ class ProductController extends \App\Http\Controllers\Controller
   }
 
   public function show(Request $request, $slug) {
-    $product = Product::where('slug', $slug)->firstOrFail();
+    $product = $this->product_class::where('slug', $slug)->firstOrFail();
     return new $this->product_large_resource_class($product);
   }
 
@@ -105,7 +107,7 @@ class ProductController extends \App\Http\Controllers\Controller
     if(empty($request->ids))
       return response()->json(['products' => []]);
       
-    $products = Product::whereIn('id', $request->ids)->get();
+    $products = $this->product_class::whereIn('id', $request->ids)->get();
     
     return response()->json($products); 
   }
