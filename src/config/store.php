@@ -124,6 +124,8 @@ return [
 
     // PROPUCT
     'product' => [
+      'class' => 'Backpack\Store\app\Models\Product',
+
       'seo' => [
         'enable' => true
       ],

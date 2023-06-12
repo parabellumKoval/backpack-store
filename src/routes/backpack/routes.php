@@ -11,8 +11,9 @@ Route::group([
     // Route::crud('delivery', 'DeliveryCrudController');
     // Route::crud('payment', 'PaymentCrudController');
     Route::crud('order', 'OrderCrudController');
+    Route::crud('promocode', 'PromocodeCrudController');
     
-    if(config('backpack.store.enable_attributes')) {
+    if(config('backpack.store.attributes.enable')) {
       Route::crud('attribute', 'AttributeCrudController');
     }
 

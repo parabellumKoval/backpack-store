@@ -29,7 +29,7 @@ class Order extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['price', 'productsRelated', 'extras'];
+    protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status'];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
