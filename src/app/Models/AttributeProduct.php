@@ -15,21 +15,12 @@ class AttributeProduct extends Pivot
   
   protected $guarded = ['id'];
 
-  protected $translatable = ['value'];
+  protected $translatable = [];
 
-    // protected $casts = [
-    //   'value' => 'array'
-    // ];
-    
-    // public function setValueAttribute($value)
-    // {
-    //   if(!is_array($value)){
-    //     $trimed_value = trim($value);
-        
-    //     if(!empty($trimed_value) || (string)$value === '0' )
-    //       $this->attributes['value'] = json_encode($value);
-    //   }else{
-    //       $this->attributes['value'] = json_encode($value);
-    //   }
-    // } 
+  public function __construct () {
+    if(config('backpack.store.attributes.translatable_value', true)) {
+      $this->translatable = ['value'];
+    }
+  }
+
 }

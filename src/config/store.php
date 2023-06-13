@@ -158,7 +158,8 @@ return [
 
     // ATTRIBUTES
     'attributes' => [
-      'enable' => true
+      'enable' => true,
+      'translatable_value' => false
     ],
 
     // PRODUCT -> properties
