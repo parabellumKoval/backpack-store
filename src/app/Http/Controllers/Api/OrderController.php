@@ -213,10 +213,11 @@ class OrderController extends \App\Http\Controllers\Controller
 
       // add user data to info field (json)
       $info = $order->info;
-      $info['user'] = $user_dat;
+      $info['user'] = $user_data;
       $order->info = $info;
 
-      $order->user_id = isset($user_model)? $user_model->id: null;
+      $order->orderable_id = isset($user_model)? $user_model->id: null;
+      $order->orderable_type = isset($user_model)? config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
     }
 
     try {
