@@ -25,7 +25,7 @@ class OrderController extends \App\Http\Controllers\Controller
   private $ORDER_MODEL = '';
 
   public function __construct() {
-    $this->ORDER_MODEL = config('backpack.store.ORDER_MODEL', 'Backpack\Store\app\Models\Order');
+    $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
   }
 
   public function index(Request $request) {
@@ -96,7 +96,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return response()->json($e->getMessage(), 404);
     }
 
-    return response()->json($order);
+    return response()->json(new OrderLargeResource($order));
   }
 
   private function assignArrayByPath(&$arr, $path, $value, $separator='.') {
@@ -150,7 +150,7 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     // Create new empty Order 
-    $order = new Order;
+    $order = new $this->ORDER_MODEL;
 
     // Set common fields
     foreach($data as $field_name => $field_value){
