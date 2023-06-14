@@ -29,6 +29,9 @@ return [
 
       'per_page' => 12,
 
+      // Large order resource
+      'large_resource' => 'Backpack\Store\app\Http\Resources\OrderLargeResource',
+
       // Common order statuses
       'status' => [
         'default' => 'new',

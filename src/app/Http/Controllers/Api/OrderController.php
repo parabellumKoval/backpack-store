@@ -14,7 +14,6 @@ use Backpack\Store\app\Models\Order;
 
 // RESOURCES
 use Backpack\Store\app\Http\Resources\ProductCartResource;
-use Backpack\Store\app\Http\Resources\OrderLargeResource;
 
 // EVENTS
 use Backpack\Store\app\Events\ProductAttachedToOrder;
@@ -23,9 +22,14 @@ class OrderController extends \App\Http\Controllers\Controller
 { 
 
   private $ORDER_MODEL = '';
+  private $USER_MODEL = '';
+  private $ORDER_LARGE_RESOURCE = '';
 
   public function __construct() {
     $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+    $this->USER_MODEL = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile');
+
+    $this->$ORDER_LARGE_RESOURCE = config('backpack.store.order.large_resource', 'Backpack\Store\app\Http\Resources\OrderLargeResource');
   }
 
   public function index(Request $request) {
@@ -35,12 +39,10 @@ class OrderController extends \App\Http\Controllers\Controller
     $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
-              ->where('user_id', $profile->id)
+              ->where('ak_orders.orderable_id', $profile->id)
+              ->where('ak_orders.orderable_type', $this->USER_MODEL)
               ->when(request('status'), function($query) {
                 $query->where('ak_orders.category_id', request('status'));
-              })
-              ->when(request('is_paid'), function($query) {
-                $query->where('ak_orders.is_paid', request('is_paid'));
               })
               ->when(request('price'), function($query) {
                 $query->where('ak_orders.price', request('price'));
@@ -50,7 +52,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
-    $orders = OrderLargeResource::collection($orders);
+    $orders = $this->$ORDER_LARGE_RESOURCE::collection($orders);
 
     return $orders;
   }
@@ -83,7 +85,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
-    $orders = OrderLargeResource::collection($orders);
+    $orders = $this->$ORDER_LARGE_RESOURCE::collection($orders);
 
     return $orders;
   }
@@ -96,7 +98,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return response()->json($e->getMessage(), 404);
     }
 
-    return response()->json(new OrderLargeResource($order));
+    return response()->json(new $this->$ORDER_LARGE_RESOURCE($order));
   }
 
   private function assignArrayByPath(&$arr, $path, $value, $separator='.') {
@@ -234,7 +236,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return response()->json($e->getMessage(), 400);
     }
 
-    return response()->json(new OrderLargeResource($order));
+    return response()->json(new $this->$ORDER_LARGE_RESOURCE($order));
   }
 
   public function copy(Request $request) {
