@@ -10,12 +10,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Arr;
 
 use Illuminate\Support\Facades\Hash;
-use Backpack\Store\app\Models\Order;
 
 use Illuminate\Support\Facades\Mail;
 
 use app\Models\User;
-use Backpack\Store\app\Models\Product;
 
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Events\ProductAttachedToOrder;
@@ -37,18 +35,22 @@ class OrderCrudController extends CrudController
   private $status = [];
         
   private $current_status;
+  private $ORDER_MODEL = '';
+  private $PRODUCT_MODEL = '';
 
   public function setup()
   {
-      $this->crud->setModel('Backpack\Store\app\Models\Order');
+      $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Order'));
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
       $this->crud->setEntityNameStrings('заказ', 'Заказы');
       
+      $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+      $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
       $this->current_status = \Request::input('status')? \Request::input('status') : null;
 
       $this->setStatusOptions();
 
-      Order::created(function($entry) {
+      $this->ORDER_MODEL::created(function($entry) {
 
         // Sync with Products relation
         foreach($entry->products_to_synk as $key => $product) {
@@ -64,7 +66,7 @@ class OrderCrudController extends CrudController
       });
 
 
-      Order::creating(function($entry) {
+      $this->ORDER_MODEL::creating(function($entry) {
 
         // IF price empty, fill it from products data
         if($entry->price === null) {
@@ -75,7 +77,7 @@ class OrderCrudController extends CrudController
           $plucked_products = Arr::pluck($filtered_products, 'amount', 'id');
           $product_keys = array_keys($plucked_products);
 
-          $products = Product::whereIn('id', $product_keys)->get();
+          $products = $this->PRODUCT_MODEL::whereIn('id', $product_keys)->get();
 
           if(!$products || !$products->count()){
             \Alert::add('error', 'Товары отсутсвуют')->flash();
@@ -243,7 +245,7 @@ class OrderCrudController extends CrudController
             'name'    => 'id',
             'type'      => 'select2',
             'label'   => 'Товар',
-            'model'     => "Backpack\Store\app\Models\Product",
+            'model'     => $this->PRODUCT_MODEL,
             'attribute' => 'name',
             'wrapper' => ['class' => 'form-group col-md-10'],
         ],[
