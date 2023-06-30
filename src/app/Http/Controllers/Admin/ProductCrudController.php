@@ -165,14 +165,14 @@ class ProductCrudController extends ProductCrudBase
         ]);
 
         // SHORT NAME FOR MODIFICATIONS
-        if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
+        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
           $this->crud->addField([
             'name' => 'short_name',
             'label' => 'Краткое название модификации',
             'type' => 'text',
             'tab' => 'Основное'
           ]);
-        }
+        // }
         
         // SLUG
         $this->crud->addField([
