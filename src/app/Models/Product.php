@@ -315,6 +315,9 @@ class Product extends Model
         $parent_children = clone $this->parent->children;
         return $parent_children->prepend($this->parent);
       }
+      else {
+        return $this;
+      }
     }
     
     /**
