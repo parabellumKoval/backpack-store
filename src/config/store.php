@@ -99,6 +99,11 @@ return [
           'rules' => 'nullable|numeric',
           'store_in' => 'info'
         ],
+        
+        'promocode' => [
+          'rules' => 'nullable',
+          'hidden' => true,
+        ],
   
         'user' => [
           'rules' => 'array:firstname,lastname,phone,email',

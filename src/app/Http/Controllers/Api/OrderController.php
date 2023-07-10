@@ -11,12 +11,14 @@ use Illuminate\Support\Facades\Auth;
 // MODELS
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
+use Backpack\Store\app\Models\Promocode;
 
 // RESOURCES
 use Backpack\Store\app\Http\Resources\ProductCartResource;
 
 // EVENTS
 use Backpack\Store\app\Events\ProductAttachedToOrder;
+use Backpack\Store\app\Events\PromocodeApplied;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
@@ -222,6 +224,9 @@ class OrderController extends \App\Http\Controllers\Controller
       $order->orderable_type = isset($user_model)? config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
     }
 
+    // Try validate and apply promocode to order
+    $order = $this->usePromocode($order, $data);
+
     try {
       $order->save();
 
@@ -232,11 +237,38 @@ class OrderController extends \App\Http\Controllers\Controller
       // Dispatch event to change product in_stock etc.
       ProductAttachedToOrder::dispatch($order);
       
+      if($order->promocode)
+        PromocodeApplied::dispatch($order);
+
     }catch(\Exception $e){
       return response()->json($e->getMessage(), 400);
     }
 
     return response()->json(new $this->ORDER_LARGE_RESOURCE($order));
+  }
+
+  protected function usePromocode($order, $data) {
+    if(!isset($data['promocode']) || empty($data['promocode']) || !$order)
+      return $order;
+    
+    $promocode = Promocode::whereRaw('LOWER(`code`) LIKE ? ',[trim(strtolower($data['promocode'])).'%'])->first();
+    
+    if(!$promocode || !$promocode->isValid)
+      return $order;
+    
+
+    // Set info about promocode to order's info
+    $info = $order->info;
+    $info['promocode'] = $promocode;
+    $order->info = $info;
+
+    if($promocode->type === 'value')
+      $order->price = $order->price - $promocode->value;
+
+    if($promocode->type === 'percent')
+      $order->price = $order->price - ($order->price * $promocode->value / 100);
+    
+    return $order;
   }
 
   public function copy(Request $request) {

@@ -8,6 +8,8 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 // TRANSLATIONS
 use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 
+use Carbon\Carbon;
+
 class Promocode extends Model
 {
     use CrudTrait;
@@ -99,7 +101,22 @@ class Promocode extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
-      
+    public function getIsValidAttribute() {
+      if($this->limit !== 0 && $this->used_times >= $this->limit) {
+        return false;
+      }
+  
+      if(!$this->is_active) {
+        return false;
+      }
+  
+      if(Carbon::now()->gt($this->valid_until)) {
+        return false;
+      }
+
+      return true;
+    }
+    
 
     /*
     |--------------------------------------------------------------------------

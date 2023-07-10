@@ -67,11 +67,19 @@
     </div>
     <br>
   @endforeach
-
-  <h4>Сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . $entry->price }}</strong></h4>
-
+  
   @if(config('backpack.store.order.enable_bonus', false))
     <h4>Использовано бонусов: <strong>{{ config('backpack.store.currency.symbol') . $bonusesUsed }}</strong></h4>
-    <h4>Итого сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . ($entry->price - $bonusesUsed) }}</strong></h4>
   @endif
+
+  @if($entry->promocode)
+    <hr>
+    <div>Промокод: 
+      <strong><a href='{{ url("/admin/promocode/{$entry->promocode['id']}/edit") }}'>{{ $entry->promocode['code'] }}</a></strong>
+      <strong>({{ $entry->promocodeSaleString }})</strong>
+    </div>
+  @endif
+
+  <hr>
+  <h4>Сумма заказа: <strong>{{ config('backpack.store.currency.symbol') . ($entry->price - $bonusesUsed) }}</strong></h4>
 </span>

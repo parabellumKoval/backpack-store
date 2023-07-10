@@ -10,6 +10,9 @@ use Backpack\Store\app\Listeners\OrderCreatedListener;
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 use Backpack\Store\app\Listeners\ProductAttachedToOrderListener;
 
+use Backpack\Store\app\Events\PromocodeApplied;
+use Backpack\Store\app\Listeners\PromocodeAppliedListener;
+
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
@@ -18,6 +21,9 @@ class EventServiceProvider extends ServiceProvider
       ],
       ProductAttachedToOrder::class => [
         ProductAttachedToOrderListener::class,
+      ],
+      PromocodeApplied::class => [
+        PromocodeAppliedListener::class,
       ]
     ];
 

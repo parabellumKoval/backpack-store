@@ -205,7 +205,28 @@ class Order extends Model
         
       return implode(', ', $arr);
     }
+
+    public function getPromocodeAttribute() {
+      if(!isset($this->info['promocode']) || empty($this->info['promocode']))
+        return null;
+
+      return $this->info['promocode'];
+    }
     
+    public function getPromocodeSaleStringAttribute() {
+      if(!$this->promocode)
+        return '';
+       
+      
+      if($this->promocode['type'] === 'value'){
+        $currency = config('backpack.store.currency.symbol', '$');  
+        return '-' . $currency . $this->promocode['value'];
+      } elseif($this->promocode['type'] === 'percent')
+        return '-' . $this->promocode['value'] . '%';
+      else
+        return $this->promocode['value'];
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
