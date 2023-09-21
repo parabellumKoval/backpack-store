@@ -31,6 +31,8 @@ class OrderCrudController extends CrudController
   use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+
+  use \App\Http\Controllers\Admin\Traits\OrderCrud;
   
   private $status = [];
         
@@ -40,69 +42,72 @@ class OrderCrudController extends CrudController
 
   public function setup()
   {
-      $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Order'));
-      $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
-      $this->crud->setEntityNameStrings('заказ', 'Заказы');
-      
-      $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
-      $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
-      $this->current_status = \Request::input('status')? \Request::input('status') : null;
+    $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Order'));
+    $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
+    $this->crud->setEntityNameStrings('заказ', 'Заказы');
+    
+    $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+    $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+    $this->current_status = \Request::input('status')? \Request::input('status') : null;
 
-      $this->setStatusOptions();
+    $this->setStatusOptions();
 
-      $this->ORDER_MODEL::created(function($entry) {
+    $this->ORDER_MODEL::created(function($entry) {
 
-        // Sync with Products relation
-        foreach($entry->products_to_synk as $key => $product) {
-          if(!isset($product->id) || empty($product->id))
-            continue;
+      // Sync with Products relation
+      foreach($entry->products_to_synk as $key => $product) {
+        if(!isset($product->id) || empty($product->id))
+          continue;
 
-          $amount = $product->amount ?? 1;
-          $entry->products()->attach($product->id, ['amount' => $amount]);
+        $amount = $product->amount ?? 1;
+        $entry->products()->attach($product->id, ['amount' => $amount]);
+      }
+
+      ProductAttachedToOrder::dispatch($entry);
+    
+    });
+
+
+    $this->ORDER_MODEL::creating(function($entry) {
+
+      // IF price empty, fill it from products data
+      if($entry->price === null) {
+        $filtered_products = array_filter($entry->products_to_synk, function($item) {
+          return !empty($item->id);
+        });
+
+        $plucked_products = Arr::pluck($filtered_products, 'amount', 'id');
+        $product_keys = array_keys($plucked_products);
+
+        $products = $this->PRODUCT_MODEL::whereIn('id', $product_keys)->get();
+
+        if(!$products || !$products->count()){
+          \Alert::add('error', 'Товары отсутсвуют')->flash();
+          return redirect()->back();
         }
 
-        ProductAttachedToOrder::dispatch($entry);
-      
-      });
+        $total_sum = $products->reduce(function($carry, $item) use($plucked_products) {
+          return $carry + $item->price * $plucked_products[$item->id];
+        }, 0);
+        
+        $entry->price = $total_sum;
 
 
-      $this->ORDER_MODEL::creating(function($entry) {
-
-        // IF price empty, fill it from products data
-        if($entry->price === null) {
-          $filtered_products = array_filter($entry->products_to_synk, function($item) {
-            return !empty($item->id);
-          });
-
-          $plucked_products = Arr::pluck($filtered_products, 'amount', 'id');
-          $product_keys = array_keys($plucked_products);
-
-          $products = $this->PRODUCT_MODEL::whereIn('id', $product_keys)->get();
-
-          if(!$products || !$products->count()){
-            \Alert::add('error', 'Товары отсутсвуют')->flash();
-            return redirect()->back();
-          }
-
-          $total_sum = $products->reduce(function($carry, $item) use($plucked_products) {
-            return $carry + $item->price * $plucked_products[$item->id];
-          }, 0);
-          
-          $entry->price = $total_sum;
-
-
-          // Save products to info field (json)
-          foreach($products as $key => $product) {
-            $product->amount = $plucked_products[$product->id];
-            $info = $entry->info;
-            $info['products'][$key] = new ProductCartResource($product);
-            $entry->info = $info;
-          }
+        // Save products to info field (json)
+        foreach($products as $key => $product) {
+          $product->amount = $plucked_products[$product->id];
+          $info = $entry->info;
+          $info['products'][$key] = new ProductCartResource($product);
+          $entry->info = $info;
         }
+      }
 
-        // Generate random code
-        $entry->code = random_int(100000, 999999);
-      });
+      // Generate random code
+      $entry->code = random_int(100000, 999999);
+    });
+
+    // Trait
+    $this->setupOperation();
   }
 
   private function setStatusOptions() {
@@ -194,6 +199,9 @@ class OrderCrudController extends CrudController
         'label' => '💵',
         'prefix' => config('backpack.store.currency.symbol')
       ]);
+
+      // TRAIT
+      $this->listOperation();
   }
 
   protected function setupCreateOperation()
@@ -449,6 +457,8 @@ class OrderCrudController extends CrudController
         ]
     ]);
 
+    // TRAIT
+    $this->createOperation();
 
   }
 

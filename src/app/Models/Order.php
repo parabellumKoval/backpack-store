@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\OrderFactory;
 
+// TRAITS
+use App\Http\Models\Traits\OrderModel as OrderModelTrait;
+
 // Arr
 use Illuminate\Support\Arr;
 
@@ -19,6 +22,7 @@ class Order extends Model
     use CrudTrait;
     use HasFactory;
 
+    use OrderModelTrait;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
