@@ -131,11 +131,13 @@ class ProductCrudController extends ProductCrudBase
     {
         $this->crud->setValidation(ProductRequest::class);
 
-        $this->crud->addField([
-          'name' => 'parent_id',
-          'type' => 'hidden',
-          'value' => \Request::query('parent_id') ?? null
-        ]);
+        if(config('backpack.store.product.modifications.enable', true)) {
+          $this->crud->addField([
+            'name' => 'parent_id',
+            'type' => 'hidden',
+            'value' => \Request::query('parent_id') ?? null
+          ]);
+        }
         
         if(config('backpack.store.product.modifications.enable', true)) {
           $this->crud->addField([
@@ -166,12 +168,14 @@ class ProductCrudController extends ProductCrudBase
 
         // SHORT NAME FOR MODIFICATIONS
         // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
+        if(config('backpack.store.product.modifications.enable', true)) {
           $this->crud->addField([
             'name' => 'short_name',
             'label' => 'Краткое название модификации',
             'type' => 'text',
             'tab' => 'Основное'
           ]);
+        }
         // }
         
         // SLUG
