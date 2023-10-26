@@ -252,7 +252,7 @@ class ProductCrudController extends ProductCrudBase
             'name' => 'price',
             'label' => 'Цена',
             'type' => 'number',
-            'prefix' => '$',
+            'prefix' => config('backpack.store.currency.symbol'),
             'wrapper'   => [ 
               'class' => 'form-group col-md-6'
             ],
@@ -270,7 +270,7 @@ class ProductCrudController extends ProductCrudBase
             'name' => 'old_price',
             'label' => 'Старая цена',
             'type' => 'number',
-            'prefix' => '$',
+            'prefix' => config('backpack.store.currency.symbol'),
             'wrapper'   => [ 
               'class' => 'form-group col-md-6'
             ],
