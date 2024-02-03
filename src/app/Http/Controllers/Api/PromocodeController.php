@@ -3,13 +3,19 @@
 namespace Backpack\Store\app\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-
-use Backpack\Store\app\Models\Promocode;
-use Backpack\Store\app\Models\Order;
 use Carbon\Carbon;
 
+use Backpack\Store\app\Models\Promocode;
+
 class PromocodeController extends \App\Http\Controllers\Controller
-{ 
+{   
+  /**
+   * findAndCheck
+   *
+   * @param  mixed $request
+   * @param  mixed $code
+   * @return void
+   */
   public function findAndCheck(Request $request, $code) {
     
     if(!$code)

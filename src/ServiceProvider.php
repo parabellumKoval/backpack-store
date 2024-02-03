@@ -24,10 +24,12 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->loadRoutesFrom(__DIR__.'/routes/api/order.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/cart.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/promocode.php');
+    $this->loadRoutesFrom(__DIR__.'/routes/api/attribute.php');
     
 
     $this->publishes([
       self::CONFIG_PATH => config_path('/backpack/store.php'),
+      // __DIR__ . '/config/auth.php' => config_path('/auth.php'),
     ], 'config');
     
     $this->publishes([
@@ -60,6 +62,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
   public function register()
   {
     $this->app->register(EventServiceProvider::class);
+
+    $this->mergeConfigFrom(self::CONFIG_PATH, 'backpack.store');
   }
 
     // public function configurePackage(Package $package): void

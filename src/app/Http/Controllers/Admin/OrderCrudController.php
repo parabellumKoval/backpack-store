@@ -42,11 +42,11 @@ class OrderCrudController extends CrudController
 
   public function setup()
   {
-    $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Order'));
+    $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order'));
     $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
     $this->crud->setEntityNameStrings('заказ', 'Заказы');
     
-    $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+    $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order');
     $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
     $this->current_status = \Request::input('status')? \Request::input('status') : null;
 
@@ -112,9 +112,9 @@ class OrderCrudController extends CrudController
 
   private function setStatusOptions() {
     $status_base = [
-      'order' => config('backpack.store.order.status.values'),
-      'pay' => config('backpack.store.order.pay_status.values'),
-      'delivery' => config('backpack.store.order.delivery_status.values')
+      'order' => config('backpack.store.order.status.values', []),
+      'pay' => config('backpack.store.order.pay_status.values', []),
+      'delivery' => config('backpack.store.order.delivery_status.values', [])
     ];
 
     foreach($status_base as $key => $status){

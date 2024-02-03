@@ -20,6 +20,9 @@ use Backpack\Store\app\Http\Resources\ProductCartResource;
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 use Backpack\Store\app\Events\PromocodeApplied;
 
+// EXCEPTIONS
+use Backpack\Store\app\Exceptions\OrderException;
+
 class OrderController extends \App\Http\Controllers\Controller
 { 
 
@@ -58,18 +61,38 @@ class OrderController extends \App\Http\Controllers\Controller
 
     return $orders;
   }
-
+  
+  /**
+   * all
+   * 
+   * Get Orders collection. Filtering by owner, status, pay_status, delivery_status, price is available.
+   * Also you can setup per_page and ordering parametrs.
+   *
+   * @param  Illuminate\Http\Request $request
+   *    [
+   *      "orderable_id" => (int) - owner ID
+   *      "orderable_type" => (string) - Class/Model/Provider of the owner
+   *      "status" => (string) - Common status
+   *      "pay_status" => (string) - Payment status
+   *      "delivery_status" => (string) - Delivery status
+   *      "price" => (float) - total price of the order 
+   *      "per_page" => (int) - Pagination, Rows per page 
+   *    ]
+   * @return string JSON
+   */
   public function all(Request $request) {
 
     $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
+              // Owner of the order (user, account, persone etc.)
               ->when(request('orderable_id'), function($query) {
                 $query->where('ak_orders.orderable_id', request('orderable_id'));
               })
               ->when(request('orderable_type'), function($query) {
                 $query->where('ak_orders.orderable_type', request('orderable_type'));
               })
+              //
               ->when(request('status'), function($query) {
                 $query->where('ak_orders.category_id', request('status'));
               })
@@ -91,7 +114,16 @@ class OrderController extends \App\Http\Controllers\Controller
 
     return $orders;
   }
-
+  
+  /**
+   * show
+   * 
+   * Get one order using unique code.
+   *
+   * @param  mixed $request
+   * @param  mixed $code
+   * @return void
+   */
   public function show(Request $request, $code) {
 
     try {
@@ -112,11 +144,14 @@ class OrderController extends \App\Http\Controllers\Controller
 
     $arr = $value;
   }
-
-  public function validateData(Request $request) {
-    // Get only allowed fields
-    $data = $request->only($this->ORDER_MODEL::getFieldKeys());
-
+  
+  /**
+   * validateData
+   *
+   * @param  array $data - Data from the order request
+   * @return void
+   */
+  public function validateData($data) {
     // Apply validation rules to data
     $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
 
@@ -128,51 +163,152 @@ class OrderController extends \App\Http\Controllers\Controller
         $this->assignArrayByPath($errors_array, $key, $error);
       }
 
-      return response()->json($errors_array, 400);
+      throw new OrderException('Order Validation Error', 403, null, $errors_array);
     }
 
     return $data;
   }
-
+  
+  /**
+   * create
+   * 
+   * Store new product.
+   *
+   * @param  mixed $request
+   * @return void
+   */
   public function create(Request $request){
     
-    // Get only allowed fields
-    $data = $request->only($this->ORDER_MODEL::getFieldKeys());
+    try {
+      // Get only allowed fields
+      $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
+      
+      // Create new empty Order 
+      $order = new $this->ORDER_MODEL;
 
-    // Apply validation rules to data
-    $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
+      // Set base data that independent from external sources (data from request)
+      $order = $this->prepareOrder($order);
 
-    if ($validator->fails()) {
-      $errors = $validator->errors()->toArray();
-      $errors_array = [];
+      // Set common fields
+      $order = $this->setRequestFields($order, $data);
 
-      foreach($errors as $key => $error){
-        $this->assignArrayByPath($errors_array, $key, $error);
+      // Set user data
+      $order = $this->setUserData($order, $data);
+
+      // Attach product to order and calculate order total price
+      [$order, $products] = $this->setProductsToOrder($order, $data);
+
+      // Try validate and apply promocode to order
+      if(isset($data['promocode']) && !empty($data['promocode'])) {
+        $order->promocode = $data['promocode'];
       }
 
-      return response()->json($errors_array, 400);
+      // Get price with products, promocodes etc.
+      $order->price = $order->getTotalPrice();
+
+      // Save order
+      $order->save();
+
+      // Try attach products to order after save()
+      foreach($products as $product) {
+        $order->products()->attach($product, ['amount' => $data['products'][$product->id]]);
+      }
+
+      // Dispatch event to change product in_stock etc.
+      ProductAttachedToOrder::dispatch($order);
+      
+      // Dispatch promocode usage event
+      if($order->promocode) {
+        PromocodeApplied::dispatch($order);
+      }
+
+    }catch(OrderException $e) {
+      return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
     }
 
-    // Create new empty Order 
-    $order = new $this->ORDER_MODEL;
+    return response()->json(new $this->ORDER_LARGE_RESOURCE($order));
+  }
 
-    // Set common fields
+  /**
+   * setUserData
+   * 
+   * Set user data to order info field and attach user Model if possible.
+   * 
+   * @param  Backpack\Store\app\Models\Order $order - new Order model
+   * @param  array $data - Order request data
+   * @return Backpack\Store\app\Models\Order $order
+   */
+  protected function setUserData($order, array $data){
+    // GET USER MODEL IF AUTHED
+    if($data['provider'] === 'auth') {
+
+      if(!Auth::guard(config('backpack.store.auth_guard', 'profile'))->check()){
+        throw new OrderException('User not authenticated', 401);
+      }
+
+      $user_model = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
+
+      // User Model have to implement toOrderArray() method that gives:
+      //    array {first_name: string, last_name: string, phone: string, email: string}
+      $user_data = $user_model->toOrderArray();
+
+      // add user data to info field (json)
+      $info = $order->info;
+      $info['user'] = $user_data;
+      $order->info = $info;
+
+      $order->orderable_id = isset($user_model)? $user_model->id: null;
+      $order->orderable_type = isset($user_model)? config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
+    }
+
+    return $order;
+  }
+
+
+  /**
+   * setRequestFields
+   * 
+   * Automatycly setting all fields form request 
+   * using structure from the config("backpack.store.order.fields").
+   * 
+   * 
+   * @param  Backpack\Store\app\Models\Order $order - new Order model
+   * @param  array $data - Order request data
+   * @return Backpack\Store\app\Models\Order $order
+   */
+  protected function setRequestFields($order, array $data) {
+
     foreach($data as $field_name => $field_value){
+      // Getting fields structure and rules from config
       $config_fields = $this->ORDER_MODEL::getFields();
       $field = $config_fields[$field_name] ?? $config_fields[$field_name.'.*'];
       
+      // Skipping if filed is hidden
       if(isset($field['hidden']) && $field['hidden'])
         continue;
 
+      // If JSON field 
       if(isset($field['store_in'])) {
         $field_old_value = $order->{$field['store_in']};
         $field_old_value[$field_name] = $field_value;
         $order->{$field['store_in']} = $field_old_value;
-      }else {
+      }
+      // if regular field
+      else {
         $order->{$field_name} = $field_value;
       }
     }
 
+    return $order;
+  }
+
+  /**
+   * prepareOrder
+   *
+   * @param Backpack\Store\app\Models\Order $order
+   * @return Backpack\Store\app\Models\Order $order
+   */
+  protected function prepareOrder($order) {
     // Generate order code
     $order->code = random_int(100000, 999999);
 
@@ -185,11 +321,22 @@ class OrderController extends \App\Http\Controllers\Controller
     // Generate order code
     $order->delivery_status = config('backpack.store.order.delivery_status.default', 'waiting');
 
+    return $order;
+  }
+  
+  /**
+   * setProductsToOrder
+   * 
+   * @param  Backpack\Store\app\Models\Order $order - new Order model
+   * @param  array $data - Order request data
+   * @return array {$order: Backpack\Store\app\Models\Order, $products: Collection}
+   */
+  protected function setProductsToOrder($order, array $data){
     // Get products collection
     $products = Product::whereIn('id', array_keys($data['products']))->get();
 
     if(!$products || !$products->count()) {
-      return response()->json("There are no products found in cart or products does not exist in the database.", 404);
+      throw new OrderException("There are no products found in cart or products does not exist in the database.", 404);
     }
 
     // Set products to info
@@ -200,95 +347,79 @@ class OrderController extends \App\Http\Controllers\Controller
       $order->info = $info;
     }
 
-    // Set order total price
-    $order->price = round($products->reduce(function($carry, $item) {
-      return $carry + $item->price * $item->amount;
-    }, 0), 2);
-
-    // GET USER MODEL IF AUTHED
-    if($data['provider'] === 'auth') {
-
-      if(!Auth::guard(config('backpack.store.auth_guard', 'profile'))->check()){
-        return response()->json('User not authenticated', 401);
-      }
-
-      $user_model = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
-      $user_data = $user_model->infoData;
-
-      // add user data to info field (json)
-      $info = $order->info;
-      $info['user'] = $user_data;
-      $order->info = $info;
-
-      $order->orderable_id = isset($user_model)? $user_model->id: null;
-      $order->orderable_type = isset($user_model)? config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
-    }
-
-    // Try validate and apply promocode to order
-    $order = $this->usePromocode($order, $data);
-
-    try {
-      $order->save();
-
-      foreach($products as $product) {
-        $order->products()->attach($product, ['amount' => $data['products'][$product->id]]);
-      }
-
-      // Dispatch event to change product in_stock etc.
-      ProductAttachedToOrder::dispatch($order);
-      
-      if($order->promocode)
-        PromocodeApplied::dispatch($order);
-
-    }catch(\Exception $e){
-      return response()->json($e->getMessage(), 400);
-    }
-
-    return response()->json(new $this->ORDER_LARGE_RESOURCE($order));
+    return [$order, $products];
   }
 
-  protected function usePromocode($order, $data) {
-    if(!isset($data['promocode']) || empty($data['promocode']) || !$order)
-      return $order;
+  /**
+   * usePromocode
+   * 
+   * Apply promocode to order after validation. 
+   * The promocode affects the order price.
+   *
+   * @param  Backpack\Store\app\Models\Order $order - new order Model
+   * @param  array $data - Data from the order request
+   * @return Backpack\Store\app\Models\Order $order
+   */
+  // protected function usePromocode($order, $data) {
+  //   // Checking if promocode data isset in request
+  //   if(!isset($data['promocode']) || empty($data['promocode']) || !$order)
+  //     return $order;
     
-    $promocode = Promocode::whereRaw('LOWER(`code`) LIKE ? ',[trim(strtolower($data['promocode'])).'%'])->first();
+  //   // Checking if promocode really excists in DB and getting it. 
+  //   $promocode = Promocode::whereRaw('LOWER(`code`) LIKE ? ',[trim(strtolower($data['promocode'])).'%'])->first();
     
-    if(!$promocode || !$promocode->isValid)
-      return $order;
+  //   // Check if promocode valid by used times, date and is_active property
+  //   if(!$promocode || !$promocode->isValid)
+  //     return $order;
     
+  //   // Setting promocode info to order's info
+  //   $info = $order->info;
+  //   $info['promocode'] = $promocode;
+  //   $order->info = $info;
 
-    // Set info about promocode to order's info
-    $info = $order->info;
-    $info['promocode'] = $promocode;
-    $order->info = $info;
+  //   // Making correction to order price
+  //   // if promocode is expressed in currency 
+  //   if($promocode->type === 'value')
+  //     $order->price = $order->price - $promocode->value;
 
-    if($promocode->type === 'value')
-      $order->price = $order->price - $promocode->value;
-
-    if($promocode->type === 'percent')
-      $order->price = $order->price - ($order->price * $promocode->value / 100);
+  //   // if promocode is expressed in percent
+  //   if($promocode->type === 'percent')
+  //     $order->price = $order->price - ($order->price * $promocode->value / 100);
     
-    return $order;
-  }
-
-  public function copy(Request $request) {
-    if(!$request->id)
-      throw new Exception('The ID of the base record was not pass.');
+  //   // return changed order
+  //   return $order;
+  // }
   
+  /**
+   * copy
+   * 
+   * Clone existing order to a new 
+   *
+   * @param  mixed $request
+   *    [
+   *      "id" => (int) Base order id
+   *    ]
+   * @return Backpack\Store\app\Models\Order $order
+   */
+  public function copy(Request $request) {
+    // Getting base order id from request
+    if(!$request->id)
+      throw new \Exception('The ID of the base record was not pass.', 403);
+  
+    // Getting base order
     $base = Order::findOrFail($request->id);
     
+    // Clone base order to variable
     $order = $base->replicate();
 
     try {
-      $order->code = random_int(100000, 999999);
+      // Reset total price, statuses, delete promocodes and bonuses
+      $order->resetCopy();
 
-      $info = $order->info;
-      $info['bonusesUsed'] = 0;
-      $order->info = $info;
-
+      // Try to save order
       $order->save();
     }catch(\Exception $e) {
-      throw new Exception('An error has occurred. Failed to create reorder');
+      throw new \Exception('An error has occurred. Failed to create copy: ' . $e->getMessage(), $e->getCode());
     }
 
     return $order;

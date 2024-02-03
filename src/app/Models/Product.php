@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\ProductFactory;
 
 // TRAITS
-use App\Http\Models\Traits\ProductModel as ProductModelTrait;
+use App\Models\Traits\ProductModel as ProductModelTrait;
 
 // PIVOT
 use Backpack\Store\app\Models\AttributeProduct;
@@ -288,7 +288,7 @@ class Product extends Model
      *
      * Return parent product if exists, Otherwise return self
      * 
-     * @return void
+     * @return Product
      */
     public function getBaseAttribute() {
       if($this->parent)
@@ -302,7 +302,7 @@ class Product extends Model
      *
      * Return all product modifications includes self model
      * 
-     * @return void
+     * @return collection
      */
     public function getModificationsAttribute() {
       if($this->children->count())

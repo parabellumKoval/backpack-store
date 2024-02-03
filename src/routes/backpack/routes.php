@@ -13,7 +13,7 @@ Route::group([
     Route::crud('order', 'OrderCrudController');
     Route::crud('promocode', 'PromocodeCrudController');
     
-    if(config('backpack.store.attributes.enable')) {
+    if(config('backpack.store.attribute.enable')) {
       Route::crud('attribute', 'AttributeCrudController');
     }
 

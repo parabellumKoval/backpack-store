@@ -23,29 +23,46 @@ class OrderFactory extends Factory
     {
 
       return [
-        'user_id' => $this->faker->randomElement([1, null]),
         'code' => $this->faker->regexify('[A-Z]{3}[0-4]{3}'),
         'price' => $this->faker->randomFloat(2, 0, 100000),
-        'status' => $this->faker->randomElement(
-          [
-            'new',
-            'pending',
-            'complited',
-            'fail'
-          ]
-        ),
-        'is_paid' => $this->faker->randomElement([
-          1, 0
+        'status' => $this->faker->randomElement([
+          'new',
+          'pending',
+          'complited',
+          'fail'
+        ]),
+        'pay_status' => $this->faker->randomElement([
+          'waiting',
+          'failed',
+          'paied'
+        ]),
+        'delivery_status' => $this->faker->randomElement([
+          'waiting',
+          'sent',
+          'failed',
+          'delivered',
+          'pickedup'
         ]),
         'info' => [
-          'name' => $this->faker->firstName(),
-          'address' => $this->faker->address(),
-          'city' => $this->faker->city(),
-          'tel' => $this->faker->phoneNumber(),
-          'email' => 'ex@ex.com',
-          'payment' => $this->faker->randomElement(['visa', 'paypal']),
-          'delivery' => $this->faker->randomElement(['shipping', 'courier']),
-          'comment' => $this->faker->sentence(),
+          'user' => [
+            'firstname' => $this->faker->firstName(),
+            'lastname' => $this->faker->lastName(),
+            'phone' => $this->faker->phoneNumber(),
+            'email' => $this->faker->email(),
+          ],
+          'delivery' => [
+            'zip' => $this->faker->randomNumber(6, true),
+            'room' => $this->faker->randomNumber(2, false),
+            'house' => $this->faker->randomNumber(2, false),
+            'method' => $this->faker->randomElement(['address', 'courier']),
+            'street' => $this->faker->address(),
+            'city' => $this->faker->city(),
+            'warehouse' => null,
+            'comment' => $this->faker->sentence(),
+          ],
+          'payment' => [
+            'method' => $this->faker->randomElement(['cash', 'paypal']),
+          ],
           'products' => [
             [
               'name' => $this->faker->sentence(),
@@ -73,6 +90,26 @@ class OrderFactory extends Factory
           ]
         ],
       ];
+    }
+
+    /**
+     * Indicate that the user is suspended.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+    */
+    public function suspended()
+    {
+        return $this->state(function (array $attributes) {
+          $products = $attributes['info']['products'];
+
+          $price = array_reduce($products, function($carry, $item) {
+            return $carry + $item['price'] * $item['amount'];
+          }, 0);
+
+          return [
+              'price' => round($price, 2),
+          ];
+        });
     }
 
 }

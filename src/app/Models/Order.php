@@ -10,12 +10,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\OrderFactory;
 
 // TRAITS
-use App\Http\Models\Traits\OrderModel as OrderModelTrait;
+use App\Models\Traits\OrderModel as OrderModelTrait;
 
 // Arr
 use Illuminate\Support\Arr;
 
+// EVENTS
+use Backpack\Store\app\Events\PromocodeApplied;
 use Backpack\Store\app\Events\OrderCreated;
+use Backpack\Store\app\Models\Promocode;
 
 class Order extends Model
 {
@@ -67,7 +70,13 @@ class Order extends Model
       return OrderFactory::new();
     }
 
-
+    
+    /**
+     * getFields
+     *
+     * @param  mixed $type
+     * @return void
+     */
     public static function getFields($type = 'fields') {
       $fields = config("backpack.store.order.{$type}");
       
@@ -117,7 +126,13 @@ class Order extends Model
 
       return $rules;
     }
-
+    
+    /**
+     * getFieldKeys
+     *
+     * @param  mixed $type
+     * @return void
+     */
     public static function getFieldKeys($type = 'fields') {
       //$keys = array_keys(static::$$type);
       $keys = array_keys(config("backpack.store.order.{$type}"));
@@ -127,8 +142,108 @@ class Order extends Model
 
       return $keys;
     }
+    
+    /**
+     * resetCopy
+     * 
+     * Reset some fields during coping order
+     *
+     * @return void
+     */
+    public function resetCopy() {
+      // Get current info data
+      $info = $this->info;
 
+      // Remove used bonuses data
+      $info['bonusesUsed'] = 0;
 
+      // Reset promocode
+      $info['promocode'] = null;
+
+      // Generate new order code 
+      $this->code = random_int(100000, 999999);
+
+      // Reset total order price (without promocodes and bonuses)
+      $this->price = $this->getProductsPrice();
+
+      // Reset statuses
+      $this->status = config("backpack.store.order.status.default");
+      $this->pay_status = config("backpack.store.order.pay_status.default");
+      $this->delivery_status = config("backpack.store.order.delivery_status.default");
+
+      // Write clear info
+      $this->info = $info;
+    }
+    
+    /**
+     * getProductsPrice
+     * 
+     * Calculate order total price from info array
+     * without tax, promocodes, bonuses etc. Using only product price and product amount
+     *
+     * @return float $price
+     */
+    public function getProductsPrice() {
+      $products = $this->info['products'];
+      
+      // Calculate price
+      $price = array_reduce($products, function($carry, $item) {
+        return $carry + $item['price'] * $item['amount'];
+      }, 0);
+
+      // return order total price
+      return round($price, 2);
+    }
+    
+    /**
+     * getTotalPrice
+     * 
+     * Total price using products price, promocodes etc.
+     *
+     * @return void
+     */
+    public function getTotalPrice() {
+      // Get sum of products with amount
+      $price = $this->getProductsPrice();
+      // If no promocode return regular price
+      if(!isset($this->info['promocode']) || empty($this->info['promocode'])) {
+        return $price;
+      }
+
+      // Try find promocode data in info JSON
+      $promocode = $this->info['promocode'];
+
+      // Making correction to order price
+      // if promocode is expressed in currency 
+      if($promocode['type'] === 'value') {
+        $price = $price - $promocode['value'];
+      }
+
+      // if promocode is expressed in percent
+      if($promocode['type'] === 'percent')
+        $price = $price - ($price * $promocode['value'] / 100);
+
+      return round($price, 2);
+    }
+    
+    /**
+     * usePromocode
+     * 
+     * Making 2 things:
+     * -- Set promocode info to info JSON
+     * -- Set total order price
+     *
+     * @param  mixed $promocode
+     * @return void
+     */
+    public function usePromocode(string $promocode): void {
+      
+      // Set promocode to info JSON
+      $this->promocode = $promocode;
+      
+      // Refresh price (using promocode sale)
+      $this->price = $this->getTotalPrice();
+    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -139,14 +254,11 @@ class Order extends Model
       return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product')->withPivot('amount');
     }
 
+    // Owner/User Model/ Profile Model etc.
     public function orderable()
     {
       return $this->morphTo();
     }
-    // public function user()
-    // {
-    //   return $this->belongsTo(config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'));
-    // }
     
     /*
     |--------------------------------------------------------------------------
@@ -159,76 +271,118 @@ class Order extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
-
+    
+    /**
+     * getUserAttribute
+     * 
+     * Return user data array from order info JSON
+     *
+     * @return array|null
+     */
     public function getUserAttribute() {
       if(isset($this->info['user']) && $this->info['user'] && count($this->info['user']))
         return $this->info['user'];
+      else
+        return null;
     }
-
+    
+    /**
+     * getDeliveryAttribute
+     *
+     * Return delivery data array from order info JSON
+     * 
+     * @return array|null
+     */
     public function getDeliveryAttribute() {
       if(isset($this->info['delivery']) && $this->info['delivery'] && count($this->info['delivery']))
         return $this->info['delivery'];
+      else
+        return null;
     }
-
+    
+    /**
+     * getPaymentAttribute
+     *
+     * Return payment data array from order info JSON
+     *
+     * @return array|null
+     */
     public function getPaymentAttribute() {
       if(isset($this->info['payment']) && $this->info['payment'] && count($this->info['payment']))
         return $this->info['payment'];
-    }
-
-    public function getProductsAnywayAttribute() {
-      if(isset($this->info['products']) && $this->info['products'] && count($this->info['products']))
-        return $this->info['products'];
-      elseif($this->products)
-        return $this->products;
-      else [];
-    }
-
-    public function getStatusStringAttribute(){
-	    if($this->status == 'new' || $this->status == 'pending' || $this->status == 'paid' || $this->status == 'sent')
-	    	return '<span class="icon-sent order-history-icon"></span><span class="text">'.$this->status.'</span>';
-	    elseif($this->status == 'canceled')
-	    	return '<span class="icon-canceled order-history-icon"></span><span class="text" style="color: #EB5757;">CANCELED</span>';
-	    else
-	    	return '<span class="icon-delivered order-history-icon"></span><span class="text" style="color: #ACDA53;">delivered</span>';
+      else
+        return null;
     }
     
-    public function getAddressStringAttribute(){
-      if(!isset($this->info['address']) || !count($this->info['address']))
-        return null;
-      
-      return implode(', ', $this->info['address']);
-    }
+    /**
+     * getProductsAnywayAttribute
+     * 
+     * Return products from info JSON or from relations otherwise
+     *
+     * @return array
+     */
+    public function getProductsAnywayAttribute() {
+      $PRODUCT_CART_RESOURCE = config('backpack.store.product.product_cart_resource', 'Backpack\Store\app\Http\Resources\ProductCartResource');
 
-    public function getUserStringAttribute() {
-      if(!isset($this->info['user'])  || !count($this->info['user']))
-        return null;
-
-      $arr = array_filter($this->info['user'], function($item) {
-        return !empty($item);
-      });
+      // Try get products from static info field
+      if(isset($this->info['products']) && $this->info['products'] && count($this->info['products'])) {
+        return $this->info['products'];
+      }
+      // try get products from relations
+      elseif($this->products) {
+        // Get products collection resource 
+        $products_collection = $PRODUCT_CART_RESOURCE::collection($this->products);
         
-      return implode(', ', $arr);
+        // Convert to array and return
+        return json_decode($products_collection->toJson(), true);
+      }
+      // else return empty array
+      else {
+        return [];
+      }
     }
-
+    
+    
+    /**
+     * getPromocodeAttribute
+     *
+     * Get promocode info from order info
+     * 
+     * @return array|null
+     */
     public function getPromocodeAttribute() {
       if(!isset($this->info['promocode']) || empty($this->info['promocode']))
         return null;
 
       return $this->info['promocode'];
     }
-    
+        
+    /**
+     * getPromocodeSaleStringAttribute
+     * 
+     * Necessary for email-letters and dashboard
+     * Return sale value in currency or in percents
+     * Fx: -50$ or -5%
+     * 
+     * @return string
+     */
     public function getPromocodeSaleStringAttribute() {
       if(!$this->promocode)
         return '';
-       
       
-      if($this->promocode['type'] === 'value'){
-        $currency = config('backpack.store.currency.symbol', '$');  
-        return '-' . $currency . $this->promocode['value'];
-      } elseif($this->promocode['type'] === 'percent')
-        return '-' . $this->promocode['value'] . '%';
-      else
-        return $this->promocode['value'];
+      // Get currency symbol from config
+      $currency_symbol = config('backpack.store.currency.symbol', '$'); 
+
+      switch($this->promocode['type']) {
+        // If regular return in currency
+        case 'value':
+          return "-{$currency_symbol}{$this->promocode['value']}";
+        // If percents
+        case 'percent':
+          return "-{$this->promocode['value']}%";
+        default:
+          return $this->promocode['value'];
+      }
     }
 
     /*
@@ -237,23 +391,73 @@ class Order extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function setPromocodeAttribute($value = null) {
+      // Checking if promocode data isset in request
+      if(empty($value))
+        return;
+      
+      // Checking if promocode really excists in DB and getting it. 
+      $promocode = Promocode::whereRaw('LOWER(`code`) LIKE ? ',[trim(strtolower($value)).'%'])->first();
+      
+      // Check if promocode exists
+      if(!$promocode) {
+        throw new \Exception('Promocode does not exist.', 404);
+      }
+
+      // Check if promocode valid by used times, date and is_active property
+      if(!$promocode->isValid) {
+        throw new \Exception('Promocode is not valid.', 401);
+      }
+      
+      // Setting promocode info to order's info
+      $info = $this->info;
+      $info['promocode'] = $promocode;
+      $this->info = $info;
+    }
+    
+    /**
+     * setProductsRelatedAttribute
+     * 
+     * Auxiliary field for data processing in Observer, Listeners etc.
+     *
+     * @param  mixed $v
+     * @return void
+     */
     public function setProductsRelatedAttribute($v) {
       $this->products_to_synk = $v;
     }
-
+    
+    /**
+     * setExtrasAttribute
+     *
+     * @param  array $value
+     * @return void
+     */
     public function setExtrasAttribute($value) {
+      // Getting current info data
       $info_array = $this->info ?? [];
 
+      // New extrat data
       $extras_array = [];
 
+      // For each item 
       foreach ($value as $k => $v) {
-          static::undash($extras_array, $k, $v);
+        // Undash and set to extras_array by link
+        static::undash($extras_array, $k, $v);
       }
 
+      // Merging old and new extras data
       $this->info = array_merge($info_array, $extras_array);
-      //dd($results);
     }
-
+    
+    /**
+     * undash
+     *
+     * @param  array $array
+     * @param  mixed $key
+     * @param  mixed $value
+     * @return array
+     */
     public static function undash(&$array, $key, $value)
     {
         if (is_null($key)) {

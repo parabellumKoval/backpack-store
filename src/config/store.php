@@ -102,7 +102,7 @@ return [
         
         'promocode' => [
           'rules' => 'nullable',
-          'hidden' => true,
+          'store_in' => 'info'
         ],
   
         'user' => [
@@ -165,9 +165,13 @@ return [
     ],
 
     // ATTRIBUTES
-    'attributes' => [
+    'attribute' => [
       'enable' => true,
-      'translatable_value' => false
+
+      // Is pivot values translatable
+      'translatable_value' => false,
+
+      'enable_icon' => false
     ],
 
     // PRODUCT -> properties
@@ -188,6 +192,9 @@ return [
     
     // Large product resource used for product page (show route)
     'product_large_resource' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
+
+    // Cart product resource used for order
+    'product_cart_resource' => 'Backpack\Store\app\Http\Resources\ProductCartResource',
 
     // BRANDS
     'enable_brands' => false,

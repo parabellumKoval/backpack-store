@@ -18,7 +18,8 @@ class AttributeProduct extends Pivot
   protected $translatable = [];
 
   public function __construct () {
-    if(config('backpack.store.attributes.translatable_value', true)) {
+    // If translatable value available
+    if(config('backpack.store.attribute.translatable_value', true)) {
       $this->translatable = ['value'];
     }
   }

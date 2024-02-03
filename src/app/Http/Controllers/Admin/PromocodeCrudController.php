@@ -10,14 +10,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
-use Backpack\Store\app\Http\Controllers\Admin\Base\ProductCrudBase;
 
 /**
  * Class ProductCrudController
  * @package App\Http\Controllers\Admin
  * @property-read CrudPanel $crud
  */
-class PromocodeCrudController extends ProductCrudBase
+class PromocodeCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
@@ -27,7 +26,7 @@ class PromocodeCrudController extends ProductCrudBase
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-    use \App\Http\Controllers\Admin\Traits\PromocodeCrud;
+    // use \App\Http\Controllers\Admin\Traits\PromocodeCrud;
     
     private $categories;
     private $filter_categories;

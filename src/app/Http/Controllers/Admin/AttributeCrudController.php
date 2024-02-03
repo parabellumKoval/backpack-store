@@ -28,12 +28,14 @@ class AttributeCrudController extends CrudController
 
     public function setup()
     {
-        $this->crud->setModel('Backpack\Store\app\Models\Attribute');
+        $this->crud->setModel('Backpack\Store\app\Models\Admin\Attribute');
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/attribute');
         $this->crud->setEntityNameStrings('атрибут', 'атрибуты');
         
         $this->crud->query = $this->crud->query->withoutGlobalScopes();
-        Category::first();
+        
+        // Category::first();
+
         $this->crud->model->clearGlobalScopes();
         
         $this->types = array_unique(Attribute::pluck('type', 'type')->toArray());
@@ -79,16 +81,16 @@ class AttributeCrudController extends CrudController
           'label' => 'Название',
         ]);
 
-      if(config('aimix.shop.enable_attribute_groups')) {
-        $this->crud->addColumn([
-          'name' => 'attribute_group_id',
-          'label' => 'Группа',
-          'type' => 'select',
-          'entity' => 'AttributeGroup',
-          'attribute' => 'name',
-          'model' => "Aimix\Shop\app\Models\AttributeGroup",
-        ]);
-      }
+      // if(config('backpack.store.attribute.enable_groups')) {
+      //   $this->crud->addColumn([
+      //     'name' => 'attribute_group_id',
+      //     'label' => 'Группа',
+      //     'type' => 'select',
+      //     'entity' => 'AttributeGroup',
+      //     'attribute' => 'name',
+      //     'model' => "Aimix\Shop\app\Models\AttributeGroup",
+      //   ]);
+      // }
 
         $this->crud->addColumn([
           'name' => 'si',
@@ -193,7 +195,7 @@ class AttributeCrudController extends CrudController
           'hint' => 'Если включено, то данный тип будет активен',
         ]);
 
-      if(config('aimix.shop.enable_attribute_icon')) {
+      if(config('backpack.store.attribute.enable_icon')) {
         $this->crud->addField([
           'name' => 'icon',
           'label' => 'Иконка',

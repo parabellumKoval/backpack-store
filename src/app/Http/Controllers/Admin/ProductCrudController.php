@@ -10,14 +10,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
-use Backpack\Store\app\Http\Controllers\Admin\Base\ProductCrudBase;
 
 /**
  * Class ProductCrudController
  * @package App\Http\Controllers\Admin
  * @property-read CrudPanel $crud
  */
-class ProductCrudController extends ProductCrudBase
+class ProductCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
@@ -32,6 +31,7 @@ class ProductCrudController extends ProductCrudBase
     private $categories;
     private $filter_categories;
     private $brands;
+    private $attrs;
     
     public function setup()
     {
@@ -55,7 +55,7 @@ class ProductCrudController extends ProductCrudBase
         $this->setCategories();
 
         // SET ATTRIBUTES MODEL 
-        $this->setAttrs();
+        $this->setAttrsForCategories();
 
         // $this->crud->query = $this->crud->query->withoutGlobalScopes();
         
@@ -395,35 +395,47 @@ class ProductCrudController extends ProductCrudBase
      * @return void
      */
     public function setAttributesFields() {
-    
+      
+      // $this->entry - current product data from DB
+      // $this->attrs - collection of all attributes for attached categories
       if(isset($this->attrs) && $this->entry) {
         
+        // Adding hidden field
         $this->crud->addField([
           'name' => 'props',
           'type' => 'hidden',
           'value' => null
         ]);
 
-
         $attr_fields = [];
 
+        //
         foreach($this->attrs as $index => $attribute) {
+          // Attribute Model ID
           $id = $attribute->id;
+          // Attribute Model values list
           $values = json_decode($attribute->values);
 
-          if($this->entry && $this->entry->attrs) {
+          // If entry has attached attributes
+          // Try find current value for this attribute 
+          if($this->entry->attrs) {
+            // Find this attribute from already attached attributes
             $model_attribute = $this->entry->attrs()->find($attribute->id);
+            // If exists get pivot value 
             $value = $model_attribute? $model_attribute->pivot->value: null;
           }else {
             $value = null;
           }
           
+          // Create base attribute field template
           $attr_fields[$index] = [
             'name' => "props[{$id}]",
             'label' => $attribute->name,
             'tab' => 'Характеристики'
           ];
 
+          // Set correct options for different attribute types
+          // For checkbox
           if($attribute->type === 'checkbox')
           {
             $value = json_decode($value);
@@ -439,6 +451,7 @@ class ProductCrudController extends ProductCrudBase
               ]
             );
           }
+          // For radio
           else if($attribute->type === 'radio')
           {
             $attr_fields[$index] = array_merge(
@@ -451,6 +464,7 @@ class ProductCrudController extends ProductCrudBase
               ]
             );
           }
+          // For number
           else if($attribute->type === 'number')
           {
             $attr_fields[$index] = array_merge(
@@ -466,6 +480,7 @@ class ProductCrudController extends ProductCrudBase
               ]
             );
           }
+          // For string
           else if($attribute->type === 'string')
           {
             $attr_fields[$index] = array_merge(
@@ -478,6 +493,7 @@ class ProductCrudController extends ProductCrudBase
           }
         }
 
+        // Set all prepared fields
         foreach($attr_fields as $attr_field) {
           $this->crud->addField($attr_field);
         }
@@ -497,20 +513,35 @@ class ProductCrudController extends ProductCrudBase
         ]);
       }
     }
-
-    private function setAttrs() {
+    
+    /**
+     * setAttrsForCategories
+     * 
+     * Set all attributes for attached categories 
+     *
+     * @return void
+     */
+    private function setAttrsForCategories() {
+      // if operation type differ from create/update go out
       if(!in_array($this->opr, ['create', 'update']))
         return;
 
+      // create empty collection
       $this->attrs = collect();
 
+      // if categories have not been set go out
       if(!$this->categories || !$this->categories->count())
         return;
       
+      // 
       foreach($this->categories as $category) {
+        // Take all active attributes for this category 
         $cat_attrs = $category->attributes()->where('is_active', true)->get();
-        if($cat_attrs && $cat_attrs->count())
+
+        // If isset active attributes for this category merge with common list
+        if($cat_attrs && $cat_attrs->count()) {
           $this->attrs = $this->attrs->merge($cat_attrs);
+        }
       }
     }
 

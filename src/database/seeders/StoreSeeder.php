@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\Sequence;
 
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
-use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Attribute;
 
 class StoreSeeder extends Seeder
@@ -19,39 +18,51 @@ class StoreSeeder extends Seeder
      */
     public function run()
     {
-
       $this->createCategoriesTree();
-
       $this->createProducts();
-        
-      $this->createOrders();
+      $this->createAttributes();
     }
 
-    private function createOrders() {
-      Order::factory()
-          ->count(10)
-          ->hasAttached(
-            Product::factory()->count(3),
-            [
-              'amount' => rand(1,10),
-              'value' => rand(100, 9999)
-            ]
-          )
-          ->create();
+    private function createAttributes() {
+      $attributes = Attribute::factory()
+              ->count(10)
+              ->suspended()
+              ->create();
     }
 
     private function createProducts() {
       $categories = Category::all();
 
       foreach($categories as $category) {
-        Product::factory()
+        $childProducts = Product::factory()->count(3)->hasAttached($category)->create();
+
+        $products = Product::factory()
             ->count(3)
-            ->for($category)
-            ->has(Product::factory()->count(3)->state(function (array $attributes, Product $product){
-              return ['category_id' => $product->category->id];
-            }), 'children')
+            ->hasAttached($category)
+            ->hasChildren($childProducts)
+            // ->hasAttrs($attributes)
             ->suspended()
             ->create();
+
+        // Attach attributes
+        foreach($products as $product) {
+          $attributes = Attribute::inRandomOrder()->limit(3)->get();
+          $attrs_array = [];
+
+          foreach($attributes as $attribute) {
+            if($attribute->type === 'checkout' || $attribute->type === 'radio'){
+              $value = $attribute->values[array_rand($attribute->values)];
+            }else {
+              $value = 100;
+            }
+
+            $attrs_array[$attribute->id] = [
+              'value' => $value
+            ];
+          }
+
+          $product->attrs()->attach($attrs_array);
+        }
       }
     }
 

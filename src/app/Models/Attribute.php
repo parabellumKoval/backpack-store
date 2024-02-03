@@ -12,7 +12,9 @@ use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 // TRANSLATIONS
 use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 
+// FACTORY
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Backpack\Store\database\factories\AttributeFactory;
 
 class Attribute extends Model
 {
@@ -46,11 +48,32 @@ class Attribute extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+      return AttributeFactory::new();
+    }
+        
+    /**
+     * clearGlobalScopes
+     *
+     * @return void
+     */
     public function clearGlobalScopes()
     {
         static::$globalScopes = [];
     }
-    
+        
+    /**
+     * toArray
+     *
+     * @return void
+     */
     public function toArray()
     {
       
@@ -71,7 +94,12 @@ class Attribute extends Model
         'in_properties' => $this->in_properties,
       ];
     }
-    
+        
+    /**
+     * sluggable
+     *
+     * @return array
+     */
     public function sluggable(): array
     {
         return [
@@ -80,7 +108,12 @@ class Attribute extends Model
             ],
         ];
     }
-
+    
+    /**
+     * getCurrentLang
+     *
+     * @return void
+     */
     public function getCurrentLang() {
       $lang = request()->query('locale');
 
@@ -110,14 +143,27 @@ class Attribute extends Model
     // public function scopeNoEmpty($query){
     //   return $query->has('modifications');
     // }
-    
+        
+    /**
+     * scopeAllFromCategory
+     *
+     * @param  mixed $query
+     * @param  mixed $category
+     * @return void
+     */
     public function scopeAllFromCategory($query, $category) {
       if(!$category)
         return $query->get();
       else
         return $category->attributes()->get();
     }
-    
+        
+    /**
+     * scopeImportant
+     *
+     * @param  mixed $query
+     * @return void
+     */
     public function scopeImportant($query)
     {
       return $query->where('is_important', 1);
@@ -136,7 +182,12 @@ class Attribute extends Model
 
         return $this->name;
     }
-    
+        
+    /**
+     * getMaxValueAttribute
+     *
+     * @return void
+     */
     public function getMaxValueAttribute(){
      if(!$this->modifications->count())
       return 0;
@@ -144,7 +195,12 @@ class Attribute extends Model
      $max = $this->modifications->max('pivot.value');
      return $max;
     }
-    
+        
+    /**
+     * getMinValueAttribute
+     *
+     * @return void
+     */
     public function getMinValueAttribute(){
      if(!$this->modifications->count())
       return 0;
@@ -152,12 +208,25 @@ class Attribute extends Model
      $min = $this->modifications->min('pivot.value');
      return $min;
     }
-    
+        
+    /**
+     * getJsonAllAttribute
+     *
+     * @return void
+     */
     public function getJsonAllAttribute(){
      return collect($this->getAttributes())->toJson();   
     }
-    
+        
+    /**
+     * getInputValuesAttribute
+     * 
+     * Prepage values to Dashboard
+     *
+     * @return void
+     */
     public function getInputValuesAttribute(){
+      
       $values = array(
           'color' => null,
           'number' => [
@@ -179,7 +248,8 @@ class Attribute extends Model
       );
 
       $this_values = json_decode($this->values);
-        
+    
+      // type range
       if($this->type == 'range')
       {
         if(isset($this_values->step))
@@ -191,11 +261,14 @@ class Attribute extends Model
         if(isset($this_values->max))
         $values['range']['max'] = $this_values->max;
         
-      }elseif($this->type == 'color')
+      }
+      // type color
+      elseif($this->type == 'color')
       {
         $values['color'] = $this_values;
-
-      }elseif($this->type == 'number')
+      }
+      // type number
+      elseif($this->type == 'number')
       {
         if(isset($this_values->step))
         $values['number']['step'] = $this_values->step;
@@ -205,8 +278,9 @@ class Attribute extends Model
         
         if(isset($this_values->max))
         $values['number']['max'] = $this_values->max;
-        
-      }elseif($this->type == 'datetime')
+      }
+      // type datetime
+      elseif($this->type == 'datetime')
       {
         if(isset($this_values) && $this_values == 'datetime')
         $values['datetime']['datetime'] = 'selected="selected"';
@@ -216,35 +290,52 @@ class Attribute extends Model
         
         if(isset($this_values) && $this_values == 'daterange')
         $values['datetime']['daterange'] = 'selected="selected"';
-        
-      }elseif($this->type == 'select' || $this->type == 'checkbox' || $this->type == 'radio')
+      }
+      // type checkbox / radio / select
+      elseif($this->type == 'select' || $this->type == 'checkbox' || $this->type == 'radio')
       {
         if(isset($this_values))
-        $values['select'] = $this_values;
-        
+          $values['select'] = $this_values;  
       }
 
         return $values;
     }
-      
+          
+    /**
+     * getPivotValueAttribute
+     * 
+     * Pivot field contains:
+     * -- indexes of available values from Attribute if type: radio / checkbox
+     * -- value itself if Attribute type is: number / string
+     *
+     * @return void
+     */
     public function getPivotValueAttribute(){
+      // If empty return null
       if(!$this->pivot || $this->pivot->value === null)
         return null;
       
+      // Get values from attribute
       $this_values = json_decode($this->values);
 
       if($this->type === 'checkbox') 
       {
+        // Get indexes
         $indexes = json_decode($this->pivot->value);
         
-        if($indexes && !empty($indexes))
+        if($indexes && !empty($indexes)) {
+          // Get values 
           $human_value = array_map(fn($index) => isset($this_values[$index])? $this_values[$index]: null, $indexes);
-        else
+        } else {
           $human_value = null;
+        }
       }
       elseif($this->type === 'radio')
       {
+        // Correct value is - one index
         $index = $this->pivot->value;
+
+        // Try find value from values-list using index
         $human_value = isset($this_values[$index])? $this_values[$index]: null;
       }
       else 
@@ -262,30 +353,5 @@ class Attribute extends Model
     | MUTATORS
     |--------------------------------------------------------------------------
     */
-    // public function setSiAttribute($value){
-    //   $requestValue = \Request::all()['value'];
-    //   if(is_array($requestValue))
-    //   $attr_value = collect(array_filter($requestValue))->toJson();
-    //  else
-    //   $attr_value = json_encode($requestValue);
-
-    //   $this->attributes['value'] = $attr_value;
-      
-    // }
-
-    // public function setValuesAttribute($value) {
-    //   $this->setTranslation('values', 'en', json_encode($value));
-    //   //dd($value);
-    // }
-
-    public function setTypeAttribute($value){
-      $this->attributes['type'] = $value['type'];
-      //$this->attributes['values'] = isset($value['values']) ? json_encode($value['values']) : null;
-
-      if(isset($value['values'])) {
-        //$this->setTranslation('values', $this->getCurrentLang(), json_encode($value['values']));
-        //dd($value['values']);
-        //$this->values = $value['values'];
-      }
-    }
+    
 }
