@@ -18,4 +18,6 @@ use Backpack\Store\app\Http\Controllers\Api\AttributeController;
 
 Route::prefix('api/attribute')->controller(AttributeController::class)->group(function () {
   Route::get('', 'index');
+
+  Route::get('/{id}', 'show');
 });

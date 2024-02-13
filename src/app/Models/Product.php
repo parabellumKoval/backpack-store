@@ -19,8 +19,11 @@ use Backpack\Store\database\factories\ProductFactory;
 // TRAITS
 use App\Models\Traits\ProductModel as ProductModelTrait;
 
-// PIVOT
+// MODELS
+use Backpack\Store\app\Models\Attribute;
+use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
+use Backpack\Store\app\Models\Category;
 
 class Product extends Model
 {
@@ -42,20 +45,39 @@ class Product extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['props', 'images', 'price', 'old_price', 'is_active', 'code', 'in_stock'];
+    protected $fillable = [
+      'code',
+      'name',
+      'short_name',
+      'slug',
+      'content',
+      'excerpt',
+      'images',
+      'parent_id',
+      'brand_id',
+      'price',
+      'old_price',
+      'in_stock',
+      'is_active',
+      'seo',
+      'extras',
+      'extras_trans',
+
+      'props',
+    ];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $with = ['categories', 'attrs'];
+    protected $with = ['categories'];
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
     ];
 
     protected $fakeColumns = [
-      'meta_description', 'meta_title', 'fields', 'extras', 'images'
+      'meta_description', 'meta_title', 'seo', 'extras_trans', 'extras', 'images'
     ];
     
-    protected $translatable = ['name', 'short_name', 'content', 'fields'];
+    protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
     
     public $images_array = [];
 
@@ -126,7 +148,7 @@ class Product extends Model
     
     public function categories()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_category_product');
+      return $this->belongsToMany(Category::class, 'ak_category_product');
     }
     
     /**
@@ -169,10 +191,15 @@ class Product extends Model
      *
      * @return void
      */
-    public function attrs()
+    public function ap()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_product')->withPivot('value')->using(AttributeProduct::class);
+      return $this->hasMany(AttributeProduct::class);
     }
+
+    // public function attributes() 
+    // {
+    //   return $this->hasManyThrough(Attribute::class, AttributeProduct::class);
+    // }
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -238,6 +265,14 @@ class Product extends Model
       return $this->categories[0] ?? null;
     }
 
+    
+    public function getCategoryOrParentCategory() {
+      if(!$this->category && $this->parent) {
+        return $this->parent->category;
+      }
+
+      return $this->category;
+    }
     
     /**
      * getImageAttribute
@@ -334,14 +369,17 @@ class Product extends Model
     public function getSeoAttribute() {
       
       return [
-        'meta_title' => $this->fieldsDecoded->meta_title ?? null,
-        'meta_description' => $this->fieldsDecoded->meta_description ?? null,
+        'meta_title' => $this->seoDecoded->meta_title ?? null,
+        'meta_description' => $this->seoDecoded->meta_description ?? null,
       ];
     }
 
+    public function getSeoDecodedAttribute() {
+      return !empty($this->seo)? json_decode($this->seo): null;
+    }
 
-    public function getFieldsDecodedAttribute() {
-      return !empty($this->fields)? json_decode($this->fields): null;
+    public function getExtrasTransDecodedAttribute() {
+      return !empty($this->extras_trans)? json_decode($this->extras_trans): null;
     }
     
     /*

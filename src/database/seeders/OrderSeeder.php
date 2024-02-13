@@ -17,6 +17,9 @@ class OrderSeeder extends Seeder
      */
     public function run()
     {   
+      Order::where('id', '>=', 0)->delete();
+      (new \Symfony\Component\Console\Output\ConsoleOutput())->writeln("<info>Order was deleted.</info>");
+
       $this->createOrders();
     }
 

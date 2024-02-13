@@ -24,6 +24,7 @@ class ProductFactory extends Factory
 
       return [
         'name' => $this->faker->sentence(),
+        'short_name' => $this->faker->word(),
         'slug' => $this->faker->uuid(),
         'code' => $this->faker->regexify('[A-Z]{5}[0-4]{3}'),
         'price' => $this->faker->randomFloat(2, 0, 100000),
@@ -35,11 +36,11 @@ class ProductFactory extends Factory
         ),
         'images' => [
           [
-            'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+            'src' => null,
             'alt' => 'alt',
             'title' => 'title'
           ],[
-            'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+            'src' => null,
             'alt' => 'alt 2',
             'title' => 'title 2'
           ]

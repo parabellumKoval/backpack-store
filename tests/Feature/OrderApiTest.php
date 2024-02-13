@@ -34,20 +34,20 @@ class OrderApiTest extends TestCase
       ]
     ];
     
-  /**
-   * getOrderData
-   *
-   * @return array $this->order_data
-   */
-  protected function getOrderData() {
-    $products_ids_array = Product::take(3)->pluck('id')->toArray();
-    $products_amount_array = array_map(fn($item) => rand(1, 10), array_flip($products_ids_array));
+    /**
+     * getOrderData
+     *
+     * @return array $this->order_data
+     */
+    protected function getOrderData() {
+      $products_ids_array = Product::take(3)->pluck('id')->toArray();
+      $products_amount_array = array_map(fn($item) => rand(1, 10), array_flip($products_ids_array));
 
-    // Fill order data correct products data
-    $this->order_data['products'] = $products_amount_array;
+      // Fill order data correct products data
+      $this->order_data['products'] = $products_amount_array;
 
-    return $this->order_data;
-  }
+      return $this->order_data;
+    }
 
     protected function setUp(): void {
       parent::setUp();
@@ -69,7 +69,7 @@ class OrderApiTest extends TestCase
      */
     public function test_index_is_200()
     {
-        $response = $this->get('/api/orders/all');
+        $response = $this->get('/api/order/all');
         $response->assertStatus(200);
     }
 
@@ -83,7 +83,7 @@ class OrderApiTest extends TestCase
      */
     public function test_orders_isset_in_db() 
     {
-      $response = $this->getJson('/api/orders/all');
+      $response = $this->getJson('/api/order/all');
       
       try {
         $response_array = $response->json();
@@ -103,7 +103,7 @@ class OrderApiTest extends TestCase
      */
     public function test_index_structure_is_ok()
     {
-      $response = $this->get('/api/orders/all'); 
+      $response = $this->get('/api/order/all'); 
       $response->assertJsonStructure([
         'data' => [
           '*' => [
@@ -167,7 +167,7 @@ class OrderApiTest extends TestCase
    * @return void
    */
   public function test_create_ok () {
-    $response = $this->post('/api/orders', $this->getOrderData());
+    $response = $this->post('/api/order', $this->getOrderData());
     $response->assertStatus(200);
   }
     
@@ -179,7 +179,7 @@ class OrderApiTest extends TestCase
    * @return void
    */
   public function test_create_request_validation_error() {
-    $response = $this->post('/api/orders', []);
+    $response = $this->post('/api/order', []);
     $response->assertStatus(403);
   }
 
@@ -199,7 +199,7 @@ class OrderApiTest extends TestCase
 
     $this->order_data['products'] = $products_amount_array;
 
-    $response = $this->post('/api/orders', $this->order_data);
+    $response = $this->post('/api/order', $this->order_data);
     $response->assertStatus(404);
   }
   
@@ -214,7 +214,7 @@ class OrderApiTest extends TestCase
     // User not auth
     Auth::guard('profile')->logout();
 
-    $response = $this->post('/api/orders', $this->getOrderData());
+    $response = $this->post('/api/order', $this->getOrderData());
     $response->assertUnauthorized();
   }
     
@@ -238,7 +238,7 @@ class OrderApiTest extends TestCase
       'promocode' => $promocode->code
     ]);
 
-    $response = $this->post('/api/orders', $data);
+    $response = $this->post('/api/order', $data);
     $new_order_data = $response->json();
 
     $new_order_model = Order::find($new_order_data['id']);
@@ -259,7 +259,7 @@ class OrderApiTest extends TestCase
   public function test_order_copy_is_ok() {
     $order = Order::first();
 
-    $response = $this->post('/api/orders/copy', ['id' => $order->id]);
+    $response = $this->post('/api/order/copy', ['id' => $order->id]);
     $response->assertStatus(201);
   }
 
@@ -274,7 +274,7 @@ class OrderApiTest extends TestCase
   public function test_order_copy_is_reseted() {
     $base_order = Order::first();
 
-    $response = $this->post('/api/orders/copy', ['id' => $base_order->id]);
+    $response = $this->post('/api/order/copy', ['id' => $base_order->id]);
     
     $new_order = $response->json();
 

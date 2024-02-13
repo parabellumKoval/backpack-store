@@ -57,7 +57,23 @@ php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="tr
 
 ### Seeders
 ```bash
-php artisan db:seed --class="Backpack\Store\database\seeders\StoreSeeder"
+php artisan db:seed --class="Backpack\Store\database\seeders\CategorySeeder"
+```
+
+```bash
+php artisan db:seed --class="Backpack\Store\database\seeders\ProductSeeder"
+```
+
+```bash
+php artisan db:seed --class="Backpack\Store\database\seeders\AttributeSeeder"
+```
+
+```bash
+php artisan db:seed --class="Backpack\Store\database\seeders\OrderSeeder"
+```
+
+```bash
+php artisan db:seed --class="Backpack\Store\database\seeders\PromocodeSeeder"
 ```
 
 ## Security

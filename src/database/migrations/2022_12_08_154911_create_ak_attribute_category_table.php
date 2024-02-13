@@ -16,8 +16,9 @@ class CreateAkAttributeCategoryTable extends Migration
         Schema::create('ak_attribute_category', function (Blueprint $table) {
             $table->id();
             
-            $table->integer('attribute_id');
-            $table->integer('category_id');
+            $table->foreignId('attribute_id');
+            
+            $table->foreignId('category_id');
 
             $table->timestamps();
         });

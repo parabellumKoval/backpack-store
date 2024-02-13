@@ -27,6 +27,6 @@ class CreateAkCategoryProductTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('ak_order_product');
+        Schema::dropIfExists('ak_category_product');
     }
 }

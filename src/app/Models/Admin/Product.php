@@ -9,7 +9,7 @@ use Backpack\Store\app\Models\Product as BaseProduct;
 
 class Product extends BaseProduct
 {
-
+  public $props = null;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -77,19 +77,22 @@ class Product extends BaseProduct
       if(!$attributes)
         return;
 
+      
       foreach($attributes as $attr_key => $value) {
         $clear_value = is_array($value)? array_filter($value, fn($i) => $i !== null): trim($value);
-        $serialized_value = is_array($clear_value)? json_encode(array_values($clear_value)): $clear_value;
+        // $serialized_value = is_array($clear_value)? json_encode(array_values($clear_value)): $clear_value;
         
-        // if(empty($serialized_value))
-        //   continue;
+        $this->props[$attr_key] = $clear_value;
 
-        //dd($serialized_value);
+        // dd($clear_value);
         //$this->attrs()->attach($attr_key, ['value' => $serialized_value]);
+
         //syncWithoutDetaching
-        $this->attrs()->syncWithoutDetaching([
-          $attr_key => ['value' => $serialized_value]
-        ]);
+        // $this->attrs()->syncWithoutDetaching([
+        //   $attr_key => ['value' => $serialized_value]
+        // ]);
+
+        // $this->ap()->
       }
     }
 

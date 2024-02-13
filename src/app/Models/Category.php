@@ -121,7 +121,6 @@ class Category extends Model
       return $this->hasMany(self::class, 'parent_id');
     }
     
-    
     public function attributes()
     {
         return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_category');

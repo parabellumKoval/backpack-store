@@ -16,6 +16,9 @@ class PromocodeSeeder extends Seeder
      */
     public function run()
     {   
+      Promocode::where('id', '>=', 0)->delete();
+      (new \Symfony\Component\Console\Output\ConsoleOutput())->writeln("<info>Promocode was deleted.</info>");
+
       $this->createPromocodes();
     }
 

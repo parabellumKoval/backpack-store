@@ -6,8 +6,6 @@ use Illuminate\Testing\Fluent\AssertableJson;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Backpack\Store\Tests\TestCase;
 
-use Backpack\Store\database\seeders\StoreSeeder;
-
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
 
@@ -24,7 +22,7 @@ class ProductApiTest extends TestCase
      */
     public function test_index_is_200()
     {
-        $response = $this->get('/api/products');
+        $response = $this->get('/api/product');
         $response->assertStatus(200);
     }
 
@@ -39,7 +37,7 @@ class ProductApiTest extends TestCase
      */
     public function test_products_isset_in_db() 
     {
-      $response = $this->getJson('/api/products');
+      $response = $this->getJson('/api/product');
       
       try {
         $response_array = $response->json();
@@ -59,7 +57,7 @@ class ProductApiTest extends TestCase
      */
     public function test_index_structure_is_ok()
     {
-      $response = $this->get('/api/products'); 
+      $response = $this->get('/api/product'); 
       $response->assertJsonStructure([
         'data' => [
           '*' => [
@@ -98,7 +96,7 @@ class ProductApiTest extends TestCase
       // Get random first product from db
       $product = Product::firstOrFail();
 
-      $response = $this->get("/api/products/{$product->slug}"); 
+      $response = $this->get("/api/product/{$product->slug}"); 
       $response->assertJsonStructure([
         'id',
         'name',
@@ -155,13 +153,13 @@ class ProductApiTest extends TestCase
 
       //Filter collection using category id
       $filters = "?category_id={$category->id}";
-      $response = $this->getJson('/api/products'.$filters);
+      $response = $this->getJson('/api/product'.$filters);
       $response_array = $response->json();
       $this->assertTrue(count($response_array['data']) > 0);
 
       //Filter collection using category slug
       $filters = "?category_slug={$category->slug}";
-      $response = $this->getJson('/api/products'.$filters);
+      $response = $this->getJson('/api/product'.$filters);
       $response_array = $response->json();
       $this->assertTrue(count($response_array['data']) > 0);
     }
@@ -180,7 +178,7 @@ class ProductApiTest extends TestCase
       // Search by product name 
       $filters = "?q={$product->name}";
 
-      $response = $this->getJson('/api/products'.$filters);
+      $response = $this->getJson('/api/product'.$filters);
       $response_array = $response->json();
 
       $this->assertTrue(count($response_array['data']) > 0);

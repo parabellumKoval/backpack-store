@@ -4,6 +4,8 @@ namespace Backpack\Store\app\Models\Admin;
 
 use Backpack\Store\app\Models\Attribute as BaseAttribute;
 
+use Backpack\Store\app\Models\AttributeValue;
+
 class Attribute extends BaseAttribute
 {
     /*
@@ -11,6 +13,8 @@ class Attribute extends BaseAttribute
     | GLOBAL VARIABLES
     |--------------------------------------------------------------------------
     */
+    
+    public $values_store = [];
 
     /*
     |--------------------------------------------------------------------------
@@ -36,7 +40,7 @@ class Attribute extends BaseAttribute
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
-        
+      
     /**
      * getInputValuesAttribute
      * 
@@ -126,6 +130,18 @@ class Attribute extends BaseAttribute
     | MUTATORS
     |--------------------------------------------------------------------------
     */
+    // public function setSiAttribute($value) {
+    //   $this->extras['si'] = $value;
+    // }
+
+    // public function setDefaultValueAttribute($value) {
+    //   $this->extras['default_value'] = $value;
+    // }
+
+    public function setValuesAttribute($values_array) {
+      $this->values_store = $values_array;
+    }
+
     // public function setSiAttribute($value){
     //   $requestValue = \Request::all()['value'];
     //   if(is_array($requestValue))
@@ -142,14 +158,14 @@ class Attribute extends BaseAttribute
     //   //dd($value);
     // }
 
-    public function setTypeAttribute($value){
-      $this->attributes['type'] = $value['type'];
-      //$this->attributes['values'] = isset($value['values']) ? json_encode($value['values']) : null;
+    // public function setTypeAttribute($value){
+    //   $this->attributes['type'] = $value['type'];
+    //   //$this->attributes['values'] = isset($value['values']) ? json_encode($value['values']) : null;
 
-      if(isset($value['values'])) {
-        //$this->setTranslation('values', $this->getCurrentLang(), json_encode($value['values']));
-        //dd($value['values']);
-        //$this->values = $value['values'];
-      }
-    }
+    //   if(isset($value['values'])) {
+    //     //$this->setTranslation('values', $this->getCurrentLang(), json_encode($value['values']));
+    //     //dd($value['values']);
+    //     //$this->values = $value['values'];
+    //   }
+    // }
 }

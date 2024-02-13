@@ -10,6 +10,11 @@ use Illuminate\Database\Eloquent\Builder;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\AttributeValue;
+use Backpack\Store\app\Models\Admin\Product as ProductAdmin;
+
+//EVENTS
+use Backpack\Store\app\Events\ProductSaved;
 
 /**
  * Class ProductCrudController
@@ -35,7 +40,7 @@ class ProductCrudController extends CrudController
     
     public function setup()
     {
-        $this->crud->setModel('Backpack\Store\app\Models\Admin\Product');
+        $this->crud->setModel(ProductAdmin::class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
         $this->crud->setEntityNameStrings('товар', 'товары');
 
@@ -68,6 +73,12 @@ class ProductCrudController extends CrudController
         // }
 
         // $this->crud->model->clearGlobalScopes();
+
+        // Set event listiner to Model
+        ProductAdmin::saved(function($entry) {
+          // Attach attributes here
+          ProductSaved::dispatch($entry);
+        });
     }
     protected function fetchOrder()
     {
@@ -355,7 +366,7 @@ class ProductCrudController extends CrudController
               'label' => "Meta Title", 
               'type' => 'text',
               'fake' => true, 
-              'store_in' => 'fields',
+              'store_in' => 'seo',
               'tab' => 'SEO'
           ]);
 
@@ -364,7 +375,7 @@ class ProductCrudController extends CrudController
               'label' => "Meta Description", 
               'type' => 'textarea',
               'fake' => true, 
-              'store_in' => 'fields',
+              'store_in' => 'seo',
               'tab' => 'SEO'
           ]);
         }
@@ -413,18 +424,23 @@ class ProductCrudController extends CrudController
         foreach($this->attrs as $index => $attribute) {
           // Attribute Model ID
           $id = $attribute->id;
+
           // Attribute Model values list
-          $values = json_decode($attribute->values);
+          $available_values = $attribute->values->mapWithKeys(function ($item, $key) {
+            return [$item['id'] => $item['value']];
+          });
+
+          // Attribute settings
+          $settings = $attribute->extras;
+          // dd($settings['min'] ?? '1');
 
           // If entry has attached attributes
           // Try find current value for this attribute 
-          if($this->entry->attrs) {
+          if($this->entry->ap) {
             // Find this attribute from already attached attributes
-            $model_attribute = $this->entry->attrs()->find($attribute->id);
-            // If exists get pivot value 
-            $value = $model_attribute? $model_attribute->pivot->value: null;
+            $model_attribute = $this->entry->ap()->where('attribute_id', $attribute->id)->get();
           }else {
-            $value = null;
+            $model_attribute = null;
           }
           
           // Create base attribute field template
@@ -438,14 +454,16 @@ class ProductCrudController extends CrudController
           // For checkbox
           if($attribute->type === 'checkbox')
           {
-            $value = json_decode($value);
+            // IMPORTANT !!!!! CHANGE THIS
+            // If exists get pivot value 
+            $value = $model_attribute? $model_attribute->pluck('attribute_value_id')->unique()->toArray(): null;
 
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
-                'type' => 'select_from_array',
+                'type' => 'select2_from_array',
                 'allows_multiple' => true,
-                'options' => $values ?? [],
+                'options' => $available_values ?? [],
                 'value' => $value,
                 'allows_null' => true
               ]
@@ -454,12 +472,15 @@ class ProductCrudController extends CrudController
           // For radio
           else if($attribute->type === 'radio')
           {
+            // IMPORTANT !!!!! CHANGE THIS
+            $value = $model_attribute? $model_attribute->pluck('attribute_value_id')->unique()->toArray(): null;
+
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
-                'type' => 'select_from_array',
-                'options' => $values ?? [],
-                'value' => $value,
+                'type' => 'select2_from_array',
+                'options' => $available_values ?? [],
+                'value' => $value[0] ?? null,
                 'allows_null' => true
               ]
             );
@@ -467,30 +488,33 @@ class ProductCrudController extends CrudController
           // For number
           else if($attribute->type === 'number')
           {
+            // IMPORTANT !!!!! CHANGE THIS
+            $value = $model_attribute->first()->value ?? null;
+
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
                 'type' => 'number',
                 'attributes' => [
-                  'min' => $values->min,
-                  'max' => $values->max,
-                  'step' => $values->step,
+                  'min' => $settings['min'] ?? 0,
+                  'max' => $settings['max'] ?? 999999999999,
+                  'step' => $settings['step'] ?? 0.1,
                 ],
                 'value' => $value,
               ]
             );
           }
           // For string
-          else if($attribute->type === 'string')
-          {
-            $attr_fields[$index] = array_merge(
-              $attr_fields[$index],
-              [
-                'type' => 'text',
-                'value' => $value,
-              ]
-            );
-          }
+          // else if($attribute->type === 'string')
+          // {
+          //   $attr_fields[$index] = array_merge(
+          //     $attr_fields[$index],
+          //     [
+          //       'type' => 'text',
+          //       'value' => $value,
+          //     ]
+          //   );
+          // }
         }
 
         // Set all prepared fields
@@ -536,7 +560,7 @@ class ProductCrudController extends CrudController
       // 
       foreach($this->categories as $category) {
         // Take all active attributes for this category 
-        $cat_attrs = $category->attributes()->where('is_active', true)->get();
+        $cat_attrs = $category->attributes()->active()->get();
 
         // If isset active attributes for this category merge with common list
         if($cat_attrs && $cat_attrs->count()) {
@@ -544,7 +568,12 @@ class ProductCrudController extends CrudController
         }
       }
     }
-
+    
+    /**
+     * setCategories
+     *
+     * @return void
+     */
     private function setCategories()
     {
       if(!in_array($this->opr, ['create', 'update']))
@@ -593,14 +622,24 @@ class ProductCrudController extends CrudController
     //     $this->category = Category::first();
     //   }
     }
-
+    
+    /**
+     * setEntry
+     *
+     * @return void
+     */
     private function setEntry() {
       if($this->crud->getCurrentOperation() === 'update')
         $this->entry = $this->crud->getEntry(\Route::current()->parameter('id'));
       else
         $this->entry = null;
     }
-
+    
+    /**
+     * setParentEntry
+     *
+     * @return void
+     */
     private function setParentEntry() {
       if(!empty($parent_id = \Request::query('parent_id')))
         $this->parent_entry = $this->crud->getEntry($parent_id);
@@ -610,11 +649,21 @@ class ProductCrudController extends CrudController
         $this->parent_entry = null;
       }
     }
-
+    
+    /**
+     * setOperation
+     *
+     * @return void
+     */
     private function setOperation() {
       $this->opr = $this->crud->getCurrentOperation();
     }
-
+    
+    /**
+     * setLocale
+     *
+     * @return void
+     */
     private function setLocale() {
       if(\Request::query('locale'))
         app()->setLocale(\Request::query('locale'));

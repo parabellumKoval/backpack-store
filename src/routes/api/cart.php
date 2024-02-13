@@ -16,7 +16,7 @@ use Backpack\Store\app\Http\Controllers\Api\CartController;
 |
 */
 
-Route::prefix('api/carts')->controller(CartController::class)->group(function () {
+Route::prefix('api/cart')->controller(CartController::class)->group(function () {
   
   Route::get('', 'index');
 

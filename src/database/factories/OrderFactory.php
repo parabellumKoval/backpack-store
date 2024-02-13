@@ -71,7 +71,7 @@ class OrderFactory extends Factory
               'price' => $this->faker->randomFloat(2, 0, 1000),
               'old_price' => $this->faker->randomFloat(2, 0, 1000),
               'image' => [
-                'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+                'src' => null,
                 'alt' => 'alt',
                 'title' => 'title'
               ],
@@ -82,7 +82,7 @@ class OrderFactory extends Factory
               'price' => $this->faker->randomFloat(2, 0, 1000),
               'old_price' => $this->faker->randomFloat(2, 0, 1000),
               'image' => [
-                'src' => $this->faker->imageUrl(640, 480, 'Post', true),
+                'src' => null,
                 'alt' => 'alt',
                 'title' => 'title'
               ],

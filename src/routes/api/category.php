@@ -16,7 +16,7 @@ use Backpack\Store\app\Http\Controllers\Api\CategoryController;
 |
 */
 
-Route::prefix('api/categories')->controller(CategoryController::class)->group(function () {
+Route::prefix('api/category')->controller(CategoryController::class)->group(function () {
   
   Route::get('', 'index')->middleware('api');
 

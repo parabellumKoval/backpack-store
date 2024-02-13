@@ -18,7 +18,7 @@ use Backpack\Store\app\Http\Controllers\Api\OrderController;
 
 $guard = config('backpack.store.auth_guard', 'profile');
 
-Route::prefix('api/orders')->controller(OrderController::class)->group(function () use($guard) {
+Route::prefix('api/order')->controller(OrderController::class)->group(function () use($guard) {
   
 
   // GET orders list with pagination for authed user

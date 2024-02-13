@@ -2,6 +2,8 @@
 
 namespace Backpack\Store\Tests;
 
+// ini_set('memory_limit', '-1');
+
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -17,7 +19,9 @@ use Backpack\Store\ServiceProvider as StoreServiceProvider;
 
 use \Backpack\Store\app\FakeUser;
 use \Backpack\Store\app\FakeAdmin;
-use Backpack\Store\database\seeders\StoreSeeder;
+use Backpack\Store\database\seeders\CategorySeeder;
+use Backpack\Store\database\seeders\ProductSeeder;
+use Backpack\Store\database\seeders\AttributeSeeder;
 use Backpack\Store\database\seeders\PromocodeSeeder;
 
 // #[WithMigration]
@@ -49,10 +53,16 @@ class TestCase extends Orchestra
       // Enter via backpack login system
       backpack_auth()->login($this->admin);
       
-      // Run store seeder (add categories and products)
-      $this->seed(StoreSeeder::class);
+      // Run category seeder
+      $this->seed(CategorySeeder::class);
 
-      // Promocode seeder
+      // Run product seeder
+      $this->seed(ProductSeeder::class);
+
+      // Run attribute seeder
+      // $this->seed(AttributeSeeder::class);
+
+      // Run promocode seeder
       $this->seed(PromocodeSeeder::class);
 
       // xz

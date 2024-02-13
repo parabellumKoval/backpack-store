@@ -8,7 +8,6 @@ use Backpack\Store\Tests\TestCase;
 
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
-use Backpack\Store\database\seeders\StoreSeeder;
 
 class ProductAdminTest extends TestCase
 {

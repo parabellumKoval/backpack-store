@@ -22,27 +22,26 @@ class AttributeFactory extends Factory
     public function definition()
     {
         return [
-          'name' => $this->faker->sentence(),
+          'name' => $this->faker->words(2, true),
           'slug' => $this->faker->uuid(),
           'content' => $this->faker->text(),
-          'si' => null,
-          'default_value' => null,
-          'values' => null,
+
           'type' => $this->faker->randomElement([
             'checkbox',
             'radio',
-            'number',
-            'string'
+            'number'
           ]),
 
           'extras' => null,
+          'extras_trans' => json_encode([
+            'si' => $this->faker->regexify('[a-z]{2}\.')
+          ]),
 
-          'is_important' => $this->faker->randomElement([1,0]),
-          'is_active' => $this->faker->randomElement([1,0]),
+          'is_active' => true,
           'in_filters' => $this->faker->randomElement([1,0]),
           'in_properties' => $this->faker->randomElement([1,0]),
 
-          'parent_id' => 0,
+          'parent_id' => null,
           'lft' => 0,
           'rgt' => 0,
           'depth' => 0
@@ -57,34 +56,22 @@ class AttributeFactory extends Factory
     public function suspended()
     {
         return $this->state(function (array $attributes) {
-          $values = null;
-          $default_value = null;
+          $extras = null;
 
-          // CHECKBOX and RADIO
-          if($attributes['type'] === 'checkbox' || $attributes['type'] === 'radio') {
-            $values = $this->faker->words(10);
-            $default_value = $values[0];
-          }
-          // NUMBER TYPE
-          elseif($attributes['type'] === 'number') {
-            $values = null;
-            $default_value = $this->faker->randomElement([
-              null,
-              $this->faker->words(3, true)
-            ]);
-          }
-          // STRING TYPE
-          elseif($attributes['type'] === 'string') {
-            $values = null;
-            $default_value = $this->faker->randomElement([
-              null,
-              $this->faker->numberBetween(0, 50)
-            ]);
+          if($attributes['type'] === 'number') {
+            $extras = [
+              'min' => 0,
+              'max' => $this->faker->randomElement([100, 500, 1000]),
+              'step' => $this->faker->randomElement([0.1, 1, 10])
+            ];
+
+            $extras['default_value'] = rand($extras['min'], $extras['max']);
+            
+            $attributes['extras'] = json_encode($extras, true);
           }
 
           return [
-            'values' => $values,
-            'default_value' => $default_value,
+            'extras' => $extras,
           ];
         });
     }

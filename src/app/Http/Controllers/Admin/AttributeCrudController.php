@@ -8,7 +8,10 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Attribute;
+use Backpack\Store\app\Models\AttributeValue;
+use Backpack\Store\app\Models\Admin\Attribute as AttributeAdmin;
 
+use Backpack\Store\app\Events\AttributeSaved;
 
 /**
  * Class AttributeCrudController
@@ -22,13 +25,19 @@ class AttributeCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
     
+    // all available types
     private $types;
-    private $units;
+
+    // current active attribute type
+    private $type;
+    // current model instance
+    private $entry;
 
     public function setup()
     {
-        $this->crud->setModel('Backpack\Store\app\Models\Admin\Attribute');
+        $this->crud->setModel(AttributeAdmin::class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/attribute');
         $this->crud->setEntityNameStrings('атрибут', 'атрибуты');
         
@@ -39,7 +48,16 @@ class AttributeCrudController extends CrudController
         $this->crud->model->clearGlobalScopes();
         
         $this->types = array_unique(Attribute::pluck('type', 'type')->toArray());
-        $this->units = array_unique(Attribute::pluck('si', 'si')->toArray());
+
+        // CURRENT MODEL
+        $this->setEntry();
+
+        // SET ATTRIBUTE TYPE
+        $this->setType();
+
+        AttributeAdmin::saving(function($entry) {
+          AttributeSaved::dispatch($entry);        
+        });
     }
 
     protected function setupListOperation()
@@ -63,17 +81,7 @@ class AttributeCrudController extends CrudController
           ], $this->types
           , function($value) {
                 $this->crud->addClause('where', 'type', $value);
-          }); 
-              
-          $this->crud->addFilter([
-            'type' => 'dropdown',
-            'name' => 'si',
-            'label'=> 'Единицы измерения'
-          ], 
-          $this->units, 
-          function($value) {
-              $this->crud->addClause('where', 'si', $value);
-        });
+          });
        
 
         $this->crud->addColumn([
@@ -93,17 +101,49 @@ class AttributeCrudController extends CrudController
       // }
 
         $this->crud->addColumn([
-          'name' => 'si',
-          'label' => 'Единицы измерения',
-        ]);
-
-        $this->crud->addColumn([
           'name' => 'is_active',
           'label' => 'Активен',
           'type' => 'boolean'
         ]);
-    }
 
+        $this->crud->addColumn([
+          'name' => 'type',
+          'label' => 'Тип',
+        ]);
+    }
+    
+    public function fetchValues()
+    {
+      // We have to get attribute id field
+      $request = request()->all();
+      
+      // Find attribute field
+      $id_field = array_filter($request['form'], function($item) {
+        if($item['name'] === 'id'){
+          return true;
+        }else {
+          return false;
+        }
+      });
+
+      // Get attribute id
+      $attribute_id = array_values($id_field)[0]['value'];
+
+      return $this->fetch([
+        'model' => AttributeValue::class,
+        'searchable_attributes' => ['value'],
+        'paginate' => 20,
+        'query' => function($model) use ($attribute_id) {
+            return $model->where('attribute_id', $attribute_id);
+        }
+      ]);
+    }
+    
+    /**
+     * setupCreateOperation
+     *
+     * @return void
+     */
     protected function setupCreateOperation()
     {
         $this->crud->setValidation(AttributeRequest::class);
@@ -120,29 +160,26 @@ class AttributeCrudController extends CrudController
         $this->crud->addField([
           'name' => 'slug',
           'label' => 'URL',
-          'prefix' => url('/characteristics').'/',
+          'prefix' => url('/attributes').'/',
           'hint' => 'По умолчанию будет сгенерирован из названия.',
           'type' => 'text',
         ]);
 
-        $this->crud->addField([
-          'name' => 'values',
-          'type' => 'hidden',
-          'value' => ''
-        ]);
+        // $this->crud->addField([
+        //   'name' => 'type',
+        //   'label' => 'Тип значения',
+        //   'type' => 'type_configurator',
+        //   'options_name' => 'values'
+        // ]);
 
-
-        $this->crud->addField([
-          'name' => 'type',
-          'label' => 'Тип значения',
-          'type' => 'type_configurator',
-          'options_name' => 'values'
-        ]);
+        $this->setTypeFields();
 
         $this->crud->addField([
           'name' => 'default_value',
           'label' => 'Значение по-умолчанию',
           'type' => 'text',
+          'fake' => true,
+          'store_in' => 'extras',
         ]);
 
         $this->crud->addField([
@@ -150,6 +187,8 @@ class AttributeCrudController extends CrudController
           'label' => 'Единицы измерения',
           'hint' => 'Единицы измерения будут добавлены после значений',
           'type' => 'text',
+          'fake' => true,
+          'store_in' => 'extras_trans',
         ]);
 
         $this->crud->addField([
@@ -195,27 +234,178 @@ class AttributeCrudController extends CrudController
           'hint' => 'Если включено, то данный тип будет активен',
         ]);
 
-      if(config('backpack.store.attribute.enable_icon')) {
-        $this->crud->addField([
-          'name' => 'icon',
-          'label' => 'Иконка',
-          'type' => 'textarea',
-          'attributes' => [
-            'rows' => '7'
-          ],
-          'hint' => 'html-код иконки',
-        ]);
-      }
+        if(config('backpack.store.attribute.enable_icon')) {
+          $this->crud->addField([
+            'name' => 'icon',
+            'label' => 'Иконка',
+            'type' => 'textarea',
+            'attributes' => [
+              'rows' => '7'
+            ],
+            'hint' => 'html-код иконки',
+          ]);
+        }
 
         $this->crud->addField([
-          'name' => 'description',
+          'name' => 'content',
           'label' => 'Описание',
           'type' => 'ckeditor', 
         ]);
     }
+        
+    /**
+     * setCountableField
+     *
+     * @return void
+     */
+    protected function setTypeFields() {
+      $js_attributes = [
+        'data-value' => '',
+        'onfocus' => "this.setAttribute('data-value', this.value);",
+        'onchange' => "
+          const value = event.target.value
+          let isConfirmed = confirm('Несохраненные данные будут сброшены. Все равно продолжить?');
+          
+          if(isConfirmed) {
+            reload_page(event);
+          } else{
+            this.value = this.getAttribute('data-value');
+          }
 
+          function reload_page(event) {
+            const value = event.target.value
+            url = insertParam('type', value)
+          };
+
+          function insertParam(key, value) {
+            key = encodeURIComponent(key);
+            value = encodeURIComponent(value);
+        
+            // kvp looks like ['key1=value1', 'key2=value2', ...]
+            var kvp = document.location.search.substr(1).split('&');
+            let i=0;
+        
+            for(; i<kvp.length; i++){
+                if (kvp[i].startsWith(key + '=')) {
+                    let pair = kvp[i].split('=');
+                    pair[1] = value;
+                    kvp[i] = pair.join('=');
+                    break;
+                }
+            }
+        
+            if(i >= kvp.length){
+                kvp[kvp.length] = [key,value].join('=');
+            }
+        
+            // can return this or...
+            let params = kvp.join('&');
+        
+            // reload page with new params
+            document.location.search = params;
+          }
+        "
+      ];
+
+      $this->crud->addField([
+        'name' => 'type',
+        'label' => 'Тип значения',
+        'type' => 'select_from_array',
+        'options' => Attribute::$TYPES,
+        'attributes' => $js_attributes,
+        'value' => $this->type
+      ]);
+
+      if($this->type === 'checkbox' || $this->type === 'radio' ) {
+        $this->crud->addField([
+          'name' => 'values',
+          'label' => 'Допустимые значения',
+          'type' => 'relationship',
+          'ajax' => true,
+          'inline_create' => [
+            'entity' => 'value',
+            'force_select' => true
+          ]
+        ]);
+      } else {
+        $this->crud->addField([
+          'name' => 'min',
+          'label' => 'Минимальное значение',
+          'type' => 'number',
+          'fake' => true,
+          'store_in' => 'extras',
+          'attributes' => ["step" => 0.0001],
+          'wrapper'   => [ 
+            'class' => 'form-group col-md-4'
+          ],
+        ]);
+        $this->crud->addField([
+          'name' => 'max',
+          'label' => 'Максимальное значение',
+          'type' => 'number',
+          'fake' => true,
+          'store_in' => 'extras',
+          'attributes' => ["step" => 0.0001],
+          'wrapper'   => [ 
+            'class' => 'form-group col-md-4'
+          ],
+        ]);
+        $this->crud->addField([
+          'name' => 'step',
+          'label' => 'Шаг',
+          'type' => 'number',
+          'fake' => true,
+          'store_in' => 'extras',
+          'attributes' => ["step" => 0.0001],
+          'wrapper'   => [ 
+            'class' => 'form-group col-md-4'
+          ],
+        ]);
+      }
+    }
+    /**
+     * setupUpdateOperation
+     *
+     * @return void
+     */
     protected function setupUpdateOperation()
     {
-        $this->setupCreateOperation();
+      $this->setupCreateOperation();
+      $this->crud->modifyField('type', [
+        'attributes' => [
+          'readonly' => 'readonly',
+          'disabled' => 'disabled'
+        ],
+      ]);
+    }
+
+    
+    /**
+     * setEntry
+     *
+     * @return void
+     */
+    private function setEntry() {
+      if($this->crud->getCurrentOperation() === 'update')
+        $this->entry = $this->crud->getEntry(\Route::current()->parameter('id'));
+      else
+        $this->entry = null;
+    }
+    
+    /**
+     * setType
+     *
+     * @return void
+     */
+    private function setType() {
+      $request_type = \Request::get('type', null);
+      
+      if($request_type) {
+        $this->type = $request_type;
+      }elseif($this->entry) {
+        $this->type = $this->entry->type;
+      }else {
+        $this->type = 'checkbox';
+      }
     }
 }

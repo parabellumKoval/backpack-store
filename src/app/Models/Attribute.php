@@ -16,6 +16,10 @@ use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\AttributeFactory;
 
+// MODELS
+use Backpack\Store\app\Models\AttributeValue;
+use Backpack\Store\app\Models\AttributeProduct;
+
 class Attribute extends Model
 {
     use HasFactory;
@@ -33,21 +37,49 @@ class Attribute extends Model
     protected $table = 'ak_attributes';
     // protected $primaryKey = 'id';
     // public $timestamps = false;
-    protected $guarded = ['id'];
-    // protected $fillable = [];
+    // protected $guarded = ['id'];
+    protected $fillable = [
+      'name',
+      'slug',
+      'values',
+      'content',
+      'extras',
+      'extras_trans',
+      'type',
+      'is_active',
+      'in_filters',
+      'in_properties',
+      'si',
+      'default_value'
+    ];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
-      'values' => 'object'
+      'extras' => 'array',
     ];
 
-    protected $translatable = ['name', 'values', 'content', 'default_value', 'si'];
+    protected $fakeColumns = [
+      'si', 'default_value', 'min', 'max', 'step', 'extras', 'extras_trans'
+    ];
 
+    protected $translatable = ['name', 'content', 'extras_trans'];
+
+    public static $TYPES;
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+
+    public function __construct(array $attributes = array()) {
+      parent::__construct($attributes);
+
+      self::$TYPES = [
+        'checkbox' => __('shop.fieldType.checkbox'),
+        'radio' => __('shop.fieldType.radio'),
+        'number' => __('shop.fieldType.number')
+      ];
+    }
 
     /**
      * Create a new factory instance for the model.
@@ -132,7 +164,12 @@ class Attribute extends Model
     */
     public function categories()
     {
-        return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_attribute_category');
+      return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_attribute_category');
+    }
+
+    public function values()
+    {
+      return $this->hasMany(AttributeValue::class);
     }
     
     /*
@@ -159,14 +196,14 @@ class Attribute extends Model
     }
         
     /**
-     * scopeImportant
+     * scopeActive
      *
      * @param  mixed $query
      * @return void
      */
-    public function scopeImportant($query)
+    public function scopeActive($query)
     {
-      return $query->where('is_important', 1);
+      return $query->where('is_active', 1);
     }
     /*
     |--------------------------------------------------------------------------

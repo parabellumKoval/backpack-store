@@ -16,9 +16,17 @@ class CreateAkAttributeProductTable extends Migration
         Schema::create('ak_attribute_product', function (Blueprint $table) {
             $table->id();
             
-            $table->integer('attribute_id');
-            $table->integer('product_id');
-            $table->longtext('value');
+            // Only used when attribute type: number
+            $table->double('value')->nullable();
+
+            // Only used when attribute type: checkbox, radio
+            $table->foreignId('attribute_value_id')->nullable();
+
+            // Link to attribute
+            $table->foreignId('attribute_id');
+
+            // Link to product
+            $table->foreignId('product_id');
 
             $table->timestamps();
         });

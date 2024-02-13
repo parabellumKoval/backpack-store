@@ -25,7 +25,6 @@ class CreateAkProductsTable extends Migration
           $table->json('images')->nullable();
 
           $table->foreignId('parent_id')->nullable()->default(null);
-
           $table->foreignId('brand_id')->default('0');
 
           $table->double('price', 8, 2)->nullable();
@@ -35,10 +34,10 @@ class CreateAkProductsTable extends Migration
 
           $table->integer('in_stock')->default(1);
           $table->boolean('is_active')->default(1);
-          $table->boolean('is_pricehidden')->default(0);
           
           $table->json('seo')->nullable();
           $table->json('extras')->nullable();
+          $table->json('extras_trans')->nullable();
 
           $table->timestamps();
         });

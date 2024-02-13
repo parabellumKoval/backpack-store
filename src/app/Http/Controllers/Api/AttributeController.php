@@ -23,4 +23,9 @@ class AttributeController extends \App\Http\Controllers\Controller
 
     return response()->json($attributes);
   }
+
+  public function show(Request $request, $id) {
+    $attribute = Attribute::findOrFail($id);
+    return new AttributeLargeResource($attribute);
+  }
 }

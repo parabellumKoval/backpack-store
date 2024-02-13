@@ -6,8 +6,7 @@ return [
     'radio' => 'Единичный выбор',
     'number' => 'Число',
     'string' => 'Свободная строка',
-    'color' => 'Цвет',
-    'colors' => 'colors'
+    'color' => 'Цвет'
   ],
   
   "order_status" => [
