@@ -25,12 +25,7 @@ class AttributeProductFactory extends Factory
           'value' => $this->faker->randomNumber(8, false),
           'attribute_value_id' => null,
           'attribute_id' => 0,
-          'product_id' => 0,
-          'type' => $this->faker->randomElement([
-            'checkbox',
-            'radio',
-            'number'
-          ]),
+          'product_id' => 0
         ];
     }
 
