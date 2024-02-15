@@ -27,7 +27,7 @@ class AttributeProduct extends Pivot
   
   protected $fillable = ['value', 'attribute_value_id', 'attribute_id', 'product_id', 'type'];
 
-  protected $with = ['attribute', 'attribute_value', 'product'];
+  // protected $with = ['attribute', 'attribute_value', 'product'];
 
   // protected $guarded = ['id'];
 

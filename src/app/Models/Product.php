@@ -67,7 +67,7 @@ class Product extends Model
     ];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $with = ['categories'];
+    protected $with = ['categories', 'ap'];
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
