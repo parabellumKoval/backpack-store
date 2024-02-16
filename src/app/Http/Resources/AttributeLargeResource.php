@@ -22,6 +22,7 @@ class AttributeLargeResource extends JsonResource
         'defaultValue' => $this->default_value,
         'si' => $this->si,
         'content' => $this->content,
+        'type' => $this->type
       ];
     }
 }
