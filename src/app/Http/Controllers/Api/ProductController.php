@@ -75,35 +75,35 @@ class ProductController extends \App\Http\Controllers\Controller
     $ap = $this->getAttributesQuery(request('attrs'));
 
     $products = $this->product_class::query()
-              ->select('ak_products.*')
-              // Getting only unique rows
-              ->distinct('ak_products.id')
-              // Getting only products that have not "parent_id" param
-              ->base()
-              // Getting only products that "is_active" param set to true
-              ->active()
-              
-              // filtering by category if "category_id" or "category_slug" is presented in request
-              ->when((request('category_id') || request('category_slug')), function($query) use($node_ids){
-                $query->leftJoin('ak_category_product as cp', 'cp.product_id', '=', 'ak_products.id');
-                $query->whereIn('cp.category_id', $node_ids);
-              })
+      ->select('ak_products.*')
+      // Getting only unique rows
+      ->distinct('ak_products.id')
+      // Getting only products that have not "parent_id" param
+      ->base()
+      // Getting only products that "is_active" param set to true
+      ->active()
+      
+      // filtering by category if "category_id" or "category_slug" is presented in request
+      ->when((request('category_id') || request('category_slug')), function($query) use($node_ids){
+        $query->leftJoin('ak_category_product as cp', 'cp.product_id', '=', 'ak_products.id');
+        $query->whereIn('cp.category_id', $node_ids);
+      })
 
-              // filtering by attributes if "attrs" is presented in request
-              ->when((request('attrs') && !empty($ap)), function($query) use($ap) {
-                $query->rightJoinSub($ap, 'ap', function ($join) {
-                    $join->on('ap.product_id', '=', 'ak_products.id');
-                });
-              })
+      // filtering by attributes if "attrs" is presented in request
+      ->when((request('attrs') && !empty($ap)), function($query) use($ap) {
+        $query->rightJoinSub($ap, 'ap', function ($join) {
+            $join->on('ap.product_id', '=', 'ak_products.id');
+        });
+      })
 
-              // filtering by search query if "q" is presented in request
-              ->when(request('q'), function($query) {
-                $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
-                      ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower(request('q')) . '%')
-                      ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
-              })
-              // Setting order by 
-              ->orderBy('created_at', 'desc');
+      // filtering by search query if "q" is presented in request
+      ->when(request('q'), function($query) {
+        $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
+              ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower(request('q')) . '%')
+              ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
+      })
+      // Setting order by 
+      ->orderBy('created_at', 'desc');
     
     // $start = microtime(true);
     // dd(microtime(true) - $start);

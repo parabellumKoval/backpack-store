@@ -76,8 +76,7 @@ class AttributeValue extends Model
       
       return [
         'id' => $this->id,
-        'value' => $this->value,
-        'attribute_id' => $this->attribute_id
+        'value' => $this->value
       ];
     }
         

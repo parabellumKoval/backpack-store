@@ -18,9 +18,9 @@ class AttributeLargeResource extends JsonResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'value' => $this->pivotValue,
         'values' => $this->values,
         'defaultValue' => $this->default_value,
+        'si' => $this->si,
         'content' => $this->content,
       ];
     }

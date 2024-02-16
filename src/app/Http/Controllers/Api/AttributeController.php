@@ -31,24 +31,27 @@ class AttributeController extends \App\Http\Controllers\Controller
       $node_ids = isset($node_ids) && count($node_ids)? $node_ids: [];
     }
 
-    $attributes = Attribute::query()
-              ->select('ak_attributes.*')
-
-              ->distinct('ak_attributes.id')
-
-              // Getting only products that "is_active" param set to true
-              ->active()
-              
-              // filtering by category if "category_id" or "category_slug" is presented in request
-              ->when((request('category_id') || request('category_slug')), function($query) use($node_ids){
-                $query->leftJoin('ak_attribute_category as ac', 'ac.category_id', '=', 'ak_attributes.id');
-                $query->whereIn('ac.category_id', $node_ids);
-              })
-
-              ->orderBy('lft')
-
-              ->get();
+    $start = microtime(true);
     
+    $attributes = Attribute::query()
+      ->select('ak_attributes.*')
+
+      ->distinct('ak_attributes.id')
+
+      // Getting only products that "is_active" param set to true
+      ->active()
+      
+      // filtering by category if "category_id" or "category_slug" is presented in request
+      ->when((request('category_id') || request('category_slug')), function($query) use($node_ids){
+        $query->leftJoin('ak_attribute_category as ac', 'ac.category_id', '=', 'ak_attributes.id');
+        $query->whereIn('ac.category_id', $node_ids);
+      })
+
+      ->orderBy('lft')
+
+      ->get();
+    
+    // dd(microtime(true) - $start);
     $attributes = AttributeLargeResource::collection($attributes);
 
     return response()->json($attributes);
