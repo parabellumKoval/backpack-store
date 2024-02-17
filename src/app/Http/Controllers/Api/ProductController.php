@@ -194,8 +194,8 @@ class ProductController extends \App\Http\Controllers\Controller
     //define empty array
     $uniq_attrs = [
       'price' => [
-        'from' => null,
-        'to' => null
+        'min' => null,
+        'max' => null
       ]
     ];
     
@@ -203,18 +203,18 @@ class ProductController extends \App\Http\Controllers\Controller
     for($p = 0; $p < $products->count(); $p++){
 
       // Set initial price
-      if($uniq_attrs['price']['from'] === null || $uniq_attrs['price']['to'] === null) {
-        $uniq_attrs['price']['from'] = $uniq_attrs['price']['to'] = $products[$p]->price;
+      if($uniq_attrs['price']['min'] === null || $uniq_attrs['price']['max'] === null) {
+        $uniq_attrs['price']['min'] = $uniq_attrs['price']['max'] = $products[$p]->price;
       }
 
       // Set lower price limit
-      if($products[$p]->price < $uniq_attrs['price']['from']) {
-        $uniq_attrs['price']['from'] = $products[$p]->price;
+      if($products[$p]->price < $uniq_attrs['price']['min']) {
+        $uniq_attrs['price']['min'] = $products[$p]->price;
       }
 
       // Set upper price limit
-      if($products[$p]->price > $uniq_attrs['price']['to']) {
-        $uniq_attrs['price']['to'] = $products[$p]->price;
+      if($products[$p]->price > $uniq_attrs['price']['max']) {
+        $uniq_attrs['price']['max'] = $products[$p]->price;
       }
 
       $attributes = $products[$p]->ap;
