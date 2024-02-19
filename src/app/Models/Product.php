@@ -25,6 +25,9 @@ use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Category;
 
+// RESOURCES
+use Backpack\Store\app\Http\Resources\AttributeProductResource;
+
 class Product extends Model
 {
     use HasFactory;
@@ -198,7 +201,7 @@ class Product extends Model
 
     // public function attributes() 
     // {
-    //   return $this->hasManyThrough(Attribute::class, AttributeProduct::class);
+    //   return $this->hasManyThrough(Attribute::class, AttributeProduct::class, 'product_id', 'id');
     // }
     /*
     |--------------------------------------------------------------------------
@@ -382,6 +385,34 @@ class Product extends Model
       return !empty($this->extras_trans)? json_decode($this->extras_trans): null;
     }
     
+      
+    /**
+     * getAttributesAttribute
+     *
+     * Return attributes with pivot values for each product
+     * 
+     * @return array
+     */
+    public function getAttributesAttribute () {
+
+      $attrs = [];
+
+      for($i = 0; $i < $this->ap->count(); $i++) {
+        $thisAttr = $this->ap[$i]->attribute;
+
+        if($this->ap[$i]->attribute_value_id){
+          $thisAttr->pivotValue[] = $this->ap[$i]->attribute_value;
+        }elseif($this->ap[$i]->value) {
+          $thisAttr->pivotValue = $this->ap[$i]->value;
+        }
+
+        if(!isset($attrs[$thisAttr->id])) {
+          $attrs[$thisAttr->id] = new AttributeProductResource($thisAttr);
+        }
+      }
+
+      return array_values($attrs);
+    }
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

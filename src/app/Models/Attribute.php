@@ -65,6 +65,9 @@ class Attribute extends Model
     protected $translatable = ['name', 'content', 'extras_trans'];
 
     public static $TYPES;
+    
+    // pivot
+    public $pivotValue;
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS

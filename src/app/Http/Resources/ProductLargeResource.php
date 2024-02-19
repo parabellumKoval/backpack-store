@@ -20,6 +20,9 @@ class ProductLargeResource extends JsonResource
     {
       $product_tiny_resource_class = config('backpack.store.product_tiny_resource', 'Backpack\Store\app\Http\Resources\ProductTinyResource');
 
+      //AttributeSmallResource::collection($this->attrs)
+      // dd($this->attributes);
+
       return [
         'id' => $this->id,
         'name' => $this->name,
@@ -32,7 +35,7 @@ class ProductLargeResource extends JsonResource
         'images' => $this->images,
         'content' => $this->content,
         'categories' => $this->categories && $this->categories->count()? CategoryTinyResource::collection($this->categories): null,
-        'attrs' => $this->attrs && $this->attrs->count()? AttributeSmallResource::collection($this->attrs): null,
+        'attrs' => $this->attributes,
         'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null,
         'seo' => $this->seo
       ];
