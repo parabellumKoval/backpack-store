@@ -26,7 +26,7 @@ class CategorySeeder extends Seeder
     
     private function createCategoriesTree($category = null, $itteration = 1) {
 
-      $itterations_limit = config('backpack.store.category_depth_level', 1);
+      $itterations_limit = config('backpack.store.category.depth_level', 1);
 
       if($itteration > $itterations_limit) {
         return;

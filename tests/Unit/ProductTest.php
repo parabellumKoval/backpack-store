@@ -15,15 +15,15 @@ use Carbon\Carbon;
 class ProductTest extends TestCase
 {  
   /**
-   * test_seo_attribute
+   * test_seo_array_attribute
    *
    * @return void
    */
-  public function test_seo_attribute():void {
+  public function test_seo_array_attribute():void {
     $product = Product::first();
    
-    $this->assertArrayHasKey('meta_title', $product->seo);
-    $this->assertArrayHasKey('meta_description', $product->seo);
+    $this->assertArrayHasKey('meta_title', $product->seoArray);
+    $this->assertArrayHasKey('meta_description', $product->seoArray);
   }
   
   /**

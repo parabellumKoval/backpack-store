@@ -18,7 +18,6 @@ use app\Models\User;
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 
-use Backpack\Store\app\Http\Resources\ProductCartResource;
 /**
  * Class OrderCrudController
  * @package App\Http\Controllers\Admin

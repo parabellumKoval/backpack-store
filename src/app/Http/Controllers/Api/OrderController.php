@@ -13,9 +13,6 @@ use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Promocode;
 
-// RESOURCES
-use Backpack\Store\app\Http\Resources\ProductCartResource;
-
 // EVENTS
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 use Backpack\Store\app\Events\PromocodeApplied;
@@ -25,16 +22,17 @@ use Backpack\Store\app\Exceptions\OrderException;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
+  use \Backpack\Store\app\Traits\Resources;
 
   private $ORDER_MODEL = '';
   private $USER_MODEL = '';
   private $ORDER_LARGE_RESOURCE = '';
 
   public function __construct() {
+    self::resources_init();
+
     $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
     $this->USER_MODEL = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile');
-
-    $this->ORDER_LARGE_RESOURCE = config('backpack.store.order.large_resource', 'Backpack\Store\app\Http\Resources\OrderLargeResource');
   }
 
   public function index(Request $request) {
@@ -57,7 +55,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
-    $orders = $this->ORDER_LARGE_RESOURCE::collection($orders);
+    $orders = self::$resources['order']['large']::collection($orders);
 
     return $orders;
   }
@@ -110,7 +108,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $per_page = request('per_page', config('backpack.store.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
-    $orders = $this->ORDER_LARGE_RESOURCE::collection($orders);
+    $orders = self::$resources['order']['large']::collection($orders);
 
     return $orders;
   }
@@ -132,7 +130,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return response()->json($e->getMessage(), 404);
     }
 
-    return response()->json(new $this->ORDER_LARGE_RESOURCE($order));
+    return response()->json(new self::$resources['order']['large']($order));
   }
 
   private function assignArrayByPath(&$arr, $path, $value, $separator='.') {
@@ -226,7 +224,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
     }
 
-    return response()->json(new $this->ORDER_LARGE_RESOURCE($order));
+    return response()->json(new self::$resources['order']['large']($order));
   }
 
   /**
@@ -343,7 +341,7 @@ class OrderController extends \App\Http\Controllers\Controller
     foreach($products as $key => $product) {
       $product->amount = $data['products'][$product->id];
       $info = $order->info;
-      $info['products'][$key] = new ProductCartResource($product);
+      $info['products'][$key] = new self::$resources['product']['cart']($product);
       $order->info = $info;
     }
 

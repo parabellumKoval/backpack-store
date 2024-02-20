@@ -4,9 +4,6 @@ namespace Backpack\Store\app\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-use Backpack\Store\app\Http\Resources\ProductCartResource;
-
-
 class Cart extends Model
 {
 

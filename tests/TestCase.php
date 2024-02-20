@@ -23,6 +23,7 @@ use Backpack\Store\database\seeders\CategorySeeder;
 use Backpack\Store\database\seeders\ProductSeeder;
 use Backpack\Store\database\seeders\AttributeSeeder;
 use Backpack\Store\database\seeders\PromocodeSeeder;
+use Backpack\Store\database\seeders\StoreSeeder;
 
 // #[WithMigration]
 class TestCase extends Orchestra
@@ -54,16 +55,18 @@ class TestCase extends Orchestra
       backpack_auth()->login($this->admin);
       
       // Run category seeder
-      $this->seed(CategorySeeder::class);
+      // $this->seed(CategorySeeder::class);
 
       // Run product seeder
-      $this->seed(ProductSeeder::class);
+      // $this->seed(ProductSeeder::class);
 
       // Run attribute seeder
       // $this->seed(AttributeSeeder::class);
 
       // Run promocode seeder
-      $this->seed(PromocodeSeeder::class);
+      // $this->seed(PromocodeSeeder::class);
+
+      $this->seed(StoreSeeder::class);
 
       // xz
       Factory::guessFactoryNamesUsing(

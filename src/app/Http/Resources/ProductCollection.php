@@ -11,7 +11,7 @@ class ProductCollection extends ResourceCollection
 
   public function __construct($resource)
   {
-    $this->product_small_resource_class = config('backpack.store.product_small_resource', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
+    $this->product_small_resource_class = config('backpack.store.product.resource.small', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
 
     $this->total = $resource->total();
     $this->last_page = $resource->lastPage();

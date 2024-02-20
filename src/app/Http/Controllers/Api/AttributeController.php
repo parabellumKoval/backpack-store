@@ -16,6 +16,13 @@ use Backpack\Store\app\Http\Resources\AttributeLargeResource;
 
 class AttributeController extends \App\Http\Controllers\Controller
 { 
+
+  use \Backpack\Store\app\Traits\Resources;
+
+  public function __construct() {
+    self::resources_init();
+  }
+
   public function index(Request $request) {
 
     try{
@@ -52,13 +59,13 @@ class AttributeController extends \App\Http\Controllers\Controller
       ->get();
     
     // dd(microtime(true) - $start);
-    $attributes = AttributeLargeResource::collection($attributes);
+    $attributes = self::$resources['attribute']['large']::collection($attributes);
 
     return response()->json($attributes);
   }
 
   public function show(Request $request, $id) {
     $attribute = Attribute::findOrFail($id);
-    return new AttributeLargeResource($attribute);
+    return new self::$resources['attribute']['large']($attribute);
   }
 }

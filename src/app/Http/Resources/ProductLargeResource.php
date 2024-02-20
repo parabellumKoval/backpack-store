@@ -2,13 +2,7 @@
 
 namespace Backpack\Store\app\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
-
-use Backpack\Store\app\Http\Resources\ProductTinyResource;
-use Backpack\Store\app\Http\Resources\AttributeSmallResource;
-use Backpack\Store\app\Http\Resources\CategoryTinyResource;
-
-class ProductLargeResource extends JsonResource
+class ProductLargeResource extends BaseResource
 {
     /**
      * Transform the resource into an array.
@@ -18,11 +12,6 @@ class ProductLargeResource extends JsonResource
      */
     public function toArray($request)
     {
-      $product_tiny_resource_class = config('backpack.store.product_tiny_resource', 'Backpack\Store\app\Http\Resources\ProductTinyResource');
-
-      //AttributeSmallResource::collection($this->attrs)
-      // dd($this->attributes);
-
       return [
         'id' => $this->id,
         'name' => $this->name,
@@ -34,10 +23,14 @@ class ProductLargeResource extends JsonResource
         'reviews_rating_detailes' => $this->reviewsRatingDetailes,
         'images' => $this->images,
         'content' => $this->content,
-        'categories' => $this->categories && $this->categories->count()? CategoryTinyResource::collection($this->categories): null,
+        'categories' => $this->categories && $this->categories->count()? 
+          self::$resources['category']['tiny']::collection($this->categories): 
+            null,
         'attrs' => $this->attributes,
-        'modifications' => $this->modifications && $this->modifications->count()? $product_tiny_resource_class::collection($this->modifications): null,
-        'seo' => $this->seo
+        'modifications' => $this->modifications && $this->modifications->count()? 
+          self::$resources['product']['tiny']::collection($this->modifications): 
+            null,
+        'seo' => $this->seoArray
       ];
     }
 }

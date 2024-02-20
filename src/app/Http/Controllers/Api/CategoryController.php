@@ -6,11 +6,13 @@ use Illuminate\Http\Request;
 
 use Backpack\Store\app\Models\Category;
 
-use Backpack\Store\app\Http\Resources\CategorySmallResource;
-use Backpack\Store\app\Http\Resources\CategoryLargeResource;
-
 class CategoryController extends \App\Http\Controllers\Controller
 { 
+  use \Backpack\Store\app\Traits\Resources;
+
+  public function __construct() {
+    self::resources_init();
+  }
 
   public function index(Request $request) {
 
@@ -21,11 +23,11 @@ class CategoryController extends \App\Http\Controllers\Controller
               ->active()
               ->orderBy('lft');
     
-    $per_page = request('per_page', config('backpack.store.category_per_page', 12));
+    $per_page = request('per_page', config('backpack.store.category.per_page', 12));
     
     $categories = $categories->paginate($per_page);
 
-    $categories = CategorySmallResource::collection($categories);
+    $categories = self::$resources['category']['small']::collection($categories);
 
     return $categories;
   }
@@ -33,6 +35,6 @@ class CategoryController extends \App\Http\Controllers\Controller
   public function show(Request $request, $slug) {
     $category = Category::where('slug', $slug)->first();
 
-    return new CategoryLargeResource($category);
+    return new self::$resources['category']['large']($category);
   }
 }

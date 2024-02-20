@@ -29,8 +29,9 @@ return [
 
       'per_page' => 12,
 
-      // Large order resource
-      'large_resource' => 'Backpack\Store\app\Http\Resources\OrderLargeResource',
+      'resource' => [
+        'large' => 'Backpack\Store\app\Http\Resources\OrderLargeResource',
+      ],
 
       // Common order statuses
       'status' => [
@@ -125,10 +126,19 @@ return [
     ],
 
     // CATEGORIES
-    'category_depth_level' => 3,
-    'enable_product_category_pages' => false,
-    'is_modifications_category' => true,
-    'category_per_page' => 12,
+    'category' => [
+      'depth_level' => 3,
+
+      'per_page' => 12,
+
+      'resource' => [
+        'tiny' => 'Backpack\Store\app\Http\Resources\CategoryTinyResource',
+
+        'small' => 'Backpack\Store\app\Http\Resources\CategorySmallResource',
+
+        'large' => 'Backpack\Store\app\Http\Resources\CategoryLargeResource',
+      ]
+    ],
 
     // PROPUCT
     'product' => [
@@ -161,6 +171,22 @@ return [
       'in_stock' => [
         'enable' => true,
         'fixed' => false
+      ],
+
+
+      'resource' => [
+        // PRODUCT -> resources
+        'tiny' => 'Backpack\Store\app\Http\Resources\ProductTinyResource',
+        
+        // Small product resource used for catalog pages (index route)
+        'small' => 'Backpack\Store\app\Http\Resources\ProductSmallResource',
+        'medium' => 'Backpack\Store\app\Http\Resources\ProductMediumResource',
+        
+        // Large product resource used for product page (show route)
+        'large' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
+    
+        // Cart product resource used for order
+        'cart' => 'Backpack\Store\app\Http\Resources\ProductCartResource',
       ]
     ],
 
@@ -171,7 +197,16 @@ return [
       // Is pivot values translatable
       'translatable_value' => false,
 
-      'enable_icon' => false
+      'enable_icon' => false,
+
+      'resource' => [
+
+        'product' => 'Backpack\Store\app\Http\Resources\AttributeProductResource',
+
+        'large' => 'Backpack\Store\app\Http\Resources\AttributeLargeResource',
+
+        'small' => 'Backpack\Store\app\Http\Resources\AttributeSmallResource'
+      ]
     ],
 
     // PRODUCT -> properties

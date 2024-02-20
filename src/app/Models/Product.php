@@ -37,6 +37,7 @@ class Product extends Model
     use HasTranslations;
 
     use ProductModelTrait;
+    use \Backpack\Store\app\Traits\Resources;
 
     /*
     |--------------------------------------------------------------------------
@@ -83,13 +84,23 @@ class Product extends Model
     protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
     
     public $images_array = [];
-
     
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+        
+    /**
+     * __construct
+     *
+     * @param  mixed $attributes
+     * @return void
+     */
+    public function __construct(array $attributes = array()) {
+      parent::__construct($attributes);
+      self::resources_init();
+    }
     
     /**
      * Create a new factory instance for the model.
@@ -100,7 +111,6 @@ class Product extends Model
     {
       return ProductFactory::new();
     }
-
     // protected static function boot()
     // {
     //     parent::boot();
@@ -369,8 +379,7 @@ class Product extends Model
      *  string meta_title,
      * )
      */
-    public function getSeoAttribute() {
-      
+    public function getSeoArrayAttribute() {
       return [
         'meta_title' => $this->seoDecoded->meta_title ?? null,
         'meta_description' => $this->seoDecoded->meta_description ?? null,
@@ -407,12 +416,33 @@ class Product extends Model
         }
 
         if(!isset($attrs[$thisAttr->id])) {
-          $attrs[$thisAttr->id] = new AttributeProductResource($thisAttr);
+          $resource = self::$resources['attribute']['product'];
+          $attrs[$thisAttr->id] = new $resource($thisAttr);
         }
       }
 
       return array_values($attrs);
     }
+    
+    /**
+     * getRatingDetailedAttribute
+     *
+     * @return void
+     */
+    // public function getReviewsRatingDetailesAttribute() {
+    //   return [
+    //     'reviews_count' => 0,
+    //     'rating_count' => 0,
+    //     'rating' => 0,
+    //     'rating_detailes' => [
+    //       'rating_5' => 0,
+    //       'rating_4' => 0,
+    //       'rating_3' => 0,
+    //       'rating_2' => 0,
+    //       'rating_1' => 0
+    //     ],
+    //   ];
+    // }
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

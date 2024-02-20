@@ -2,9 +2,7 @@
 
 namespace Backpack\Store\app\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
-
-class AttributeSmallResource extends JsonResource
+class AttributeSmallResource extends BaseResource
 {
     /**
      * Transform the resource into an array.
@@ -18,7 +16,7 @@ class AttributeSmallResource extends JsonResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'value' => $this->pivotValue,
+        'values' => $this->values,
       ];
     }
 }

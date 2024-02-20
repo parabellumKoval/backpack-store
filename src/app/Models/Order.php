@@ -26,6 +26,7 @@ class Order extends Model
     use HasFactory;
 
     use OrderModelTrait;
+    use \Backpack\Store\app\Traits\Resources;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -59,6 +60,17 @@ class Order extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * __construct
+     *
+     * @param  mixed $attributes
+     * @return void
+     */
+    public function __construct(array $attributes = array()) {
+      parent::__construct($attributes);
+      self::resources_init();
+    }
 
     /**
      * Create a new factory instance for the model.
@@ -322,8 +334,6 @@ class Order extends Model
      * @return array
      */
     public function getProductsAnywayAttribute() {
-      $PRODUCT_CART_RESOURCE = config('backpack.store.product.product_cart_resource', 'Backpack\Store\app\Http\Resources\ProductCartResource');
-
       // Try get products from static info field
       if(isset($this->info['products']) && $this->info['products'] && count($this->info['products'])) {
         return $this->info['products'];
@@ -331,7 +341,7 @@ class Order extends Model
       // try get products from relations
       elseif($this->products) {
         // Get products collection resource 
-        $products_collection = $PRODUCT_CART_RESOURCE::collection($this->products);
+        $products_collection = self::$resources['product']['cart']::collection($this->products);
         
         // Convert to array and return
         return json_decode($products_collection->toJson(), true);

@@ -11,20 +11,14 @@ use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Http\Resources\ProductCollection;
 
 class ProductController extends \App\Http\Controllers\Controller
-{ 
+{
+  use \Backpack\Store\app\Traits\Resources;
 
   protected $product_class;
-  protected $product_tiny_resource_class;
-  protected $product_small_resource_class;
-  protected $product_medium_resource_class;
-  protected $product_large_resource_class;
 
   function __construct() {
-    $this->product_tiny_resource_class = config('backpack.store.product_tiny_resource', 'Backpack\Store\app\Http\Resources\ProductTinyResource');
-    $this->product_small_resource_class = config('backpack.store.product_small_resource', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
-    $this->product_medium_resource_class = config('backpack.store.product_medium_resource', 'Backpack\Store\app\Http\Resources\ProductMediumResource');
-    $this->product_large_resource_class = config('backpack.store.product_large_resource', 'Backpack\Store\app\Http\Resources\ProductLargeResource');
-    
+    self::resources_init();
+
     // Product model can be overwritten. For this you have to: 
     //  - create own Product Model,
     //  - extends it from Backpack\Store\app\Models\Product
@@ -281,7 +275,7 @@ class ProductController extends \App\Http\Controllers\Controller
                 ->limit($limit)
                 ->get();
 
-    $products = $this->product_small_resource_class::collection($products);
+    $products = self::$resources['product']['small']::collection($products);
 
     return $products;
   }
@@ -297,7 +291,7 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   public function show(Request $request, $slug) {
     $product = $this->product_class::where('slug', $slug)->firstOrFail();
-    $product_resource = new $this->product_large_resource_class($product);
+    $product_resource = new self::$resources['product']['large']($product);
     return response()->json($product_resource);
   }
   

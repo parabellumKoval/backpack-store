@@ -2,9 +2,7 @@
 
 namespace Backpack\Store\app\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
-
-class ProductCartResource extends JsonResource
+class ProductCartResource extends BaseResource
 {
     /**
      * Transform the resource into an array.
