@@ -85,3 +85,4 @@ instead of using the issue tracker.
 
 - [](https://github.com/parabellumKoval/backpack-store)
 - [All contributors](https://github.com/parabellumKoval/backpack-store/graphs/contributors)
+

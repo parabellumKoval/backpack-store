@@ -1,11 +1,11 @@
 <?php
 
-namespace Backpack\Store\database\factories;
+namespace Backpack\Reviews\database\factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
-use \Backpack\Store\app\FakeAdmin;
+use \Backpack\Reviews\app\FakeAdmin;
 
 class FakeAdminFactory extends Factory
 {

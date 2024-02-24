@@ -39,8 +39,8 @@ trait Resources {
     self::$resources['product']['cart'] = config('backpack.store.product.resource.cart', 'Backpack\Store\app\Http\Resources\ProductCartResource');
 
     self::$resources['category']['tiny'] = config('backpack.store.category.resource.tiny', 'Backpack\Store\app\Http\Resources\CategoryTinyResource');
-    self::$resources['category']['tiny'] = config('backpack.store.category.resource.small', 'Backpack\Store\app\Http\Resources\CategorySmallResource');
-    self::$resources['category']['tiny'] = config('backpack.store.category.resource.large', 'Backpack\Store\app\Http\Resources\CategoryLargeResource');
+    self::$resources['category']['small'] = config('backpack.store.category.resource.small', 'Backpack\Store\app\Http\Resources\CategorySmallResource');
+    self::$resources['category']['large'] = config('backpack.store.category.resource.large', 'Backpack\Store\app\Http\Resources\CategoryLargeResource');
 
     self::$resources['attribute']['small'] = config('backpack.store.attribute.resource.small', 'Backpack\Store\app\Http\Resources\AttributeSmallResource');
     self::$resources['attribute']['large'] = config('backpack.store.attribute.resource.large', 'Backpack\Store\app\Http\Resources\AttributeLargeResource');

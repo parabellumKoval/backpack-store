@@ -16,6 +16,7 @@ class CategorySmallResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
+        'image' => $this->image,
         'children' => $this->children()->orderBy('lft')->get()
       ];
     }

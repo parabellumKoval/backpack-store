@@ -101,6 +101,21 @@ class Category extends Model
             ],
         ];
     }
+
+    public static function getCategoryNodeIdList(string $slug = null, int $id = null) {
+
+      if($slug !== null) {
+        $category = Category::where('slug', $slug)->first();
+      }elseif($id !== null) {
+        $category = Category::find($id);
+      }else {
+        $category = null;
+      }
+
+      $node_ids = $category? $category->nodeIds: null;
+
+      return $node_ids;
+    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -154,9 +169,16 @@ class Category extends Model
       return !empty($this->extras)? json_decode($this->extras): null;
     }
 
+    public function getImageAttribute() {
+      if(isset($this->images[0]))
+        return $this->images[0];
+      else 
+        return null;
+    }
+
     public function getImageSrcAttribute() {
-      if(isset($this->images[0]) && isset($this->images[0]['src']))
-        return $this->images[0]['src'];
+      if($this->image && isset($this->image['src']))
+        return $this->image['src'];
       else
         return null;
     }

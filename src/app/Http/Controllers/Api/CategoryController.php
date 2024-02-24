@@ -21,11 +21,12 @@ class CategoryController extends \App\Http\Controllers\Controller
               ->distinct('ak_product_categories.id')
               ->root()
               ->active()
-              ->orderBy('lft');
+              ->orderBy('lft')
+              ->get();
     
-    $per_page = request('per_page', config('backpack.store.category.per_page', 12));
+    // $per_page = request('per_page', config('backpack.store.category.per_page', 12));
     
-    $categories = $categories->paginate($per_page);
+    // $categories = $categories->paginate($per_page);
 
     $categories = self::$resources['category']['small']::collection($categories);
 
