@@ -22,6 +22,9 @@ class ProductSavedListener
      */
     public function handle(ProductSaved $event)
     {
+      if(!$event->product->props)
+        return;
+
       foreach($event->product->props as $prop_id => $prop_value) {
         $attribute = Attribute::find($prop_id);
 
