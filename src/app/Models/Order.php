@@ -47,8 +47,6 @@ class Order extends Model
       'user' => 'array'
     ];
 
-
-    public static $fields = null;
     public $products_to_synk = null;
 
     protected $dispatchesEvents = [
@@ -82,78 +80,6 @@ class Order extends Model
       return OrderFactory::new();
     }
 
-    
-    /**
-     * getFields
-     *
-     * @param  mixed $type
-     * @return void
-     */
-    public static function getFields($type = 'fields') {
-      $fields = config("backpack.store.order.{$type}");
-      
-      if(!$fields)
-        throw new \Exception('Please set fields in backpack.store.order config');
-      else
-        return $fields;
-    }
-
-    /** 
-     *  Get validation rules from fields array
-     * @param Array|String $fields
-     * @return Array
-    */
-    public static function getRules($fields = null, $type = 'fields') {
-      //$node = $fields? $fields: static::$$type;
-      $node = $fields? $fields: config("backpack.store.order.{$type}");
-
-      $rules = [];
-      
-      if(is_string($node)) {
-        return $node;
-      }
-
-      if(is_array($node)) {
-        
-        foreach($node as $field => $value) {
-          if(in_array($field, ['store_in']))
-            continue;
-          
-          $selfRules = static::getRules($value);
-
-          if(is_array($selfRules))
-            foreach($selfRules as $k => $v) {
-              if($k === 'rules') {
-                $rules[$field] = $v;
-              }else {
-                $name = implode('.', [$field, $k]);
-                $rules[$name] = $v;
-              }
-            }
-          else
-            $rules[$field] = $selfRules;
-        }
-
-      }
-
-      return $rules;
-    }
-    
-    /**
-     * getFieldKeys
-     *
-     * @param  mixed $type
-     * @return void
-     */
-    public static function getFieldKeys($type = 'fields') {
-      //$keys = array_keys(static::$$type);
-      $keys = array_keys(config("backpack.store.order.{$type}"));
-      $keys = array_map(function($item) {
-        return preg_replace('/[\*\.]/u', '', $item);
-      }, $keys);
-
-      return $keys;
-    }
     
     /**
      * resetCopy

@@ -1,6 +1,6 @@
 <?php
 
-namespace Backpack\Reviews\app;
+namespace Backpack\Store\app;
 
 use Illuminate\Foundation\Auth\User;
 

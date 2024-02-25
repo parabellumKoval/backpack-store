@@ -17,11 +17,12 @@
       }
     ],
     "require": {
-      "php": "^7.3|^8.0",
-      "laravel/framework": "^8.75",
-      "backpack/crud": "4.1.*",
-      "cviebrock/eloquent-sluggable": "^8.0",
-      "spatie/laravel-translatable": "5.1.0"
+        "php": "^7.3|^8.0",
+        "backpack/crud": "4.1.*",
+        "cviebrock/eloquent-sluggable": "^8.0",
+        "laravel/framework": "^8.75",
+        "parabellumkoval/request-data": "0.1.x-dev",
+        "spatie/laravel-translatable": "5.1.0"
     },
     "require-dev": {
         "orchestra/testbench": "^6.0",

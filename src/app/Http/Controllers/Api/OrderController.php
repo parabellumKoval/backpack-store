@@ -23,16 +23,21 @@ use Backpack\Store\app\Exceptions\OrderException;
 class OrderController extends \App\Http\Controllers\Controller
 { 
   use \Backpack\Store\app\Traits\Resources;
+  use \Rd\app\Traits\RdTrait;
 
   private $ORDER_MODEL = '';
   private $USER_MODEL = '';
-  private $ORDER_LARGE_RESOURCE = '';
+
+  public $rd_fields = null;
 
   public function __construct() {
     self::resources_init();
 
     $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
     $this->USER_MODEL = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile');
+
+    // Rd 
+    $this->rd_fields = config('backpack.store.order.fields');
   }
 
   public function index(Request $request) {
@@ -132,40 +137,6 @@ class OrderController extends \App\Http\Controllers\Controller
 
     return response()->json(new self::$resources['order']['large']($order));
   }
-
-  private function assignArrayByPath(&$arr, $path, $value, $separator='.') {
-    $keys = explode($separator, $path);
-
-    foreach ($keys as $key) {
-        $arr = &$arr[$key];
-    }
-
-    $arr = $value;
-  }
-  
-  /**
-   * validateData
-   *
-   * @param  array $data - Data from the order request
-   * @return void
-   */
-  public function validateData($data) {
-    // Apply validation rules to data
-    $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
-
-    if ($validator->fails()) {
-      $errors = $validator->errors()->toArray();
-      $errors_array = [];
-
-      foreach($errors as $key => $error){
-        $this->assignArrayByPath($errors_array, $key, $error);
-      }
-
-      throw new OrderException('Order Validation Error', 403, null, $errors_array);
-    }
-
-    return $data;
-  }
   
   /**
    * create
@@ -179,7 +150,7 @@ class OrderController extends \App\Http\Controllers\Controller
     
     try {
       // Get only allowed fields
-      $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
+      $data = $this->validateData($request);
       
       // Create new empty Order 
       $order = new $this->ORDER_MODEL;
@@ -262,43 +233,6 @@ class OrderController extends \App\Http\Controllers\Controller
     return $order;
   }
 
-
-  /**
-   * setRequestFields
-   * 
-   * Automatycly setting all fields form request 
-   * using structure from the config("backpack.store.order.fields").
-   * 
-   * 
-   * @param  Backpack\Store\app\Models\Order $order - new Order model
-   * @param  array $data - Order request data
-   * @return Backpack\Store\app\Models\Order $order
-   */
-  protected function setRequestFields($order, array $data) {
-
-    foreach($data as $field_name => $field_value){
-      // Getting fields structure and rules from config
-      $config_fields = $this->ORDER_MODEL::getFields();
-      $field = $config_fields[$field_name] ?? $config_fields[$field_name.'.*'];
-      
-      // Skipping if filed is hidden
-      if(isset($field['hidden']) && $field['hidden'])
-        continue;
-
-      // If JSON field 
-      if(isset($field['store_in'])) {
-        $field_old_value = $order->{$field['store_in']};
-        $field_old_value[$field_name] = $field_value;
-        $order->{$field['store_in']} = $field_old_value;
-      }
-      // if regular field
-      else {
-        $order->{$field_name} = $field_value;
-      }
-    }
-
-    return $order;
-  }
 
   /**
    * prepareOrder

@@ -1,0 +1,68 @@
+{
+    "name": "parabellumkoval/request-data",
+    "description": "Implement Request data",
+    "keywords": [
+        "parabellumKoval",
+        "request",
+        "laravel",
+        "data",
+        "validation"
+    ],
+    "homepage": "https://github.com/parabellumkoval/request-data",
+    "license": "MIT",
+    "authors": [
+      {
+        "name": "parabellumKoval",
+        "email": "parabellum.koval@gmail.com",
+        "role": "Developer"
+      }
+    ],
+    "require": {
+      "php": "^7.3|^8.0",
+      "laravel/framework": "^8.75"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.0",
+        "phpunit/phpunit": "*"
+    },
+    "autoload": {
+      "psr-4": {
+        "App\\": "src/app/",
+        "Rd\\": "src",
+        "Rd\\Database\\Factories\\": "database/factories"
+      }
+    },
+    "autoload-dev": {
+      "psr-4": {
+        "App\\": "src/app/",
+        "Rd\\Tests\\": "tests"
+      }
+    },
+    "scripts": {
+        "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
+        "analyse": "vendor/bin/phpstan analyse",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint",
+        "phpunit": "vendor/bin/phpunit --testdox"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+          "pestphp/pest-plugin": true,
+          "phpstan/extension-installer": true
+        }
+    },
+    "extra": {
+      "laravel": {
+        "providers": [
+          "Rd\\ServiceProvider"
+        ],
+        "aliases": {
+          "Rd": "Backpack\\Store\\Facades\\Rd"
+        }
+      }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

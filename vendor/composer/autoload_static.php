@@ -94,6 +94,8 @@ class ComposerStaticInit38a1f0c7854c4ec6e60eebd68b35d5f7
         ),
         'R' => 
         array (
+            'Rd\\Database\\Factories\\' => 22,
+            'Rd\\' => 3,
             'Ramsey\\Uuid\\' => 12,
             'Ramsey\\Collection\\' => 18,
         ),
@@ -343,6 +345,14 @@ class ComposerStaticInit38a1f0c7854c4ec6e60eebd68b35d5f7
         array (
             0 => __DIR__ . '/..' . '/spatie/backtrace/src',
         ),
+        'Rd\\Database\\Factories\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/parabellumkoval/request-data/database/factories',
+        ),
+        'Rd\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/parabellumkoval/request-data/src',
+        ),
         'Ramsey\\Uuid\\' => 
         array (
             0 => __DIR__ . '/..' . '/ramsey/uuid/src',
@@ -557,6 +567,7 @@ class ComposerStaticInit38a1f0c7854c4ec6e60eebd68b35d5f7
         array (
             0 => __DIR__ . '/../..' . '/src/app',
             1 => __DIR__ . '/../..' . '/src/app',
+            2 => __DIR__ . '/..' . '/parabellumkoval/request-data/src/app',
         ),
     );
 

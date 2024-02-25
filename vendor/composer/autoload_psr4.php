@@ -45,6 +45,8 @@ return array(
     'Spatie\\LaravelRay\\' => array($vendorDir . '/spatie/laravel-ray/src'),
     'Spatie\\LaravelPackageTools\\' => array($vendorDir . '/spatie/laravel-package-tools/src'),
     'Spatie\\Backtrace\\' => array($vendorDir . '/spatie/backtrace/src'),
+    'Rd\\Database\\Factories\\' => array($vendorDir . '/parabellumkoval/request-data/database/factories'),
+    'Rd\\' => array($vendorDir . '/parabellumkoval/request-data/src'),
     'Ramsey\\Uuid\\' => array($vendorDir . '/ramsey/uuid/src'),
     'Ramsey\\Collection\\' => array($vendorDir . '/ramsey/collection/src'),
     'Psr\\SimpleCache\\' => array($vendorDir . '/psr/simple-cache/src'),
@@ -97,5 +99,5 @@ return array(
     'Backpack\\Store\\Database\\Factories\\' => array($baseDir . '/database/factories'),
     'Backpack\\Store\\' => array($baseDir . '/src'),
     'Backpack\\CRUD\\' => array($vendorDir . '/backpack/crud/src'),
-    'App\\' => array($baseDir . '/src/app', $baseDir . '/src/app'),
+    'App\\' => array($baseDir . '/src/app', $baseDir . '/src/app', $vendorDir . '/parabellumkoval/request-data/src/app'),
 );

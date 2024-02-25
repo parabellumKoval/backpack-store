@@ -3241,6 +3241,76 @@
             "install-path": "../orchestra/testbench-core"
         },
         {
+            "name": "parabellumkoval/request-data",
+            "version": "0.1.x-dev",
+            "version_normalized": "0.1.9999999.9999999-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/parabellumKoval/request-data.git",
+                "reference": "b20940d0cef2f5920e858be3b494c9205efd02ed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/parabellumKoval/request-data/zipball/b20940d0cef2f5920e858be3b494c9205efd02ed",
+                "reference": "b20940d0cef2f5920e858be3b494c9205efd02ed",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/framework": "^8.75",
+                "php": "^7.3|^8.0"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^6.0",
+                "phpunit/phpunit": "*"
+            },
+            "time": "2024-02-24T17:19:26+00:00",
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Rd\\ServiceProvider"
+                    ],
+                    "aliases": {
+                        "Rd": "Backpack\\Store\\Facades\\Rd"
+                    }
+                }
+            },
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Rd\\": "src",
+                    "App\\": "src/app/",
+                    "Rd\\Database\\Factories\\": "database/factories"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "parabellumKoval",
+                    "email": "parabellum.koval@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Implement Request data",
+            "homepage": "https://github.com/parabellumkoval/request-data",
+            "keywords": [
+                "data",
+                "laravel",
+                "parabellumKoval",
+                "request",
+                "validation"
+            ],
+            "support": {
+                "issues": "https://github.com/parabellumKoval/request-data/issues",
+                "source": "https://github.com/parabellumKoval/request-data/tree/0.1"
+            },
+            "install-path": "../parabellumkoval/request-data"
+        },
+        {
             "name": "phar-io/manifest",
             "version": "2.0.3",
             "version_normalized": "2.0.3.0",
