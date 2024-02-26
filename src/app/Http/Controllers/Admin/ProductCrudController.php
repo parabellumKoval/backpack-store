@@ -509,16 +509,22 @@ class ProductCrudController extends CrudController
             // IMPORTANT !!!!! CHANGE THIS
             $value = $model_attribute->first()->value ?? null;
 
+            $options = [];
+            $options['min'] = $settings['min'] ?? 0;
+            $options['max'] = $settings['max'] ?? 999999999999;
+            $options['step'] = $settings['step'] ?? 0.1;         
+
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
                 'type' => 'number',
                 'attributes' => [
-                  'min' => $settings['min'] ?? 0,
-                  'max' => $settings['max'] ?? 999999999999,
-                  'step' => $settings['step'] ?? 0.1,
+                  'min' => $options['min'],
+                  'max' => $options['max'],
+                  'step' => $options['step'],
                 ],
                 'value' => $value,
+                'hint' => "min: {$options['min']}, max: {$options['max']}, step: {$options['step']}"
               ]
             );
           }
