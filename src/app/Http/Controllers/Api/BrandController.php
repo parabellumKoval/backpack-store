@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 
 //
 use Backpack\Store\app\Models\Brand;
+use Backpack\Store\app\Http\Resources\BrandCollection;
 
 class BrandController extends \App\Http\Controllers\Controller
 { 
@@ -22,10 +23,17 @@ class BrandController extends \App\Http\Controllers\Controller
               ->distinct('ak_brands.id')
               ->active()
               ->get();
-    
-    $brands = self::$resources['brand']['small']::collection($brands);
 
-    return $brands;
+    // Return Grouped by alpha collection or default
+    if(request('alpha_grouped', false)) {
+      $brands_collection = new BrandCollection($brands, [
+        'resource_class' => self::$resources['brand']['small']
+      ]);
+    }else {
+      $brands_collection = self::$resources['brand']['small']::collection($brands);
+    }
+
+    return $brands_collection;
   }
 
   public function show(Request $request, $slug) {
@@ -33,4 +41,5 @@ class BrandController extends \App\Http\Controllers\Controller
 
     return new self::$resources['brand']['large']($brand);
   }
+  
 }
