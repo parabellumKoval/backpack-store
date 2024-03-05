@@ -21,9 +21,9 @@ class BrandCollection extends ResourceCollection
       $collection[$letter][] = new $this->resource_class($items[$i]);
     }
 
+    // Sorting by alphabet
     ksort($collection);
 
-    dd($collection);
     parent::__construct($collection);
   }
 

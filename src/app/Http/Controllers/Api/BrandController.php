@@ -27,7 +27,7 @@ class BrandController extends \App\Http\Controllers\Controller
     // Return Grouped by alpha collection or default
     if(request('alpha_grouped', false)) {
       $brands_collection = new BrandCollection($brands, [
-        'resource_class' => self::$resources['brand']['small']
+        'resource_class' => self::$resources['brand']['large']
       ]);
     }else {
       $brands_collection = self::$resources['brand']['small']::collection($brands);
