@@ -8,6 +8,7 @@ use Backpack\Store\database\seeders\ProductSeeder;
 use Backpack\Store\database\seeders\AttributeSeeder;
 use Backpack\Store\database\seeders\OrderSeeder;
 use Backpack\Store\database\seeders\PromocodeSeeder;
+use Backpack\Store\database\seeders\BrandSeeder;
 
 class StoreSeeder extends Seeder
 {
@@ -18,6 +19,10 @@ class StoreSeeder extends Seeder
      */
     public function run()
     {
+      if(config('backpack.store.brands.enable', false)) {
+        (new BrandSeeder())->run();
+      }
+
       (new CategorySeeder())->run();
       (new ProductSeeder())->run();
       (new AttributeSeeder())->run();

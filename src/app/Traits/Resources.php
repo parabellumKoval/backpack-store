@@ -47,5 +47,8 @@ trait Resources {
     self::$resources['attribute']['product'] = config('backpack.store.attribute.resource.product', 'Backpack\Store\app\Http\Resources\AttributeProductResource');
 
     self::$resources['order']['large'] = config('backpack.store.order.resource.large', 'Backpack\Store\app\Http\Resources\OrderLargeResource');
+
+    self::$resources['brand']['small'] = config('backpack.store.brand.resource.small', 'Backpack\Store\app\Http\Resources\BrandSmallResource');
+    self::$resources['brand']['large'] = config('backpack.store.brand.resource.large', 'Backpack\Store\app\Http\Resources\BrandLargeResource');
   }
 }

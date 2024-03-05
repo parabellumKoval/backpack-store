@@ -209,6 +209,18 @@ return [
       ]
     ],
 
+    // BRAND
+    'brands' => [
+      'enable' => true,
+
+      'resource' => [
+
+        'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',
+
+        'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource'
+      ]
+    ],
+
     // PRODUCT -> properties
     
     //is hit

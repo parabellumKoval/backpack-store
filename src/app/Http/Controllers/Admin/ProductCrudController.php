@@ -86,7 +86,7 @@ class ProductCrudController extends CrudController
         
         $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
         
-        // if(config('backpack.store.enable_brands')) {
+        // if(config('backpack.store.brands.enable')) {
         //   $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
         // }
 
@@ -177,6 +177,18 @@ class ProductCrudController extends CrudController
           ]);
         }
 
+        // BRAND
+        if(config('backpack.store.brands.enable')) {
+          $this->crud->addField([
+            'name' => 'brand',
+            'label' => 'Бренд',
+            'type' => 'select2',
+            'entity' => 'brand',
+            'attribute' => 'name',
+            'model' => 'Backpack\Store\app\Models\Brand',
+            'tab' => 'Основное',
+          ]);
+        }
 
         // IS ACTIVE
         $this->crud->addField([

@@ -25,7 +25,7 @@ class CreateAkProductsTable extends Migration
           $table->json('images')->nullable();
 
           $table->foreignId('parent_id')->nullable()->default(null);
-          $table->foreignId('brand_id')->default('0');
+          $table->foreignId('brand_id')->nullable()->default(null);
 
           $table->double('price', 8, 2)->nullable();
           $table->double('old_price', 8, 2)->nullable();

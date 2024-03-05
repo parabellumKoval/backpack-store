@@ -25,6 +25,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->loadRoutesFrom(__DIR__.'/routes/api/cart.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/promocode.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/attribute.php');
+    $this->loadRoutesFrom(__DIR__.'/routes/api/brand.php');
     
 
     $this->publishes([

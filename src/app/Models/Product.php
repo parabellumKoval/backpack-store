@@ -24,6 +24,7 @@ use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Brand;
 
 // RESOURCES
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
@@ -164,6 +165,17 @@ class Product extends Model
       return $this->belongsToMany(Category::class, 'ak_category_product');
     }
     
+    
+    /**
+     * brand
+     *
+     * @return void
+     */
+    public function brand()
+    {
+      return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
     /**
      * parent
      *

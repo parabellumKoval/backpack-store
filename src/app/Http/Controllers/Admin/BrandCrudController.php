@@ -1,14 +1,12 @@
 <?php
 
-namespace Aimix\Shop\app\Http\Controllers\Admin;
+namespace Backpack\Store\app\Http\Controllers\Admin;
 
-use Aimix\Shop\app\Http\Requests\BrandRequest;
+use Backpack\Store\app\Http\Requests\BrandRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 use Backpack\LangFileManager\app\Models\Language;
-
-use App\Models\Country;
 
 /**
  * Class BrandCrudController
@@ -29,73 +27,42 @@ class BrandCrudController extends CrudController
 
     public function setup()
     {
-        $this->crud->setModel('Aimix\Shop\app\Models\Brand');
+        $this->crud->setModel('Backpack\Store\app\Models\Brand');
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/brand');
-        $this->crud->setEntityNameStrings('производетеля', 'производители');
+        $this->crud->setEntityNameStrings('бренд', 'бренды');
         
-        $this->countries = Country::NoEmpty()->pluck('name', 'id')->toArray();
-        
-        if(config('aimix.aimix.enable_languages')) {
-          $this->languages = Language::getActiveLanguagesNames();
-          
-          $this->crud->query = $this->crud->query->withoutGlobalScopes();
-          $this->crud->model->clearGlobalScopes();
-        }
     }
 
     protected function setupListOperation()
     {
         // TODO: remove setFromDb() and manually define Columns, maybe Filters
         // $this->crud->setFromDb();
-        $this->crud->addFilter([
-          'name' => 'country_id',
-          'label' => 'Страна',
-          'type' => 'select2'
-        ], function(){
-          return $this->countries;
-        }, function($value){
-          $this->crud->addClause('where', 'country_id', $value);
-        });
         
-        if(config('aimix.aimix.enable_languages')) {
-          $this->crud->addFilter([
-            'name'  => 'language',
-            'type'  => 'select2',
-            'label' => 'Язык'
-          ], function () {
-            return $this->languages;
-          }, function ($value) { // if the filter is active
-            $this->crud->addClause('where', 'language_abbr', $value);
-          });
-          
-          $this->crud->addColumn([
-            'name' => 'language_abbr',
-            'label' => 'Язык',
-          ]);
-        }
-        
-        $this->crud->addColumns([
-          [
-            'name' => 'logo',
-            'label' => 'Логотип',
-            'type' => 'image'
-          ],
-          [
-            'name' => 'country_id',
-            'label' => 'Страна',
-            'type' => 'select',
-            'entity' => 'country',
-            'attribute' => 'name',
-            'model' => 'App\Models\Country',
-          ],
-          [
-            'name' => 'name',
-            'label' => 'Название',
-          ],
-          [
-            'name' => 'description',
-            'label' => 'Описание',
-          ],
+        $this->crud->addColumn([
+          'name' => 'imageSrc',
+          'label' => '📷',
+          'type' => 'image',
+          'height' => '40px',
+          'width'  => '40px',
+        ]);
+
+
+        $this->crud->addColumn([
+          'name' => 'is_active',
+          'label' => '✅',
+          'type' => 'check'
+        ]);
+
+
+        $this->crud->addColumn([
+          'name' => 'name',
+          'label' => 'Название'
+        ]);
+
+
+        $this->crud->addColumn([
+            'name' => 'slug',
+            'label' => 'Slug',
         ]);
     }
 
@@ -105,48 +72,99 @@ class BrandCrudController extends CrudController
 
         // TODO: remove setFromDb() and manually define Fields
         // $this->crud->setFromDb();
-      if(config('aimix.aimix.enable_languages')) {
-        $this->crud->addField([
-          'name' => 'language_abbr',
-          'label' => 'Язык',
-          'type' => 'select_from_array',
-          'options' => $this->languages
-        ]);
-      }
+      
         
-        $this->crud->addFields([
-          [
-            'name' => 'name',
-            'label' => 'Название',
+        
+
+        // IS ACTIVE
+        $this->crud->addField([
+          'name' => 'is_active',
+          'label' => 'Активен',
+          'type' => 'boolean',
+          'default' => '1',
+          'tab' => 'Основное'
+        ]);
+        
+        // NAME
+        $this->crud->addField([
+          'name' => 'name',
+          'label' => 'Название',
+          'type' => 'text',
+          'tab' => 'Основное'
+        ]);
+
+        // SLUG
+        $this->crud->addField([
+          'name' => 'slug',
+          'label' => 'URL',
+          'hint' => 'По умолчанию будет сгенерирован из названия.',
+          'tab' => 'Основное'
+        ]);
+
+
+        // DESCRIPTION
+        $this->crud->addField([
+          'name' => 'content',
+          'label' => 'Описание',
+          'type' => 'ckeditor',
+          'attributes' => [
+            'rows' => 7
           ],
-          [
-            'name' => 'slug',
-            'label' => 'URL',
-            'prefix' => url('/manufacturers').'/',
-            'hint' => 'По умолчанию будет сгенерирован из названия.',
-            'type' => 'text',
-          ],
-          [
-            'name' => 'logo',
-            'label' => 'Логотип',
-            'type' => 'browse',
-          ],
-          [
-            'name' => 'country_id',
-            'label' => 'Страна',
-            'type' => 'select2',
-            'entity' => 'country',
-            'attribute' => 'name',
-            'model' => 'App\Models\Country',
-          ],
-          [
-            'name' => 'description',
-            'label' => 'Описание',
-            'type' => 'textarea',
-            'attributes' => [
-              'rows' => '7',
+          'tab' => 'Основное'
+        ]);
+
+        $this->crud->addField([
+          'name'  => 'images',
+          'label' => 'Изображения',
+          'type'  => 'repeatable',
+          'fields' => [
+            [
+              'name' => 'src',
+              'label' => 'Изображение',
+              'type' => 'browse',
+              'hint' => 'Названия файлов загруженных через файловый менеджен должны быть на латинице и без пробелов.'
+            ],
+            [
+              'name' => 'alt',
+              'label' => 'alt'
+            ],
+            [
+              'name' => 'title',
+              'label' => 'title'
+            ],
+            [
+              'name' => 'size',
+              'type' => 'radio',
+              'label' => 'Размер',
+              'options' => [
+                'cover' => 'Cover',
+                'contain' => 'Contain'
+              ],
+              'inline' => true
             ]
-          ]
+          ],
+          'new_item_label'  => 'Добавить изобрежение',
+          'init_rows' => 1,
+          'default' => [],
+          'tab' => 'Изображения'
+        ]);
+
+        $this->crud->addField([
+          'name' => 'meta_title',
+          'label' => "Meta Title", 
+          'type' => 'text',
+          'fake' => true, 
+          'store_in' => 'seo',
+          'tab' => 'SEO'
+        ]);
+
+        $this->crud->addField([
+          'name' => 'meta_description',
+          'label' => "Meta Description", 
+          'type' => 'textarea',
+          'fake' => true, 
+          'store_in' => 'seo',
+          'tab' => 'SEO'
         ]);
     }
 

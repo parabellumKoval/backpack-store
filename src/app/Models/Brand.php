@@ -6,14 +6,27 @@ use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 
+// SLUGS
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 
+// TRANSLATIONS
+use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
+
+// FACTORY
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Backpack\Store\database\factories\BrandFactory;
+
+// MODEL
+use Backpack\Store\app\Model\Product;
+
 class Brand extends Model
 {
+    use HasFactory;
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
+    use HasTranslations;
 
     /*
     |--------------------------------------------------------------------------
@@ -29,6 +42,16 @@ class Brand extends Model
     // protected $hidden = [];
     // protected $dates = [];
 
+    protected $casts = [
+      'extras' => 'array',
+      'images' => 'array',
+    ];
+
+    protected $fakeColumns = [
+      'meta_description', 'meta_title', 'seo', 'extras', 'images'
+    ];
+    
+    protected $translatable = ['name', 'content', 'seo'];
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -38,19 +61,29 @@ class Brand extends Model
     {
         parent::boot();
     }
+
+    /**
+     * Create a new factory instance for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    protected static function newFactory()
+    {
+      return BrandFactory::new();
+    }
     
     public function clearGlobalScopes()
     {
         static::$globalScopes = [];
     }
     
-    public function sluggable()
+    public function sluggable():array
     {
-        return [
-            'slug' => [
-                'source' => 'slug_or_name',
-            ],
-        ];
+      return [
+        'slug' => [
+          'source' => 'slug_or_name',
+        ],
+      ];
     }
     /*
     |--------------------------------------------------------------------------
@@ -59,37 +92,59 @@ class Brand extends Model
     */
     public function products()
     {
-      return $this->hasMany('Aimix\Shop\app\Models\Product');
-    }
-    
-    public function activeProducts()
-    {
-      return $this->hasMany('Aimix\Shop\app\Models\Product')->where('is_active', 1);
-    }
-    
-    public function country()
-    {
-      return $this->belongsTo('App\Models\Country');
+      return $this->hasMany(Product::class);
     }
     /*
     |--------------------------------------------------------------------------
     | SCOPES
     |--------------------------------------------------------------------------
     */
-    public function scopeNoEmpty($query){
-      return $query->has('activeProducts');
+    public function scopeActive($query){
+      return $query->where('is_active', 1);
     }
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * getImageAttribute
+     *
+     * Get first image from images array of the product or get image from parent product if exists 
+     * 
+     * @return Array|null Image is array(src, alt, title, size) 
+     */
+    public function getImageAttribute() {
+      $image = $this->images[0] ?? null;
+
+      if(!$image && $this->parent)
+        $image = $this->parent->image;
+
+      return $image;
+    }
+    
+    /**
+     * getImageSrcAttribute
+     *
+     * Get src url address from getImageAttribute method
+     * 
+     * @return string|null string is image src url
+     */
+    public function getImageSrcAttribute() {
+      return $this->image['src'] ?? null;
+    }
+        
+    /**
+     * getSlugOrNameAttribute
+     *
+     * @return void
+     */
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
             return $this->slug;
         }
-
         return $this->name;
     }
     /*

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Sequence;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Attribute;
+use Backpack\Store\app\Models\Brand;
 
 class ProductSeeder extends Seeder
 {
@@ -28,11 +29,23 @@ class ProductSeeder extends Seeder
     private function createProducts() {
       $categories = Category::all();
 
+      // create childrens
+      $childrens_count = config('backpack.store.modifications.enable', false)? 2: 0;
+
       foreach($categories as $category) {
+        $brand = null;
+  
+        if(config('backpack.store.brands.enable', false)) {
+          $brand = Brand::inRandomOrder()->first();
+        }
+        
         $products = Product::factory()
           ->count(3)
           ->hasAttached($category)
-          ->hasChildren(2)
+          ->hasChildren($childrens_count)
+          ->state([
+            'brand_id' => ($brand->id ?? null)
+          ])
           ->suspended()
           ->create();
       }

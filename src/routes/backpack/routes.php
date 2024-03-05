@@ -18,7 +18,7 @@ Route::group([
       Route::crud('value', 'AttributeValueCrudController');
     }
 
-    if(config('backpack.store.enable_brands')) {
+    if(config('backpack.store.brands.enable')) {
       Route::crud('brand', 'BrandCrudController');
     }
     

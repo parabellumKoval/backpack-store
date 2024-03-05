@@ -65,7 +65,7 @@ class ProductController extends \App\Http\Controllers\Controller
       // Getting only products that have not "parent_id" param
       ->base()
       // Getting only products that "is_active" param set to true
-      ->active()
+      ->where('ak_products.is_active', 1)
       
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){
@@ -80,6 +80,12 @@ class ProductController extends \App\Http\Controllers\Controller
         });
       })
 
+      // filtering by brand
+      ->when(request('brand_slug'), function($query) {
+        $query->leftJoin('ak_brands as br', 'ak_products.brand_id', '=', 'br.id');
+        $query->where('br.slug', request('brand_slug'));
+      })
+
       // filtering by search query if "q" is presented in request
       ->when(request('q'), function($query) {
         $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
@@ -92,20 +98,21 @@ class ProductController extends \App\Http\Controllers\Controller
     // $start = microtime(true);
     // dd(microtime(true) - $start);
 
-    $products_collection = $products->get();
+    // Get filters count meta
+    $filters_count = null;
 
-    // 
-    $filters_count = $this->filterValuesCount($products_collection);
+    if(request('with_filters', true)) {
+      $products_collection = $products->get();
+      $filters_count = $this->filterValuesCount($products_collection);
+    }
 
+    // Make pagination
     $per_page = request('per_page', config('backpack.store.per_page', 12));
-    
     $products = $products->paginate($per_page);
 
     // Get values using collection resource (Resource configurates by backpack.store config)
     $products = new ProductCollection($products);
 
-    // dd($products);
-    // return $products;
     return response()->json(['products' => $products, 'filters' => $filters_count]);
   }
   
