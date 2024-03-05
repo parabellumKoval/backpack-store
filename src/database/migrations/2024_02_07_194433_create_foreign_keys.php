@@ -18,6 +18,10 @@ class CreateForeignKeys extends Migration
         $table->foreign('parent_id')->references('id')->on('ak_products')
               ->onDelete('cascade')
               ->onUpdate('no action');
+        
+        $table->foreign('brand_id')->references('id')->on('ak_brands')
+              ->onDelete('cascade')
+              ->onUpdate('no action');
       });
 
       // CATEGORIES
