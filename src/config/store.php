@@ -219,30 +219,5 @@ return [
 
         'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource'
       ]
-    ],
-
-    // PRODUCT -> properties
-    
-    //is hit
-    'enable_is_hit' => false,
-
-    // rating
-    'enable_product_rating' => true,
-
-
-    // PRODUCT -> resources
-    'product_tiny_resource' => 'Backpack\Store\app\Http\Resources\ProductTinyResource',
-    
-    // Small product resource used for catalog pages (index route)
-    'product_small_resource' => 'Backpack\Store\app\Http\Resources\ProductSmallResource',
-    'product_medium_resource' => 'Backpack\Store\app\Http\Resources\ProductMediumResource',
-    
-    // Large product resource used for product page (show route)
-    'product_large_resource' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
-
-    // Cart product resource used for order
-    'product_cart_resource' => 'Backpack\Store\app\Http\Resources\ProductCartResource',
-
-    // BRANDS
-    'enable_brands' => false,
+    ]
 ];
