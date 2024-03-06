@@ -218,6 +218,14 @@ return [
         'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',
 
         'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource'
+      ],
+
+      'alpha_groups' => [
+        'patterns' => [
+          '/[А-Яа-яЁё]/u',
+          '/[0-9]/u',
+          '/[A-Za-z]/u',
+        ]
       ]
     ]
 ];

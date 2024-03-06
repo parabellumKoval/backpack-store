@@ -15,10 +15,34 @@ class BrandCollection extends ResourceCollection
     $items = $resource->all();
     $collection = [];
     
-    for($i = 0; $i < count($items); $i++){
-      $letter = mb_strtolower($items[$i]->name[0]);
+    // Patterns
+    $patterns = config('backpack.store.brands.alpha_groups.patterns', []);
 
-      $collection[$letter][] = new $this->resource_class($items[$i]);
+    for($i = 0; $i < count($items); $i++){
+      $symbol = mb_substr($items[$i]->name, 0, 1);
+
+      if(is_numeric($symbol)){
+        $symbol = '0-9';
+      }else {
+        $symbol = mb_strtolower($symbol, 'UTF-8');
+      }
+
+      // Try to distribute first symbol by patterns
+      $have_fond = 0;
+      for($j = 0; $j < count($patterns); $j++){
+        preg_match($patterns[$j], $symbol, $find);
+
+        if($find) {
+          $collection[$j][$symbol][] = new $this->resource_class($items[$i]);
+          $have_fond = 1;
+        }
+      }
+
+      // If have not fond by patterns add to collection anyway
+      if(!$have_fond) {
+        $collection[count($patterns) + 1][$symbol][] = new $this->resource_class($items[$i]);
+      }
+
     }
 
     // Sorting by alphabet

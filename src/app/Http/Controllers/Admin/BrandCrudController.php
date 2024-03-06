@@ -73,8 +73,6 @@ class BrandCrudController extends CrudController
         // TODO: remove setFromDb() and manually define Fields
         // $this->crud->setFromDb();
       
-        
-        
 
         // IS ACTIVE
         $this->crud->addField([
@@ -82,6 +80,16 @@ class BrandCrudController extends CrudController
           'label' => 'Активен',
           'type' => 'boolean',
           'default' => '1',
+          'tab' => 'Основное'
+        ]);
+
+        // IS POPULAR
+        $this->crud->addField([
+          'name' => 'is_popular',
+          'label' => 'Популярный?',
+          'type' => 'boolean',
+          'fake' => true, 
+          'store_in' => 'extras',
           'tab' => 'Основное'
         ]);
         
