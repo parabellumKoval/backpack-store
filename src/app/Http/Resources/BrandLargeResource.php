@@ -18,6 +18,7 @@ class BrandLargeResource extends BaseResource
         'slug' => $this->slug,
         'images' => $this->images,
         'content' => $this->content,
+        'extras' => $this->extras,
         'seo' => $this->seo
       ];
     }

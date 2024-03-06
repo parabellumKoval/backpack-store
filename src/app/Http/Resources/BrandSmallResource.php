@@ -16,7 +16,8 @@ class BrandSmallResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'images' => $this->images
+        'image' => $this->image,
+        'extras' => $this->extras,
       ];
     }
 }
