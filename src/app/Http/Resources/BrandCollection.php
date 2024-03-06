@@ -46,7 +46,9 @@ class BrandCollection extends ResourceCollection
     }
 
     // Sorting by alphabet
-    ksort($collection);
+    for($c = 0; $c < count($collection); $c++){
+      ksort($collection[$c]);
+    }
 
     parent::__construct($collection);
   }
