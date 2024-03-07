@@ -10,6 +10,9 @@ use Backpack\Store\database\seeders\OrderSeeder;
 use Backpack\Store\database\seeders\PromocodeSeeder;
 use Backpack\Store\database\seeders\BrandSeeder;
 
+use Backpack\Store\app\Models\Product;
+use Backpack\Store\app\Models\Order;
+
 class StoreSeeder extends Seeder
 {
     /**
@@ -19,6 +22,14 @@ class StoreSeeder extends Seeder
      */
     public function run()
     {
+      // Remove all orders first because foreign key
+      Order::where('id', '>=', 0)->delete();
+      (new \Symfony\Component\Console\Output\ConsoleOutput())->writeln("<info>Order was deleted.</info>");
+
+      // Then remove products
+      Product::where('id', '>=', 0)->delete();
+      (new \Symfony\Component\Console\Output\ConsoleOutput())->writeln("<info>Product was deleted.</info>");
+
       if(config('backpack.store.brands.enable', false)) {
         (new BrandSeeder())->run();
       }

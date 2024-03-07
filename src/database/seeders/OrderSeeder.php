@@ -17,22 +17,30 @@ class OrderSeeder extends Seeder
      */
     public function run()
     {   
-      Order::where('id', '>=', 0)->delete();
-      (new \Symfony\Component\Console\Output\ConsoleOutput())->writeln("<info>Order was deleted.</info>");
-
       $this->createOrders();
     }
 
     private function createOrders() {
-      Order::factory()
-          ->count(10)
-          ->hasAttached(
-            Product::factory()->count(3),
-            [
-              'amount' => rand(1,10),
-              'value' => rand(100, 9999)
-            ]
-          )
-          ->create();
+
+      // Create 20 orders
+      for($i = 0; $i < 20; $i++) {
+
+        $products = Product::inRandomOrder()->where('is_active', 1)->limit(3)->get();
+        $product_ids = $products->pluck('id')->toArray();
+        $products_to_attach = [];
+
+        for($p = 0; $p < count($product_ids); $p++){
+          $id = $product_ids[$p];
+          $products_to_attach[$id] = [
+            'amount' => rand(1,10),
+            'value' => rand(100, 9999)  
+          ];
+        }
+
+        $order = Order::factory()
+            ->create();
+
+        $order->products()->attach($products_to_attach);
+      }
     }
 }

@@ -19,10 +19,6 @@ class ProductSeeder extends Seeder
      */
     public function run()
     {
-
-      Product::where('id', '>=', 0)->delete();
-      (new \Symfony\Component\Console\Output\ConsoleOutput())->writeln("<info>Product was deleted.</info>");
-
       $this->createProducts();
     }
 

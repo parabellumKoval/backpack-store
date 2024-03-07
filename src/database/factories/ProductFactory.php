@@ -72,7 +72,15 @@ class ProductFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'old_price' => $attributes['price'] * 1.2,
+              'old_price' => $attributes['price'] * 1.2,
+              'in_stock' => config('backpack.store.product.in_stock.fixed', false)?
+                $this->faker->randomElement([0,1]):
+                $this->faker->randomElement([
+                  0,
+                  $this->faker->randomNumber(2, false),
+                  $this->faker->randomNumber(2, false),
+                  $this->faker->randomNumber(2, false)
+                ])
             ];
         });
     }
