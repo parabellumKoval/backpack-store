@@ -2,14 +2,16 @@
  
 namespace Backpack\Store\app\Http\Resources;
  
-class ProductCollection extends BaseCollection
+use Illuminate\Http\Resources\Json\ResourceCollection;
+ 
+class ProductCollection extends ResourceCollection
 {
-  private $total, $last_page, $current_page, $per_page, $resource_class;  
+  private $product_small_resource_class = 'Backpack\Store\app\Http\Resources\ProductSmallResource';
+  private $total, $last_page, $current_page, $per_page;  
 
-  public function __construct($resource, $options)
+  public function __construct($resource)
   {
-
-    $this->resource_class = $options['resource_class'] ?? config('backpack.store.product.resource.small', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
+    $this->product_small_resource_class = config('backpack.store.product.resource.small', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
 
     $this->total = $resource->total();
     $this->last_page = $resource->lastPage();
@@ -30,7 +32,7 @@ class ProductCollection extends BaseCollection
   public function toArray($request)
   {
     return [
-      'data' => $this->resource_class::collection($this->collection),
+      'data' => $this->product_small_resource_class::collection($this->collection),
       'meta' => [
         'total' => $this->total,
         'current_page' => $this->current_page,
