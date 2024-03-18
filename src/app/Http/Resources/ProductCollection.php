@@ -6,7 +6,7 @@ class ProductCollection extends BaseCollection
 {
   private $total, $last_page, $current_page, $per_page, $resource_class;  
 
-  public function __construct($resource, $options)
+  public function __construct($resource, $options = null)
   {
 
     $this->resource_class = $options['resource_class'] ?? config('backpack.store.product.resource.small', 'Backpack\Store\app\Http\Resources\ProductSmallResource');

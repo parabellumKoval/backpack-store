@@ -74,20 +74,6 @@ class Category extends Model
       ];    
     }
     
-    // protected static function boot()
-    // {
-
-    //     parent::boot();
-
-    //     if(config('aimix.aimix.enable_languages')) {
-    //       $language = session()->has('lang')? session()->get('lang'): 'ru';
-          
-    //       static::addGlobalScope('language', function (Builder $builder) use ($language) {
-    //           $builder->where('language_abbr', $language);
-    //       });
-    //     }
-    // }
-    
     public function clearGlobalScopes()
     {
         static::$globalScopes = [];
@@ -101,7 +87,14 @@ class Category extends Model
             ],
         ];
     }
-
+    
+    /**
+     * getCategoryNodeIdList
+     *
+     * @param  mixed $slug
+     * @param  mixed $id
+     * @return void
+     */
     public static function getCategoryNodeIdList(string $slug = null, int $id = null) {
 
       if($slug !== null) {
@@ -116,6 +109,7 @@ class Category extends Model
 
       return $node_ids;
     }
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -193,7 +187,13 @@ class Category extends Model
         return $this->name;
     }
 
-
+    
+    /**
+     * getNodeIdsAttribute
+     *
+     * @param  mixed $category
+     * @return void
+     */
     public function getNodeIdsAttribute($category){
 			$category = $category? $category: $this;
 			
