@@ -45,6 +45,8 @@ class BrandCollection extends ResourceCollection
 
     }
 
+    $collection = array_values($collection);
+    
     // Sorting by alphabet
     for($c = 0; $c < count($collection); $c++){
       if($collection[$c]) {
