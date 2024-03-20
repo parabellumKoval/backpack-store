@@ -93,7 +93,7 @@ class ProductController extends \App\Http\Controllers\Controller
               ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
       })
       // Setting order by 
-      ->orderBy('created_at', 'desc');
+      ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'));
     
     // $start = microtime(true);
     // dd(microtime(true) - $start);
