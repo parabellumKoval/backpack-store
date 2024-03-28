@@ -19,6 +19,7 @@ use Backpack\Store\app\Events\PromocodeApplied;
 
 // EXCEPTIONS
 use Backpack\Store\app\Exceptions\OrderException;
+use Rd\app\Exceptions\DetailedException;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
@@ -191,7 +192,7 @@ class OrderController extends \App\Http\Controllers\Controller
         PromocodeApplied::dispatch($order);
       }
 
-    }catch(OrderException $e) {
+    }catch(DetailedException $e) {
       return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
     }
 
