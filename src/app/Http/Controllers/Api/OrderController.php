@@ -193,7 +193,10 @@ class OrderController extends \App\Http\Controllers\Controller
       }
 
     }catch(DetailedException $e) {
-      return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
+      return response()->json([
+        'message' => $e->getMessage(),
+        'options' => $e->getOptions()
+      ], $e->getCode());
     }
 
     return response()->json(new self::$resources['order']['large']($order));
