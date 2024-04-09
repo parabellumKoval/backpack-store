@@ -18,6 +18,8 @@ use Backpack\Store\app\Http\Controllers\Api\PromocodeController;
 
 Route::prefix('api/promocode')->controller(PromocodeController::class)->group(function () {
   
+  Route::get('', 'index')->middleware('api');
+  
   Route::get('/{code}/find-and-check', 'findAndCheck')->middleware('api');
 
 });

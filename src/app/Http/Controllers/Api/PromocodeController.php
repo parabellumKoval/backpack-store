@@ -9,6 +9,22 @@ use Backpack\Store\app\Models\Promocode;
 
 class PromocodeController extends \App\Http\Controllers\Controller
 {   
+  
+  /**
+   * index
+   *
+   * @param  mixed $request
+   * @return void
+   */
+  public function index(Request $request) {
+    $promocodes = Promocode::orderBy('created_at')->get();
+
+    $per_page = request('per_page', 12);
+    $promocodes = $promocodes->paginate($per_page);
+
+    return response()->json($promocodes);
+  }
+
   /**
    * findAndCheck
    *
