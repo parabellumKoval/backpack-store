@@ -20,8 +20,7 @@ class PromocodeController extends \App\Http\Controllers\Controller
     $promocodes = Promocode::query()
                   ->select('ak_promocodes.*')
                   ->distinct('ak_promocodes.id')
-                  ->orderBy('created_at')
-                  ->get();
+                  ->orderBy('created_at');
 
     $per_page = request('per_page', 12);
     $promocodes = $promocodes->paginate($per_page);
