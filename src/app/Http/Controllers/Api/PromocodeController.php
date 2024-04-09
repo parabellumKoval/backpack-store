@@ -17,7 +17,11 @@ class PromocodeController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function index(Request $request) {
-    $promocodes = Promocode::orderBy('created_at')->get();
+    $promocodes = Promocode::query()
+                  ->select('ak_promocodes.*')
+                  ->distinct('ak_promocodes.id')
+                  ->orderBy('created_at')
+                  ->get();
 
     $per_page = request('per_page', 12);
     $promocodes = $promocodes->paginate($per_page);
