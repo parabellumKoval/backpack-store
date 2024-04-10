@@ -209,6 +209,19 @@ return [
       ]
     ],
 
+    // PROMOCODE
+    'promocodes' => [
+      'enable' => true,
+
+      'resource' => [
+
+        'large' => 'Backpack\Store\app\Http\Resources\PromocodeLargeResource',
+
+        'small' => 'Backpack\Store\app\Http\Resources\PromocodeSmallResource'
+      ],
+
+    ],
+
     // BRAND
     'brands' => [
       'enable' => true,

@@ -9,7 +9,12 @@ use Backpack\Store\app\Models\Promocode;
 
 class PromocodeController extends \App\Http\Controllers\Controller
 {   
+  use \Backpack\Store\app\Traits\Resources;
   
+  public function __construct() {
+    self::resources_init();
+  }
+
   /**
    * index
    *
@@ -23,9 +28,11 @@ class PromocodeController extends \App\Http\Controllers\Controller
                   ->orderBy('created_at');
 
     $per_page = request('per_page', 12);
-    $promocodes = $promocodes->paginate($per_page);
 
-    return response()->json($promocodes);
+    $promocodes = $promocodes->paginate($per_page);
+    $promocodes = self::$resources['promocode']['small']::collection($promocodes);
+
+    return $promocodes;
   }
 
   /**
@@ -46,15 +53,15 @@ class PromocodeController extends \App\Http\Controllers\Controller
       return response()->json(['message' => __('promocode.not_found')], 404);
     }
 
-    if($promocode->limit !== 0 && $promocode->used_times >= $promocode->limit) {
+    if($promocode->isLimit) {
       return response()->json(['message' => __('promocode.limit')], 400);
     }
 
-    if(!$promocode->is_active) {
+    if(!$promocode->isActive) {
       return response()->json(['message' => __('promocode.not_active')], 400);
     }
 
-    if(Carbon::now()->gt($promocode->valid_until)) {
+    if(!$promocode->isValid) {
       return response()->json(['message' => __('promocode.expired')], 400);
     }
 

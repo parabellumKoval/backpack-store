@@ -129,12 +129,35 @@ class Promocode extends Model
                    ->where('valid_until', '>', Carbon::now())
                    ->whereColumn('limit', '>', 'used_times');
     }
+
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
     */    
-    
+
+    public function getIsValidUntilAttribute() {
+      return Carbon::now()->lt($this->valid_until);
+    }
+
+    public function getIsLimitAttribute() {
+      return $this->limit !== 0 && $this->used_times >= $this->limit;
+    }
+
+    public function getStatusAttribute() {
+      if($this->isLimit){
+        return __('promocode.limit');
+      }
+
+      if(!$this->isActive) {
+        return __('promocode.not_active');
+      }
+
+      if(!$this->isValidUntil) {
+        return __('promocode.expired');
+      }
+    }
+
     /**
      * getIsValidAttribute
      * 
@@ -142,17 +165,16 @@ class Promocode extends Model
      *
      * @return boolean
      */
-
     public function getIsValidAttribute() {
-      if($this->limit !== 0 && $this->used_times >= $this->limit) {
+      if($this->isLimit) {
         return false;
       }
   
-      if(!$this->is_active) {
+      if(!$this->isActive) {
         return false;
       }
   
-      if(Carbon::now()->gt($this->valid_until)) {
+      if(!$this->isValidUntil) {
         return false;
       }
 
