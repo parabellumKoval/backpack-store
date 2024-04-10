@@ -146,16 +146,30 @@ class Promocode extends Model
 
     public function getStatusAttribute() {
       if($this->isLimit){
-        return __('promocode.limit');
+        return [
+          'status' => 'limit',
+          'text' => __('promocode.limit')
+        ];
       }
 
       if(!$this->is_active) {
-        return __('promocode.not_active');
+        return [
+          'status' => 'not_active',
+          'text' => __('promocode.not_active')
+        ];
       }
 
       if(!$this->isValidUntil) {
-        return __('promocode.expired');
+        return [
+          'status' => 'expired',
+          'text' => __('promocode.expired')
+        ];
       }
+
+      return [
+        'status' => 'active',
+        'text' => __('promocode.active')
+      ];
     }
 
     /**
