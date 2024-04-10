@@ -57,7 +57,7 @@ class PromocodeController extends \App\Http\Controllers\Controller
       return response()->json(['message' => __('promocode.limit')], 400);
     }
 
-    if(!$promocode->isActive) {
+    if(!$promocode->is_active) {
       return response()->json(['message' => __('promocode.not_active')], 400);
     }
 

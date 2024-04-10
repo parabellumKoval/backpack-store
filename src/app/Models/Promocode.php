@@ -149,7 +149,7 @@ class Promocode extends Model
         return __('promocode.limit');
       }
 
-      if(!$this->isActive) {
+      if(!$this->is_active) {
         return __('promocode.not_active');
       }
 
@@ -170,7 +170,7 @@ class Promocode extends Model
         return false;
       }
   
-      if(!$this->isActive) {
+      if(!$this->is_active) {
         return false;
       }
   
