@@ -23,6 +23,7 @@ class PromocodeLargeResource extends BaseResource
         'isActive' => $this->is_active,
         'isLimit' => $this->isLimit,
         'isValidUntil' => $this->isValidUntil,
+        'valid_until' => $this->valid_until,
         'created_at' => $this->created_at
       ];
     }

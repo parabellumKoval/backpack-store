@@ -20,6 +20,7 @@ class PromocodeSmallResource extends BaseResource
         'type' => $this->type,
         'status' => $this->status,
         'isValid' => $this->isValid,
+        'valid_until' => $this->valid_until,
         'created_at' => $this->created_at
       ];
     }
