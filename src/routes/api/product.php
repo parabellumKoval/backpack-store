@@ -22,7 +22,7 @@ Route::prefix('api/product')->controller(ProductController::class)->group(functi
   
   Route::get('/random', 'random')->middleware('api');
 
-  Route::get('/{slug}', 'show')->middleware('api');
-
   Route::get('/ids', 'getByIds')->middleware('api');
+
+  Route::get('/{slug}', 'show')->middleware('api');
 });
