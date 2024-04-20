@@ -310,6 +310,6 @@ class ProductController extends \App\Http\Controllers\Controller
       
     $products = $this->product_class::whereIn('id', $request->ids)->get();
     
-    return response()->json($products); 
+    return self::$resources['product']['large']::collection($products); 
   }
 }
