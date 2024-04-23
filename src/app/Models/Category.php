@@ -38,15 +38,14 @@ class Category extends Model
     // protected $fillable = [];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $fakeColumns = ['seo', 'extras', 'images', 'params'];
+    protected $fakeColumns = ['seo', 'extras', 'extras_trans', 'images', 'params'];
     protected $casts = [
-	    //'seo' => 'array',
 	    'params' => 'array',
-	    //'extras' => 'array',
+	    'extras' => 'array',
       'images' => 'array'
     ];
 
-    protected $translatable = ['name', 'content', 'seo', 'extras'];
+    protected $translatable = ['name', 'content', 'seo', 'extras_trans'];
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -177,7 +176,6 @@ class Category extends Model
         return null;
     }
     
-
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {

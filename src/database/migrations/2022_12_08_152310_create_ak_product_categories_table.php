@@ -31,6 +31,7 @@ class CreateAkProductCategoriesTable extends Migration
 
           $table->json('seo')->nullable();
           $table->json('extras')->nullable();
+          $table->json('extras_trans')->nullable();
           
           $table->timestamps();
         });
