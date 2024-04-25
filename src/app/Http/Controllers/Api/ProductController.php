@@ -28,7 +28,7 @@ class ProductController extends \App\Http\Controllers\Controller
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
   
-  public function getQuery($isQuery = true) {
+  public function getQuery($isQuery = true, $includeAvailable = true) {
     $node_ids = $this->categories_node_ids;
 
     $ap = $this->attributes_query;
@@ -39,10 +39,15 @@ class ProductController extends \App\Http\Controllers\Controller
       $products = \DB::table('ak_products');
     }
 
+    if($includeAvailable) {
+      $products = $products->selectRaw('ak_products.*, IF(ak_products.in_stock > ?, ?, ?) as available', [0, 1, 0]);
+    }else {
+      $products = $products->select('ak_products.*');
+    }
+
     $products = $products
-      ->select('ak_products.*')
       // Getting only unique rows
-      ->distinct('ak_products.id')
+      // ->distinct('ak_products.id')
       // Getting only products that have not "parent_id" param
       // ->base()
       // Getting only products that "is_active" param set to true
@@ -73,7 +78,7 @@ class ProductController extends \App\Http\Controllers\Controller
               ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower(request('q')) . '%')
               ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
       })
-      // Setting order by 
+      // Setting order by
       ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'));
 
     return $products;
@@ -119,7 +124,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     if(request('with_filters', true)) {
 
-      $products_query = $this->getQuery(false);
+      $products_query = $this->getQuery(false, false);
 
       // Get prices
       $prices = $products_query
@@ -146,18 +151,14 @@ class ProductController extends \App\Http\Controllers\Controller
           ]
         ]
       ];
-
-      // dd($filters_count);
-
-      // $products_collection = $products->get();
-      // $filters_count = $this->filterValuesCount($products_collection);
-
-      // dd($filters_count);
     }
 
     // Make pagination
     $per_page = request('per_page', config('backpack.store.per_page', 12));
-    $products = $this->getQuery()->paginate($per_page);
+
+    $products = $this->getQuery()
+      ->orderBy('available', 'desc')
+      ->paginate($per_page);
 
     // Get values using collection resource (Resource configurates by backpack.store config)
     $products = new ProductCollection($products);
