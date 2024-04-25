@@ -77,9 +77,7 @@ class ProductController extends \App\Http\Controllers\Controller
         $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
               ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower(request('q')) . '%')
               ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
-      })
-      // Setting order by
-      ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'));
+      });
 
     return $products;
   }
@@ -158,6 +156,8 @@ class ProductController extends \App\Http\Controllers\Controller
 
     $products = $this->getQuery()
       ->orderBy('available', 'desc')
+      // Setting order by
+      ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'))
       ->paginate($per_page);
 
     // Get values using collection resource (Resource configurates by backpack.store config)
