@@ -15,6 +15,8 @@ class ProductController extends \App\Http\Controllers\Controller
   use \Backpack\Store\app\Traits\Resources;
 
   protected $product_class;
+  protected $categories_node_ids = null;
+  protected $attributes_query = null;
 
   function __construct() {
     self::resources_init();
@@ -26,44 +28,23 @@ class ProductController extends \App\Http\Controllers\Controller
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
   
-  /**
-   * index
-   * 
-   * Get collection of products. Filtering by category, attributes, search query is available.
-   * Also you can setup per_page and ordering parametrs.
-   *
-   * @param Illuminate\Http\Request $request
-  *      [
-  *         "q" => (string) - Search query string makes searching by product name/short_name/code
-  *         "per_page" => (int) - Items per each page
-  *         "category_id" => (int) - Filters by category using category id
-  *         "category_slug" => (string) - Filters by category using category slug
-  *         "attrs" => (array) - Filters by attributes using array with this structure:
-  *           [
-  *              attr_id => (int) - Attribute id,
-  *              attr_value_id ??? => (int) attribute_value_id for checkbox/radio,
-  *              value ??? => (double) Strait value for numbers,
-  *              from ??? => (double) range from value for numbers,
-  *              to ??? => (double) range to value for numbers,
-  *           ], 
-  *           [...]
-  *      ]
-   * @return string JSON
-   */
-  public function index(Request $request) {
+  public function getQuery($isQuery = true) {
+    $node_ids = $this->categories_node_ids;
 
-    // Array of category id and all offspring ids
-    $node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
+    $ap = $this->attributes_query;
 
-    // ak_attribute_product subquery
-    $ap = $this->getAttributesQuery(request('attrs'));
+    if($isQuery) {
+      $products = $this->product_class::query();
+    }else {
+      $products = \DB::table('ak_products');
+    }
 
-    $products = $this->product_class::query()
+    $products = $products
       ->select('ak_products.*')
       // Getting only unique rows
       ->distinct('ak_products.id')
       // Getting only products that have not "parent_id" param
-      ->base()
+      // ->base()
       // Getting only products that "is_active" param set to true
       ->where('ak_products.is_active', 1)
       
@@ -94,6 +75,41 @@ class ProductController extends \App\Http\Controllers\Controller
       })
       // Setting order by 
       ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'));
+
+    return $products;
+  }
+
+  /**
+   * index
+   * 
+   * Get collection of products. Filtering by category, attributes, search query is available.
+   * Also you can setup per_page and ordering parametrs.
+   *
+   * @param Illuminate\Http\Request $request
+  *      [
+  *         "q" => (string) - Search query string makes searching by product name/short_name/code
+  *         "per_page" => (int) - Items per each page
+  *         "category_id" => (int) - Filters by category using category id
+  *         "category_slug" => (string) - Filters by category using category slug
+  *         "attrs" => (array) - Filters by attributes using array with this structure:
+  *           [
+  *              attr_id => (int) - Attribute id,
+  *              attr_value_id ??? => (int) attribute_value_id for checkbox/radio,
+  *              value ??? => (double) Strait value for numbers,
+  *              from ??? => (double) range from value for numbers,
+  *              to ??? => (double) range to value for numbers,
+  *           ], 
+  *           [...]
+  *      ]
+   * @return string JSON
+   */
+  public function index(Request $request) {
+
+    // Array of category id and all offspring ids
+    $this->categories_node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
+    
+    // ak_attribute_product subquery
+    $this->attributes_query = $this->getAttributesQuery(request('attrs'));
     
     // $start = microtime(true);
     // dd(microtime(true) - $start);
@@ -102,13 +118,46 @@ class ProductController extends \App\Http\Controllers\Controller
     $filters_count = null;
 
     if(request('with_filters', true)) {
-      $products_collection = $products->get();
-      $filters_count = $this->filterValuesCount($products_collection);
+
+      $products_query = $this->getQuery(false);
+
+      // Get prices
+      $prices = $products_query
+        ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
+        ->get()
+        ->all();
+
+      ['max_price' => $max_price, 'min_price' => $min_price] = (array)($prices[0]);
+      
+      // Get filters count
+      $products_collection = $products_query
+        ->select('ap.*')
+        ->join('ak_attribute_product as ap', 'ak_products.id', '=', 'ap.product_id')
+        ->get();
+      
+      $attributes_count = $this->attributesCount($products_collection);
+
+      $filters_count = [
+        ...$attributes_count,
+        ...[
+          'price' => [
+            'min' => $min_price,
+            'max' => $max_price
+          ]
+        ]
+      ];
+
+      // dd($filters_count);
+
+      // $products_collection = $products->get();
+      // $filters_count = $this->filterValuesCount($products_collection);
+
+      // dd($filters_count);
     }
 
     // Make pagination
     $per_page = request('per_page', config('backpack.store.per_page', 12));
-    $products = $products->paginate($per_page);
+    $products = $this->getQuery()->paginate($per_page);
 
     // Get values using collection resource (Resource configurates by backpack.store config)
     $products = new ProductCollection($products);
@@ -159,6 +208,50 @@ class ProductController extends \App\Http\Controllers\Controller
     return $ap;
   }
   
+  public function attributesCount($attributes) {
+    $uniq_attrs = [];
+
+    for($a = 0; $a < $attributes->count(); $a++) {
+      $attr = $attributes[$a];
+      $attr_id = $attr->attribute_id;
+      $attr_value_id = $attr->attribute_value_id;
+      $attr_value = $attr->value;
+
+      if(!isset($uniq_attrs[$attr_id])){
+        $uniq_attrs[$attr_id] = [];
+      }
+
+      // If attribute type is checkbox or radio 
+      if($attr_value_id !== null) {
+        if(!isset($uniq_attrs[$attr_id][$attr_value_id])){
+          $uniq_attrs[$attr_id][$attr_value_id] = 0;
+        }
+
+        $uniq_attrs[$attr_id][$attr_value_id] += 1;
+      }
+
+      // If attribute type is number
+      if($attr_value !== null) {
+        if(!isset($uniq_attrs[$attr_id]['min']) && !isset($uniq_attrs[$attr_id]['max'])){
+          $uniq_attrs[$attr_id]['min'] = $uniq_attrs[$attr_id]['max'] = $attr_value;
+        }
+
+        // renew max limit
+        if($attr_value > $uniq_attrs[$attr_id]['max']) {
+          $uniq_attrs[$attr_id]['max'] = $attr_value;
+        }
+
+        // renew min limit
+        if($attr_value < $uniq_attrs[$attr_id]['min']) {
+          $uniq_attrs[$attr_id]['min'] = $attr_value;
+        }
+      }
+
+    }
+
+    return $uniq_attrs;
+  }
+
   /**
    * filterValuesCount
    *
@@ -166,21 +259,6 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function filterValuesCount($products){
-    // $attrs = $products->pluck('ap')->flatten()->filter(function($attr) {
-    //   return $attr->attribute_value_id !== null? true: false;
-    // })->groupBy('attribute_id');
-    // dd($attrs);
-
-    // $group = $attrs->map(function($item) {
-    //   return $item->groupBy('attribute_value_id');
-    // });
-    // dd($group);
-
-    // $product_attrs = $products->pluck('ap')->filter(function($product) {
-    //   dd($item);
-    //   $product->filter()
-    //   return $item->attribute_value_id !== null? true: false;
-    // });
     
     //define empty array
     $uniq_attrs = [

@@ -46,6 +46,7 @@ class Category extends Model
     ];
 
     protected $translatable = ['name', 'content', 'seo', 'extras_trans'];
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -133,6 +134,7 @@ class Category extends Model
     {
         return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_category');
     }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -149,6 +151,7 @@ class Category extends Model
     public function scopeRoot($query){
       return $query->where('parent_id', NULL);
     }
+
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS
@@ -207,6 +210,7 @@ class Category extends Model
 			  return array_merge($carry, $ids);
 			}, $start_carry);
     }
+    
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
