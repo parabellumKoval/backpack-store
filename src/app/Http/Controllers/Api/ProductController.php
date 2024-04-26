@@ -156,6 +156,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     $products = $this->getQuery()
       ->orderBy('available', 'desc')
+      ->orderBy('images', 'desc')
       // Setting order by
       ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'))
       ->paginate($per_page);
