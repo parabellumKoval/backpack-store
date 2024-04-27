@@ -39,14 +39,14 @@ class AttributeController extends \App\Http\Controllers\Controller
       
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){
-        $query->leftJoin('ak_attribute_category as ac', 'ac.category_id', '=', 'ak_attributes.id');
+        $query->leftJoin('ak_attribute_category as ac', 'ac.attribute_id', '=', 'ak_attributes.id');
         $query->whereIn('ac.category_id', $node_ids);
       })
 
       ->orderBy('lft')
 
       ->get();
-    
+      
     // dd(microtime(true) - $start);
     $attributes = self::$resources['attribute']['large']::collection($attributes);
 
