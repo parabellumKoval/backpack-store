@@ -168,8 +168,8 @@ class ProductController extends \App\Http\Controllers\Controller
     
     // Get filters count
     $products_collection = $products_query
-      ->select('ap.*')
-      ->join('ak_attribute_product as ap', 'ak_products.id', '=', 'ap.product_id')
+      ->select('ak_ap.*')
+      ->join('ak_attribute_product as ak_ap', 'ak_products.id', '=', 'ak_ap.product_id')
       ->get();
     
     $attributes_count = $this->attributesCount($products_collection);
@@ -224,7 +224,13 @@ class ProductController extends \App\Http\Controllers\Controller
 
     return $ap;
   }
-  
+    
+  /**
+   * attributesCount
+   *
+   * @param  mixed $attributes
+   * @return void
+   */
   public function attributesCount($attributes) {
     $uniq_attrs = [];
 
