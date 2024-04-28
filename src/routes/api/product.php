@@ -19,6 +19,8 @@ use Backpack\Store\app\Http\Controllers\Api\ProductController;
 Route::prefix('api/product')->controller(ProductController::class)->group(function () {
   
   Route::get('', 'index')->middleware('api');
+
+  Route::get('/filters', 'filters')->middleware('api');
   
   Route::get('/random', 'random')->middleware('api');
 

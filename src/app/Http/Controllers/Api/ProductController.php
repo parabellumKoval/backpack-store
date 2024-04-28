@@ -27,8 +27,22 @@ class ProductController extends \App\Http\Controllers\Controller
     //  - set path to your Product Model in config "backpack.store.product.class"
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
-  
-  public function getQuery($isQuery = true, $includeAvailable = true) {
+    
+  /**
+   * getQuery
+   *
+   * @param  mixed $isQuery
+   * @param  mixed $includeAvailable
+   * @return void
+   */
+  public function getQuery($isQuery = true) {
+
+    // Array of category id and all offspring ids
+    $this->categories_node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
+    
+    // ak_attribute_product subquery
+    $this->attributes_query = $this->getAttributesQuery(request('attrs'));
+
     $node_ids = $this->categories_node_ids;
 
     $ap = $this->attributes_query;
@@ -39,13 +53,8 @@ class ProductController extends \App\Http\Controllers\Controller
       $products = \DB::table('ak_products');
     }
 
-    if($includeAvailable) {
-      $products = $products->selectRaw('ak_products.*, IF(ak_products.in_stock > ?, ?, ?) as available', [0, 1, 0]);
-    }else {
-      $products = $products->select('ak_products.*');
-    }
-
     $products = $products
+      ->selectRaw('ak_products.*')
       // Getting only unique rows
       // ->distinct('ak_products.id')
       // Getting only products that have not "parent_id" param
@@ -108,55 +117,27 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   public function index(Request $request) {
 
-    // Array of category id and all offspring ids
-    $this->categories_node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
-    
-    // ak_attribute_product subquery
-    $this->attributes_query = $this->getAttributesQuery(request('attrs'));
-    
     // $start = microtime(true);
     // dd(microtime(true) - $start);
 
     // Get filters count meta
-    $filters_count = null;
+    $attributes_count = null;
 
     if(request('with_filters', true)) {
-
-      $products_query = $this->getQuery(false, false);
-
-      // Get prices
-      $prices = $products_query
-        ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
-        ->get()
-        ->all();
-
-      ['max_price' => $max_price, 'min_price' => $min_price] = (array)($prices[0]);
-      
-      // Get filters count
-      $products_collection = $products_query
-        ->select('ap.*')
-        ->join('ak_attribute_product as ap', 'ak_products.id', '=', 'ap.product_id')
-        ->get();
-      
-      $attributes_count = $this->attributesCount($products_collection);
-
-      $filters_count = [
-        ...$attributes_count,
-        ...[
-          'price' => [
-            'min' => $min_price,
-            'max' => $max_price
-          ]
-        ]
-      ];
+      $attributes_count = $this->filters();
     }
 
     // Make pagination
     $per_page = request('per_page', config('backpack.store.per_page', 12));
 
     $products = $this->getQuery()
+      ->selectRaw('(ak_products.price - ak_products.old_price) as sale, IF(ak_products.in_stock > ?, ?, ?) as available', [0, 1, 0])
+      // at first in_stock > 0
       ->orderBy('available', 'desc')
+      // at first with images
       ->orderBy('images', 'desc')
+      // At first with bigger sale
+      ->orderBy('sale', 'asc')
       // Setting order by
       ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'))
       ->paginate($per_page);
@@ -164,9 +145,43 @@ class ProductController extends \App\Http\Controllers\Controller
     // Get values using collection resource (Resource configurates by backpack.store config)
     $products = new ProductCollection($products);
 
-    return response()->json(['products' => $products, 'filters' => $filters_count]);
+    return response()->json(['products' => $products, 'filters' => $attributes_count]);
   }
-  
+    
+  /**
+   * filters
+   *
+   * @param  mixed $request
+   * @return void
+   */
+  public function filters() {
+
+    $products_query = $this->getQuery(false);
+
+    // Get prices
+    $prices = $products_query
+      ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
+      ->get()
+      ->all();
+
+    ['max_price' => $max_price, 'min_price' => $min_price] = (array)($prices[0]);
+    
+    // Get filters count
+    $products_collection = $products_query
+      ->select('ap.*')
+      ->join('ak_attribute_product as ap', 'ak_products.id', '=', 'ap.product_id')
+      ->get();
+    
+    $attributes_count = $this->attributesCount($products_collection);
+
+    $attributes_count['price'] = [
+      'min' => $min_price,
+      'max' => $max_price
+    ];
+
+    return $attributes_count;
+  }
+
   /**
    * getAttributesQuery
    *
