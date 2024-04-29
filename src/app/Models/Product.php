@@ -153,7 +153,24 @@ class Product extends Model
             ],
         ];
     }
-    
+        
+    /**
+     * getImages
+     *
+     * @param  mixed $amount
+     * @return array
+     */
+    public function getImages($amount = -1):array
+    {
+      if($amount < 0) {
+        return $this->images;
+      }elseif($amount === 0) {
+        return [];
+      }else {
+        return array_slice($this->images, 0, $amount);
+      }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
