@@ -54,6 +54,12 @@ class AttributeProduct extends Pivot
     return AttributeProductFactory::new();
   }
 
+  public function toArray()
+  {
+    return [
+      'id' => $this->id,
+    ];
+  }
 
   /*
   |--------------------------------------------------------------------------
@@ -76,4 +82,13 @@ class AttributeProduct extends Pivot
     return $this->belongsTo(Product::class);
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | ACCESSORS
+  |--------------------------------------------------------------------------
+  */
+
+  // public function getValueAttribute() {
+
+  // }
 }

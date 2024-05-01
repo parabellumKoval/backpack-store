@@ -350,41 +350,43 @@ class Attribute extends Model
      *
      * @return void
      */
-    public function getPivotValueAttribute(){
-      // If empty return null
-      if(!$this->pivot || $this->pivot->value === null)
-        return null;
+    // public function getPivotValueAttribute(){
+    //   // If empty return null
+    //   if(!$this->pivot || $this->pivot->value === null)
+    //     return null;
       
-      // Get values from attribute
-      $this_values = json_decode($this->values);
+    //   // Get values from attribute
+    //   $this_values = json_decode($this->values);
 
-      if($this->type === 'checkbox') 
-      {
-        // Get indexes
-        $indexes = json_decode($this->pivot->value);
+    //   if($this->type === 'checkbox') 
+    //   {
+    //     // Get indexes
+    //     $indexes = json_decode($this->pivot->value);
         
-        if($indexes && !empty($indexes)) {
-          // Get values 
-          $human_value = array_map(fn($index) => isset($this_values[$index])? $this_values[$index]: null, $indexes);
-        } else {
-          $human_value = null;
-        }
-      }
-      elseif($this->type === 'radio')
-      {
-        // Correct value is - one index
-        $index = $this->pivot->value;
+    //     if($indexes && !empty($indexes)) {
+    //       // Get values 
+    //       $human_value = array_map(function($index) {
+    //         return isset($this_values[$index])? $this_values[$index]: null;
+    //       }, $indexes);
+    //     } else {
+    //       $human_value = null;
+    //     }
+    //   }
+    //   elseif($this->type === 'radio')
+    //   {
+    //     // Correct value is - one index
+    //     $index = $this->pivot->value;
 
-        // Try find value from values-list using index
-        $human_value = isset($this_values[$index])? $this_values[$index]: null;
-      }
-      else 
-      {
-        $human_value = $this->pivot->value;
-      }
+    //     // Try find value from values-list using index
+    //     $human_value = isset($this_values[$index])? $this_values[$index]: null;
+    //   }
+    //   else 
+    //   {
+    //     $human_value = $this->pivot->value;
+    //   }
         
-      return $human_value;
-    }
+    //   return $human_value;
+    // }
     
     
     

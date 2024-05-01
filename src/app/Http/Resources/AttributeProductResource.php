@@ -18,7 +18,6 @@ class AttributeProductResource extends BaseResource
         'slug' => $this->slug,
         'defaultValue' => $this->default_value,
         'si' => $this->si,
-        'content' => $this->content,
         'type' => $this->type,
         'value' => $this->pivotValue ?? null
       ];

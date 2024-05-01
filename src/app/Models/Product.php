@@ -112,6 +112,7 @@ class Product extends Model
     {
       return ProductFactory::new();
     }
+    
     // protected static function boot()
     // {
     //     parent::boot();
@@ -431,22 +432,71 @@ class Product extends Model
      * 
      * @return array
      */
-    public function getPropertiesAttribute () {
+    // public function getPropertiesAttribute () {
 
+    //   $attrs = [];
+
+    //   for($i = 0; $i < $this->ap->count(); $i++) {
+    //     $thisAttr = $this->ap[$i]->attribute;
+
+    //     if($this->ap[$i]->attribute_value_id){
+    //       $thisAttr->pivotValue[] = $this->ap[$i]->attribute_value;
+    //     }elseif($this->ap[$i]->value) {
+    //       $thisAttr->pivotValue = $this->ap[$i]->value;
+    //     }
+
+    //     if(!isset($attrs[$thisAttr->id])) {
+    //       $resource = self::$resources['attribute']['product'];
+    //       $attrs[$thisAttr->id] = new $resource($thisAttr);
+    //     }
+    //   }
+
+    //   return array_values($attrs);
+    // }
+
+    // public function getPropertiesAttribute () {
+    //   $attrs = [];
+
+    //   for($i = 0; $i < $this->ap->count(); $i++) {
+    //     $attribute = $this->ap[$i]->attribute;
+
+    //     if(!isset($attrs[$attribute->id])) {
+    //       $attrs[$attribute->id] = $attribute;
+    //     }
+
+    //     if($this->ap[$i]->attribute_value_id){
+    //       $attrs[$attribute->id]->pivotValue[] = $this->ap[$i]->attribute_value;
+    //     }elseif($this->ap[$i]->value) {
+    //       $attrs[$attribute->id]->pivotValue = $this->ap[$i]->value;
+    //     }
+    //   }
+
+    //   return array_values($attrs);
+    // }
+
+
+    public function getPropertiesAttribute () {
       $attrs = [];
 
       for($i = 0; $i < $this->ap->count(); $i++) {
-        $thisAttr = $this->ap[$i]->attribute;
+        $attribute = $this->ap[$i]->attribute;
 
-        if($this->ap[$i]->attribute_value_id){
-          $thisAttr->pivotValue[] = $this->ap[$i]->attribute_value;
-        }elseif($this->ap[$i]->value) {
-          $thisAttr->pivotValue = $this->ap[$i]->value;
+        if(!isset($attrs[$attribute->id])) {
+          $attrs[$attribute->id] = [
+            'id' => $attribute->id,
+            'name' => $attribute->name,
+            'slug' => $attribute->slug,
+            'defaultValue' => $attribute->default_value,
+            'si' => $attribute->si,
+            'type' => $attribute->type,
+            'value' => null
+          ];
         }
 
-        if(!isset($attrs[$thisAttr->id])) {
-          $resource = self::$resources['attribute']['product'];
-          $attrs[$thisAttr->id] = new $resource($thisAttr);
+        if($this->ap[$i]->attribute_value_id){
+          $attrs[$attribute->id]['value'][] = $this->ap[$i]->attribute_value;
+        }elseif($this->ap[$i]->value) {
+          $attrs[$attribute->id]['value'] = $this->ap[$i]->value;
         }
       }
 

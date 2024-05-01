@@ -2,6 +2,8 @@
 
 namespace Backpack\Store\app\Http\Resources;
 
+use Backpack\Store\app\Http\Resources\AttributeProductResource;
+
 class ProductLargeResource extends BaseResource
 {
     /**
