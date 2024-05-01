@@ -411,6 +411,8 @@ class ProductController extends \App\Http\Controllers\Controller
       
     $products = $this->product_class::whereIn('id', $request->ids)->get();
     
-    return self::$resources['product']['large']::collection($products); 
+    $collection = self::$resources['product']['large']::collection($products); 
+
+    return $collection;
   }
 }

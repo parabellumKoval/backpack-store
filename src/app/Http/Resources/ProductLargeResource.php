@@ -26,7 +26,7 @@ class ProductLargeResource extends BaseResource
         'categories' => $this->categories && $this->categories->count()? 
           self::$resources['category']['tiny']::collection($this->categories): 
             null,
-        'attrs' => $this->attributes,
+        'attrs' => $this->properties,
         'modifications' => $this->modifications && $this->modifications->count()? 
           self::$resources['product']['tiny']::collection($this->modifications): 
             null,

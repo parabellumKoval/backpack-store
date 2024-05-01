@@ -18,9 +18,6 @@ class ProductTinyResource extends BaseResource
         'short_name' => $this->short_name,
         'slug' => $this->slug,
         'price' => $this->price,
-        'attrs' => $this->attrs && $this->attrs->count()? 
-          self::$resources['attribute']['small']::collection($this->attrs): 
-            null,
       ];
     }
 }

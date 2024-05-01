@@ -431,7 +431,7 @@ class Product extends Model
      * 
      * @return array
      */
-    public function getAttributesAttribute () {
+    public function getPropertiesAttribute () {
 
       $attrs = [];
 
