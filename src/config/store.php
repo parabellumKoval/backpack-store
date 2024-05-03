@@ -133,9 +133,7 @@ return [
 
       'resource' => [
         'tiny' => 'Backpack\Store\app\Http\Resources\CategoryTinyResource',
-
         'small' => 'Backpack\Store\app\Http\Resources\CategorySmallResource',
-
         'large' => 'Backpack\Store\app\Http\Resources\CategoryLargeResource',
       ]
     ],
@@ -200,11 +198,8 @@ return [
       'enable_icon' => false,
 
       'resource' => [
-
         'product' => 'Backpack\Store\app\Http\Resources\AttributeProductResource',
-
         'large' => 'Backpack\Store\app\Http\Resources\AttributeLargeResource',
-
         'small' => 'Backpack\Store\app\Http\Resources\AttributeSmallResource'
       ]
     ],
@@ -214,9 +209,7 @@ return [
       'enable' => true,
 
       'resource' => [
-
         'large' => 'Backpack\Store\app\Http\Resources\PromocodeLargeResource',
-
         'small' => 'Backpack\Store\app\Http\Resources\PromocodeSmallResource'
       ],
 
@@ -227,10 +220,10 @@ return [
       'enable' => true,
 
       'resource' => [
-
         'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',
-
-        'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource'
+        'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource',
+        'product' => 'Backpack\Store\app\Http\Resources\BrandProductResource',
+        'filter' => 'Backpack\Store\app\Http\Resources\BrandFilterResource'
       ],
 
       'alpha_groups' => [

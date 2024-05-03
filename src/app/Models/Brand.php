@@ -118,9 +118,6 @@ class Brand extends Model
     public function getImageAttribute() {
       $image = $this->images[0] ?? null;
 
-      if(!$image && $this->parent)
-        $image = $this->parent->image;
-
       return $image;
     }
     

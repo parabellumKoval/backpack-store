@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 use Illuminate\Http\Request;
 
 //
+use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Http\Resources\BrandCollection;
 

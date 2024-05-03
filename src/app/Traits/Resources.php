@@ -28,6 +28,11 @@ trait Resources {
     'promocode' => [
       'small' => '',
       'large' => ''
+    ],
+    'brand' => [
+      'small' => '',
+      'large' => '',
+      'product' => ''
     ]
   ];
 
@@ -54,6 +59,8 @@ trait Resources {
 
     self::$resources['brand']['small'] = config('backpack.store.brand.resource.small', 'Backpack\Store\app\Http\Resources\BrandSmallResource');
     self::$resources['brand']['large'] = config('backpack.store.brand.resource.large', 'Backpack\Store\app\Http\Resources\BrandLargeResource');
+    self::$resources['brand']['product'] = config('backpack.store.brand.resource.product', 'Backpack\Store\app\Http\Resources\BrandProductResource');
+    self::$resources['brand']['filter'] = config('backpack.store.brand.resource.product', 'Backpack\Store\app\Http\Resources\BrandFilterResource');
 
     self::$resources['promocode']['small'] = config('backpack.store.promocode.resource.small', 'Backpack\Store\app\Http\Resources\PromocodeSmallResource');
     self::$resources['promocode']['large'] = config('backpack.store.promocode.resource.large', 'Backpack\Store\app\Http\Resources\PromocodeLargeResource');

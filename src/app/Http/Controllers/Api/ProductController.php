@@ -5,7 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-// use Backpack\Store\app\Models\Product;
+use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Http\Resources\ProductCollection;
@@ -171,7 +171,7 @@ class ProductController extends \App\Http\Controllers\Controller
       ->select('ak_ap.*')
       ->join('ak_attribute_product as ak_ap', 'ak_products.id', '=', 'ak_ap.product_id')
       ->get();
-    
+
     $attributes_count = $this->attributesCount($products_collection);
 
     $attributes_count['price'] = [
@@ -180,6 +180,32 @@ class ProductController extends \App\Http\Controllers\Controller
     ];
 
     return $attributes_count;
+  }
+  
+
+  /**
+   * brands
+   *
+   * @return void
+   */
+  public function brands() {
+    $products_query = $this->getQuery(false);
+    
+    // Get filters count
+    $brands_collection = $products_query
+      ->select(['br.id', 'br.name', 'br.slug', 'br.images', DB::raw('COUNT(br.id) as count')])
+      ->join('ak_brands as br', 'ak_products.brand_id', '=', 'br.id')
+      ->groupBy('br.id')
+      ->get();
+    
+    if(!$brands_collection->count()) {
+      return null;
+    }
+
+    // Convert array to collection
+    $brands = Brand::hydrate($brands_collection->all());
+
+    return self::$resources['brand']['filter']::collection($brands);
   }
 
   /**
