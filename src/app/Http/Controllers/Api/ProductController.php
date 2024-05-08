@@ -15,8 +15,14 @@ class ProductController extends \App\Http\Controllers\Controller
   use \Backpack\Store\app\Traits\Resources;
 
   protected $product_class;
-  protected $categories_node_ids = null;
-  protected $attributes_query = null;
+
+  protected $is_with_sales = false;
+  protected $is_top_price = false;
+  protected $is_top_sales = false;
+  protected $is_with_rating = false;
+  protected $is_in_stock = false;
+
+  protected $top_price_sale_percent = 10;
 
   function __construct() {
     self::resources_init();
@@ -28,6 +34,22 @@ class ProductController extends \App\Http\Controllers\Controller
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
     
+  
+  /**
+   * setSelections
+   *
+   * @return void
+   */
+  public function setSelections() {
+    if(request('selections') && is_array(request('selections'))) {
+      $this->is_with_sales = in_array('with_sales', request('selections'));
+      $this->is_top_price = in_array('top_price', request('selections'));
+      $this->is_top_sales = in_array('top_sales', request('selections'));
+      $this->is_with_rating = in_array('with_rating', request('selections'));
+      $this->is_in_stock = in_array('in_stock', request('selections'));
+    }
+  }
+  
   /**
    * getQuery
    *
@@ -38,14 +60,11 @@ class ProductController extends \App\Http\Controllers\Controller
   public function getQuery($isQuery = true) {
 
     // Array of category id and all offspring ids
-    $this->categories_node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
+    $node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
     
     // ak_attribute_product subquery
-    $this->attributes_query = $this->getAttributesQuery(request('attrs'));
+    $ap = $this->getAttributesQuery(request('attrs'));
 
-    $node_ids = $this->categories_node_ids;
-
-    $ap = $this->attributes_query;
 
     if($isQuery) {
       $products = $this->product_class::query();
@@ -79,6 +98,39 @@ class ProductController extends \App\Http\Controllers\Controller
       ->when(request('brand_slug'), function($query) {
         $query->leftJoin('ak_brands as br', 'ak_products.brand_id', '=', 'br.id');
         $query->where('br.slug', request('brand_slug'));
+      })
+
+      // filtering by brands id's list
+      ->when(request('brands'), function($query) {
+        $query->leftJoin('ak_brands as brnd', 'ak_products.brand_id', '=', 'brnd.id');
+        $query->whereIn('brnd.id', request('brands'));
+      })
+
+      // only with sales 
+      ->when($this->is_with_sales, function($query) {
+        $query->where('ak_products.old_price', '>', 0);
+      })
+
+      // only in stock
+      ->when($this->is_in_stock, function($query) {
+        $query->where('ak_products.in_stock', '>', 0);
+      })
+
+      // only with rating 
+      ->when($this->is_with_rating, function($query) {
+        $query->where('ak_products.rating', '!=', null);
+      })
+
+      // only top sales 
+      ->when($this->is_top_sales, function($query) {
+        $query->rightJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id');
+        $query->havingRaw("SUM(op.amount) >= ?", [5]);
+      })
+
+      // only top price 
+      ->when($this->is_top_price, function($query) {
+        // $query->havingRaw("(ak_products.price - ak_products.old_price) <= ?", [90000]);
+        $query->whereRaw("ak_products.old_price - ak_products.price > ak_products.price / ?", [$this->top_price_sale_percent]);
       })
 
       // filtering by search query if "q" is presented in request
@@ -119,6 +171,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     // $start = microtime(true);
     // dd(microtime(true) - $start);
+    $this->setSelections();
 
     // Get filters count meta
     $attributes_count = null;
@@ -131,15 +184,18 @@ class ProductController extends \App\Http\Controllers\Controller
     $per_page = request('per_page', config('backpack.store.per_page', 12));
 
     $products = $this->getQuery()
-      ->selectRaw('(ak_products.price - ak_products.old_price) as sale, IF(ak_products.in_stock > ?, ?, ?) as available', [0, 1, 0])
       // at first in_stock > 0
-      ->orderBy('available', 'desc')
+      ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
       // at first with images
       ->orderBy('images', 'desc')
       // At first with bigger sale
-      ->orderBy('sale', 'asc')
+      ->orderByRaw('ak_products.price - ak_products.old_price ASC')
       // Setting order by
       ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'))
+      // Grouping for top sales
+      ->when($this->is_top_sales, function($query) {
+        $query->groupBy('ak_products.id');
+      })
       ->paginate($per_page);
 
     // Get values using collection resource (Resource configurates by backpack.store config)
@@ -161,15 +217,26 @@ class ProductController extends \App\Http\Controllers\Controller
     // Get prices
     $prices = $products_query
       ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
+      // ->when($this->is_top_price, function($query) {
+      //   $query->join("ak_products");
+      // })
       ->get()
       ->all();
 
-    ['max_price' => $max_price, 'min_price' => $min_price] = (array)($prices[0]);
+    if($prices) {
+      ['max_price' => $max_price, 'min_price' => $min_price] = (array)($prices[0]);
+    }else {
+      $max_price = 0;
+      $min_price = 0;
+    }
     
     // Get filters count
     $products_collection = $products_query
       ->select('ak_ap.*')
       ->join('ak_attribute_product as ak_ap', 'ak_products.id', '=', 'ak_ap.product_id')
+      ->when($this->is_top_sales, function($query) {
+        $query->groupBy('ak_ap.id');
+      })
       ->get();
 
     $attributes_count = $this->attributesCount($products_collection);
