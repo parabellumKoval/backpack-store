@@ -274,14 +274,69 @@ class ProductController extends \App\Http\Controllers\Controller
 
     return self::$resources['brand']['filter']::collection($brands);
   }
+  
+  /**
+   * prepareAttributes
+   *
+   * @param  mixed $values
+   * @return void
+   */
+  private function prepareAttributes($values) {
+    $attrs = [];
+
+    for($i = 0; $i < count($values); $i++) {
+      $attr = $values[$i];
+
+      // if attribute is not isset yet
+      if(!isset($attrs[$attr['attr_id']])) {
+        
+        // if attribute type is number (range)
+        if(isset($attr['from']) && isset($attr['to'])){
+          $attrs[$attr['attr_id']] = [
+            'attr_id' => (int)$attr['attr_id'],
+            'to' => floatval($attr['to']),
+            'from' => floatval($attr['from']),
+          ];
+        }
+        // if attribute type is checkbox / radio
+        elseif(isset($attr['attr_value_id'])) {
+          $attrs[$attr['attr_id']] = [
+            'attr_id' => (int)$attr['attr_id'],
+            'attr_value_id' => [(int)$attr['attr_value_id']]
+          ];
+        
+        }
+        // if attribute type is number (strict)
+        else {
+          $attrs[$attr['attr_id']] = [
+            'attr_id' => (int)$attr['attr_id'],
+            'value' => floatval($attr['value']),
+          ];
+        }
+      }
+      // addding values to array
+      else {
+        if(isset($attr['attr_value_id'])) {
+          $attrs[$attr['attr_id']]['attr_value_id'][] = (int)$attr['attr_value_id'];
+        }else {
+          // multiple values allowed only for checkbox / radio
+          continue;
+        }
+      }
+    }
+
+    return array_values($attrs);
+  }
 
   /**
    * getAttributesQuery
    *
    * @return void
    */
-  public function getAttributesQuery($attrs) {
-    if(!$attrs) return;
+  public function getAttributesQuery($values) {
+    if(!$values) return;
+
+    $attrs = $this->prepareAttributes($values);
 
     $ap = DB::table('ak_attribute_product as ap')
                    ->selectRaw('ap.product_id, COUNT(DISTINCT id) as grouped_count');
