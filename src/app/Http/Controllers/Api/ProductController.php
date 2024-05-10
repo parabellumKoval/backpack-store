@@ -57,14 +57,13 @@ class ProductController extends \App\Http\Controllers\Controller
    * @param  mixed $includeAvailable
    * @return void
    */
-  public function getQuery($isQuery = true) {
+  public function getQuery($isQuery = true, $where = 'and') {
 
     // Array of category id and all offspring ids
     $node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
     
     // ak_attribute_product subquery
-    $ap = $this->getAttributesQuery(request('attrs'));
-
+    $ap = $this->getAttributesQuery(request('attrs'), $where);
 
     if($isQuery) {
       $products = $this->product_class::query();
@@ -77,7 +76,7 @@ class ProductController extends \App\Http\Controllers\Controller
       // Getting only unique rows
       // ->distinct('ak_products.id')
       // Getting only products that have not "parent_id" param
-      // ->base()
+      ->whereNull('ak_products.parent_id')
       // Getting only products that "is_active" param set to true
       ->where('ak_products.is_active', 1)
       
@@ -212,14 +211,11 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   public function filters() {
 
-    $products_query = $this->getQuery(false);
+    $products_query = $this->getQuery(false, 'or');
 
     // Get prices
     $prices = $products_query
       ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
-      // ->when($this->is_top_price, function($query) {
-      //   $query->join("ak_products");
-      // })
       ->get()
       ->all();
 
@@ -281,8 +277,9 @@ class ProductController extends \App\Http\Controllers\Controller
    * @param  mixed $values
    * @return void
    */
-  private function prepareAttributes($values) {
+  private function prepareAttributes($data) {
     $attrs = [];
+    $values = array_values($data);
 
     for($i = 0; $i < count($values); $i++) {
       $attr = $values[$i];
@@ -333,10 +330,11 @@ class ProductController extends \App\Http\Controllers\Controller
    *
    * @return void
    */
-  public function getAttributesQuery($values) {
+  public function getAttributesQuery($values, $where = "and") {
     if(!$values) return;
 
     $attrs = $this->prepareAttributes($values);
+    $attrs_count = count($attrs);
 
     $ap = DB::table('ak_attribute_product as ap')
                    ->selectRaw('ap.product_id, COUNT(DISTINCT id) as grouped_count');
@@ -347,9 +345,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
       $ap->{$whereFunction}(function($query) use($attr) {
         $query->where('ap.attribute_id', $attr['attr_id'])
-              ->when(
-                (isset($attr['from']) && isset($attr['to'])), 
-                function($query) use($attr) {
+              ->when((isset($attr['from']) && isset($attr['to'])), function($query) use($attr) {
                   $query->where('ap.value', '>=', $attr['from'])
                         ->where('ap.value', '<=', $attr['to']);
                 }
@@ -368,7 +364,9 @@ class ProductController extends \App\Http\Controllers\Controller
     }
     
     $ap->groupBy('product_id');
-    $ap->havingRaw("grouped_count = ?", [count($attrs)]);
+    $ap->when($where === 'and', function($query) use($attrs_count) {
+      $query->havingRaw("grouped_count = ?", [$attrs_count]);
+    });
 
     return $ap;
   }
