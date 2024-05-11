@@ -132,6 +132,11 @@ class ProductController extends \App\Http\Controllers\Controller
         $query->whereRaw("ak_products.old_price - ak_products.price > ak_products.price / ?", [$this->top_price_sale_percent]);
       })
 
+      // Price filter
+      ->when(request('price') && is_array(request('price')), function($query) {
+        $query->whereBetween('price', array_values(request('price')));
+      })
+
       // filtering by search query if "q" is presented in request
       ->when(request('q'), function($query) {
         $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
@@ -252,11 +257,20 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function brands() {
+    $sortBy = request('sort_by', 'name');
+
     $products_query = $this->getQuery(false);
-    
+    $fields_array = [];
+
+    if(request('only_meta')) {
+      $fields_array = ['br.id', DB::raw('COUNT(br.id) as count')];
+    }else {
+      $fields_array = ['br.id', 'br.name', 'br.slug', 'br.images', DB::raw('COUNT(br.id) as count')];
+    }
+
     // Get filters count
     $brands_collection = $products_query
-      ->select(['br.id', 'br.name', 'br.slug', 'br.images', DB::raw('COUNT(br.id) as count')])
+      ->select($fields_array)
       ->join('ak_brands as br', 'ak_products.brand_id', '=', 'br.id')
       ->groupBy('br.id')
       ->get();
@@ -266,9 +280,11 @@ class ProductController extends \App\Http\Controllers\Controller
     }
 
     // Convert array to collection
-    $brands = Brand::hydrate($brands_collection->all());
+    $brands = Brand::hydrate($brands_collection->sortBy($sortBy)->all());
 
-    return self::$resources['brand']['filter']::collection($brands);
+    return request('only_meta')?
+            self::$resources['brand']['filter_tiny']::collection($brands):
+            self::$resources['brand']['filter']::collection($brands);
   }
   
   /**

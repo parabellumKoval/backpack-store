@@ -223,7 +223,8 @@ return [
         'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',
         'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource',
         'product' => 'Backpack\Store\app\Http\Resources\BrandProductResource',
-        'filter' => 'Backpack\Store\app\Http\Resources\BrandFilterResource'
+        'filter' => 'Backpack\Store\app\Http\Resources\BrandFilterResource',
+        'filter_tiny' => 'Backpack\Store\app\Http\Resources\BrandFilterTinyResource'
       ],
 
       'alpha_groups' => [
