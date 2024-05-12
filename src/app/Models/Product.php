@@ -164,7 +164,7 @@ class Product extends Model
     public function getImages($amount = -1):array
     {
       if(!$this->images) {
-        return null;
+        return [];
       }
 
       if($amount < 0) {
