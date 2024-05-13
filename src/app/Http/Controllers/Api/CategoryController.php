@@ -18,15 +18,25 @@ class CategoryController extends \App\Http\Controllers\Controller
 
     $categories = Category::query()
               ->select('ak_product_categories.*')
+              
               ->distinct('ak_product_categories.id')
+              
               ->root()
+
               ->active()
+              // Filter by extras field
+              ->when(request('extras'), function($query) {
+                $extras = request('extras');
+                foreach($extras as $key => $value) {
+                  $value = is_numeric($value)? floatval($value): $value;
+                  $query->whereJsonContains("extras->{$key}", $value);
+                }
+              })
+              
               ->orderBy('lft')
+
               ->get();
     
-    // $per_page = request('per_page', config('backpack.store.category.per_page', 12));
-    
-    // $categories = $categories->paginate($per_page);
 
     $categories = self::$resources['category']['small']::collection($categories);
 
