@@ -27,6 +27,7 @@ class AttributeController extends \App\Http\Controllers\Controller
 
     $node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
 
+    // dd(request('brand_slug'));
     // $start = microtime(true);
     
     $attributes = Attribute::query()
@@ -35,7 +36,7 @@ class AttributeController extends \App\Http\Controllers\Controller
       ->distinct('ak_attributes.id')
 
       // Getting only products that "is_active" param set to true
-      ->active()
+      ->where('ak_attributes.is_active', 1)
       
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){
@@ -43,8 +44,19 @@ class AttributeController extends \App\Http\Controllers\Controller
         $query->whereIn('ac.category_id', $node_ids);
       })
 
-      ->orderBy('lft')
+      // Get by brand
+      ->when(request('brand_slug'), function($query) {
+        $query->leftJoin('ak_attribute_product as ap', 'ap.attribute_id', '=', 'ak_attributes.id');
+        
+        $query->leftJoin('ak_products as pr', 'pr.id', '=', 'ap.product_id');
+        $query->where('pr.is_active', 1);
 
+        $query->leftJoin('ak_brands as br', 'br.id', '=', 'pr.brand_id');
+        $query->where('br.slug', request('brand_slug'));
+      })
+
+      ->orderBy('lft')
+      
       ->get();
       
     // dd(microtime(true) - $start);
