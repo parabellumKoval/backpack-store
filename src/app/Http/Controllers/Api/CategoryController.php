@@ -21,11 +21,11 @@ class CategoryController extends \App\Http\Controllers\Controller
               
               ->distinct('ak_product_categories.id')
               
-              ->when(request('is_root', true), function($query) {
+              ->when(isset(request('is_root', true)), function($query) {
                 $query->root();
               })
 
-              ->when(request('is_active', true), function($query) {
+              ->when(isset(request('is_active', true)), function($query) {
                 $query->active();
               })
 
@@ -42,8 +42,14 @@ class CategoryController extends \App\Http\Controllers\Controller
 
               ->get();
     
+    // default resource
+    $resource = self::$resources['category']['small'];
+    
+    if(request('resource')) {
+      $resource = self::$resources['category'][request('resource')];
+    }
 
-    $categories = self::$resources['category']['small']::collection($categories);
+    $categories = $resource::collection($categories);
 
     return $categories;
   }
