@@ -16,16 +16,19 @@ class CategoryController extends \App\Http\Controllers\Controller
 
   public function index(Request $request) {
 
+    $is_root = request('is_root', true);
+    $is_active = request('is_active', true);
+
     $categories = Category::query()
               ->select('ak_product_categories.*')
               
               ->distinct('ak_product_categories.id')
               
-              ->when(isset(request('is_root', true)), function($query) {
+              ->when($is_root, function($query) {
                 $query->root();
               })
 
-              ->when(isset(request('is_active', true)), function($query) {
+              ->when($is_active, function($query) {
                 $query->active();
               })
 
@@ -44,7 +47,7 @@ class CategoryController extends \App\Http\Controllers\Controller
     
     // default resource
     $resource = self::$resources['category']['small'];
-    
+
     if(request('resource')) {
       $resource = self::$resources['category'][request('resource')];
     }

@@ -16,7 +16,8 @@ class CategoryTinyResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'extras' => $this->extrasToArray,
+        'image' => $this->image,
+        'extras' => $this->extras
       ];
     }
 }
