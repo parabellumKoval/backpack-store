@@ -21,9 +21,14 @@ class CategoryController extends \App\Http\Controllers\Controller
               
               ->distinct('ak_product_categories.id')
               
-              ->root()
+              ->when(request('is_root', true), function($query) {
+                $query->root();
+              })
 
-              ->active()
+              ->when(request('is_active', true), function($query) {
+                $query->active();
+              })
+
               // Filter by extras field
               ->when(request('extras'), function($query) {
                 $extras = request('extras');
