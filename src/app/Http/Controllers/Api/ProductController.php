@@ -173,8 +173,9 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   public function index(Request $request) {
 
-    // $start = microtime(true);
-    // dd(microtime(true) - $start);
+    $order_by = request('order_by', 'created_at');
+    $order_dir = request('order_dir', 'desc');
+
     $this->setSelections();
 
     // Get filters count meta
@@ -193,9 +194,26 @@ class ProductController extends \App\Http\Controllers\Controller
       // at first with images
       ->orderBy('images', 'desc')
       // At first with bigger sale
-      ->orderByRaw('ak_products.price - ak_products.old_price ASC')
+      ->when(request('order_sale', true), function($query) {
+        $query->orderByRaw('ak_products.price - ak_products.old_price ASC');
+      });
+    
+    // ORDER
+    if($order_by) {
+      if($order_by === 'sales'){
+        $product = $products
+          ->rightJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
+          ->orderByRaw('SUM(op.amount) ' . $order_dir)
+          ->groupBy('ak_products.id');
+      }else {
+        $products = $products->orderBy($order_by, $order_dir);
+      }
+    }else {
       // Setting order by
-      ->orderBy(request('order_by', 'created_at'), request('order_dir', 'desc'))
+      $products = $products->orderBy('created_at', 'desc');
+    }
+
+    $products = $products
       // Grouping for top sales
       ->when($this->is_top_sales, function($query) {
         $query->groupBy('ak_products.id');
