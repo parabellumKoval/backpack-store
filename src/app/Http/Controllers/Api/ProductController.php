@@ -192,20 +192,24 @@ class ProductController extends \App\Http\Controllers\Controller
       // at first in_stock > 0
       ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
       // at first with images
-      ->orderBy('images', 'desc')
-      // At first with bigger sale
-      ->when(request('order_sale', true), function($query) {
-        $query->orderByRaw('ak_products.price - ak_products.old_price ASC');
-      });
+      ->orderBy('images', 'desc');
     
     // ORDER
     if($order_by) {
-      if($order_by === 'sales'){
-        $product = $products
+      if($order_by === 'sales')
+      {
+        $products = $products
           ->rightJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
           ->orderByRaw('SUM(op.amount) ' . $order_dir)
           ->groupBy('ak_products.id');
-      }else {
+      }
+      elseif($order_by === 'sale') 
+      {
+        // At first with bigger sale
+        $products = $products->orderByRaw('ak_products.old_price - ak_products.price ' . $order_dir);
+      }
+      else 
+      {
         $products = $products->orderBy($order_by, $order_dir);
       }
     }else {
