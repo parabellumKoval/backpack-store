@@ -173,7 +173,7 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   public function index(Request $request) {
 
-    $order_by = request('order_by', 'created_at');
+    $order_by = request('order_by', null);
     $order_dir = request('order_dir', 'desc');
 
     $this->setSelections();
@@ -196,7 +196,7 @@ class ProductController extends \App\Http\Controllers\Controller
       if($order_by === 'sales')
       {
         $products = $products
-          ->rightJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
+          ->leftJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
           ->orderByRaw('SUM(op.amount) ' . $order_dir)
           ->groupBy('ak_products.id');
       }
