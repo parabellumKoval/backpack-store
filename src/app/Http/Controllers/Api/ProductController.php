@@ -188,13 +188,10 @@ class ProductController extends \App\Http\Controllers\Controller
     // Make pagination
     $per_page = request('per_page', config('backpack.store.per_page', 12));
 
-    $products = $this->getQuery()
-      // at first in_stock > 0
-      ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
-      // at first with images
-      ->orderBy('images', 'desc');
+    // Base query
+    $products = $this->getQuery();
     
-    // ORDER
+    // and ordering to query
     if($order_by) {
       if($order_by === 'sales')
       {
@@ -213,15 +210,22 @@ class ProductController extends \App\Http\Controllers\Controller
         $products = $products->orderBy($order_by, $order_dir);
       }
     }else {
-      // Setting order by
-      $products = $products->orderBy('created_at', 'desc');
+      $products = $products
+        // at first in_stock > 0
+        ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
+        // at first with images
+        ->orderBy('images', 'desc')
+        // new at first
+        ->orderBy('created_at', 'desc');
     }
 
+    // Finish query
     $products = $products
       // Grouping for top sales
       ->when($this->is_top_sales, function($query) {
         $query->groupBy('ak_products.id');
       })
+      // Pagination
       ->paginate($per_page);
 
     // Get values using collection resource (Resource configurates by backpack.store config)
