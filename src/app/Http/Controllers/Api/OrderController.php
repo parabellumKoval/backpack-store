@@ -149,15 +149,13 @@ class OrderController extends \App\Http\Controllers\Controller
     try{
       // Get only allowed fields
       $data = $this->validateData($request);
+      return true;
     }
     catch(DetailedException $e) {
       return response()->json([
         'message' => $e->getMessage(),
         'options' => $e->getOptions()
       ], $e->getCode());
-    }
-    finally {
-      return true;
     }
   }
 
