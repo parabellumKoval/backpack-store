@@ -140,12 +140,12 @@ class OrderController extends \App\Http\Controllers\Controller
   }
     
   /**
-   * validate
+   * validateOrder
    *
    * @param  mixed $request
    * @return void
    */
-  public function validate(Request $request) {
+  public function validateOrder(Request $request) {
     try{
       // Get only allowed fields
       $data = $this->validateData($request);
