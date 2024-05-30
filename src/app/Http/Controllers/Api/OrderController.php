@@ -156,6 +156,9 @@ class OrderController extends \App\Http\Controllers\Controller
         'options' => $e->getOptions()
       ], $e->getCode());
     }
+    finally {
+      return true;
+    }
   }
 
   /**
