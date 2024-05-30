@@ -138,7 +138,26 @@ class OrderController extends \App\Http\Controllers\Controller
 
     return response()->json(new self::$resources['order']['large']($order));
   }
-  
+    
+  /**
+   * validate
+   *
+   * @param  mixed $request
+   * @return void
+   */
+  public function validate(Request $request) {
+    try{
+      // Get only allowed fields
+      $data = $this->validateData($request);
+    }
+    catch(DetailedException $e) {
+      return response()->json([
+        'message' => $e->getMessage(),
+        'options' => $e->getOptions()
+      ], $e->getCode());
+    }
+  }
+
   /**
    * create
    * 
