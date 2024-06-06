@@ -58,46 +58,47 @@ class ProductCrudController extends CrudController
 
     public function setup()
     {
-        $this->crud->setModel(ProductAdmin::class);
-        $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
-        $this->crud->setEntityNameStrings('товар', 'товары');
+      $this->crud->setModel(ProductAdmin::class);
+      $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
+      $this->crud->setEntityNameStrings('товар', 'товары');
 
-        // SET LOCALE
-        $this->setLocale();
+      // SET LOCALE
+      $this->setLocale();
 
-        // SET OPERATION
-        $this->setOperation();
+      // SET OPERATION
+      $this->setOperation();
 
-        // CURRENT MODEL
-        $this->setEntry();
+      // CURRENT MODEL
+      $this->setEntry();
+      
+      // SET PARENT MODEL
+      $this->setParentEntry();
         
-        // SET PARENT MODEL
-        $this->setParentEntry();
-          
-        // SET CATEGORY MODEL
-        $this->setCategories();
+      // SET CATEGORY MODEL
+      $this->setCategories();
 
-        // SET ATTRIBUTES MODEL 
-        $this->setAttrsForCategories();
+      // SET ATTRIBUTES MODEL 
+      $this->setAttrsForCategories();
 
-        // $this->crud->query = $this->crud->query->withoutGlobalScopes();
-        
-        // $this->crud->model->clearGlobalScopes();
-        
-        $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
-        
-        // if(config('backpack.store.brands.enable')) {
-        //   $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
-        // }
+      // $this->crud->query = $this->crud->query->withoutGlobalScopes();
+      
+      // $this->crud->model->clearGlobalScopes();
+      
+      $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
+      
+      // if(config('backpack.store.brands.enable')) {
+      //   $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
+      // }
 
-        // $this->crud->model->clearGlobalScopes();
+      // $this->crud->model->clearGlobalScopes();
 
-        // Set event listiner to Model
-        ProductAdmin::saved(function($entry) {
-          // Attach attributes here
-          ProductSaved::dispatch($entry);
-        });
+      // Set event listiner to Model
+      ProductAdmin::saved(function($entry) {
+        // Attach attributes here
+        ProductSaved::dispatch($entry);
+      });
     }
+
     protected function fetchOrder()
     {
         return $this->fetch(\Backpack\Store\app\Models\Order::class);

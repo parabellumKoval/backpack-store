@@ -345,7 +345,13 @@ class Product extends Model
      * @return string|null string is image src url
      */
     public function getImageSrcAttribute() {
-      return $this->image['src'] ?? null;
+      $base_path = config('backpack.store.product.image.base_path', '/');
+
+      if(isset($this->image['src'])) {
+        return $base_path . $this->image['src'];
+      }else {
+        return null;
+      }
     }
     
     /**

@@ -129,7 +129,13 @@ class Brand extends Model
      * @return string|null string is image src url
      */
     public function getImageSrcAttribute() {
-      return $this->image['src'] ?? null;
+      $base_path = config('backpack.store.brands.image.base_path', '/');
+
+      if(isset($this->image['src'])) {
+        return $base_path . $this->image['src'];
+      }else {
+        return null;
+      }
     }
         
     /**

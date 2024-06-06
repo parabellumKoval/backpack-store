@@ -6,6 +6,12 @@ return [
       'symbol' => '$',
     ],
     
+    'path' => [
+      'image' => [
+        'placeholder' => '/public/images/noimage.png'
+      ]
+    ],
+
     // CATALOG
     'per_page' => 12,
 
@@ -131,6 +137,10 @@ return [
 
       'per_page' => 12,
 
+      'image' => [
+        'base_path' => '/public/images/categories/'
+      ],
+
       'resource' => [
         'tiny' => 'Backpack\Store\app\Http\Resources\CategoryTinyResource',
         'small' => 'Backpack\Store\app\Http\Resources\CategorySmallResource',
@@ -147,7 +157,8 @@ return [
       ],
 
       'image' => [
-        'enable' => true
+        'enable' => true,
+        'base_path' => '/public/images/products'
       ],
 
       'code' => [
@@ -218,6 +229,10 @@ return [
     // BRAND
     'brands' => [
       'enable' => true,
+
+      'image' => [
+        'base_path' => '/public/images/brands'
+      ],
 
       'resource' => [
         'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',

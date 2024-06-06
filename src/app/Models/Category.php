@@ -173,10 +173,13 @@ class Category extends Model
     }
 
     public function getImageSrcAttribute() {
-      if($this->image && isset($this->image['src']))
-        return $this->image['src'];
-      else
+      $base_path = config('backpack.store.category.image.base_path', '/');
+
+      if(isset($this->image['src'])) {
+        return $base_path . $this->image['src'];
+      }else {
         return null;
+      }
     }
     
     public function getSlugOrNameAttribute()
