@@ -26,7 +26,7 @@ class PromocodeCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-    // use \App\Http\Controllers\Admin\Traits\PromocodeCrud;
+    use \App\Http\Controllers\Admin\Traits\PromocodeCrud;
     
     private $categories;
     private $filter_categories;
