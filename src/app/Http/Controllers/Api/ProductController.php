@@ -302,7 +302,7 @@ class ProductController extends \App\Http\Controllers\Controller
       ->get();
     
     if(!$brands_collection->count()) {
-      return null;
+      return [];
     }
 
     // Convert array to collection
