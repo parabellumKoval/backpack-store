@@ -19,7 +19,7 @@ class BrandLargeResource extends BaseResource
         'images' => $this->images,
         'content' => $this->content,
         'extras' => $this->extras,
-        'seo' => $this->seo
+        'seo' => $this->seoArray
       ];
     }
 }

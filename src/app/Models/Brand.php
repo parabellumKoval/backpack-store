@@ -150,6 +150,30 @@ class Brand extends Model
         }
         return $this->name;
     }
+
+
+    /**
+     * getSeoAttribute
+     *
+     * Return SEO fields 
+     * 
+     * @return array(
+     *  string meta_title,
+     *  string meta_title,
+     * )
+     */
+    public function getSeoArrayAttribute() {
+      return [
+        'h1' => $this->seoDecoded->h1 ?? null,
+        'meta_title' => $this->seoDecoded->meta_title ?? null,
+        'meta_description' => $this->seoDecoded->meta_description ?? null,
+      ];
+    }
+
+    public function getSeoDecodedAttribute() {
+      return !empty($this->seo)? json_decode($this->seo): null;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
