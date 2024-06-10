@@ -2,6 +2,8 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
+
+use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\OrderRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
@@ -14,9 +16,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 use app\Models\User;
+use \Backpack\Store\app\Models\Product;
 
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Events\ProductAttachedToOrder;
+
+use Backpack\Store\app\Http\Resources\ProductCartResource;
 
 /**
  * Class OrderCrudController
@@ -30,6 +35,7 @@ class OrderCrudController extends CrudController
   use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+  use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
 
   use \App\Http\Controllers\Admin\Traits\OrderCrud;
   
@@ -248,14 +254,29 @@ class OrderCrudController extends CrudController
       'label' => 'Товары в заказе',
       'type'  => 'repeatable',
       'fields' => [
+        // [
+        //   'name' => 'id',
+        //   'label' => 'Товар',
+        //   'type' => 'relationship',
+        //   'attribute' => 'name',
+        //   'entity' => 'products',
+        //   'model' => '\Backpack\Store\app\Models\Product',
+        //   'ajax' => true,
+        //   'data_source' => url("/admin/order/fetch/product")
+        // ],
         [
             'name'    => 'id',
-            'type'      => 'select2',
+            'type'      => 'select2_from_ajax',
             'label'   => 'Товар',
             'model'     => $this->PRODUCT_MODEL,
             'attribute' => 'name',
+            'entity' => 'products',
+            'data_source' => url("/admin/api/product"),
             'wrapper' => ['class' => 'form-group col-md-10'],
-        ],[
+            'placeholder' => "Выберите товар",
+            'minimum_input_length' => 2
+        ],  
+        [
             'name'    => 'amount',
             'type'    => 'number',
             'label'   => 'Кол-во',
@@ -553,5 +574,30 @@ class OrderCrudController extends CrudController
         'label' => 'Информация о заказе',
         'type' => 'order_info'
       ]);
+  }
+
+
+  protected function fetchProduct()
+  {
+      return $this->fetch([
+        'model' => \Backpack\Store\app\Models\Product::class, // required
+        'searchable_attributes' => ['name', 'code', 'slug'],
+        'paginate' => 50
+      ]);
+  }
+
+  public function getProducts(Request $request) {
+    $search_term = $request->input('q');
+
+    if ($search_term)
+    {
+        $results = Product::where('name', 'LIKE', '%'.$search_term.'%')->paginate(10);
+    }
+    else
+    {
+        $results = Product::paginate(10);
+    }
+
+    return $results;
   }
 }

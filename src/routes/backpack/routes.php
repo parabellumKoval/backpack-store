@@ -1,5 +1,9 @@
 <?php
 
+
+
+Route::get('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\OrderCrudController@getProducts');
+
 Route::group([
     'prefix'     => config('backpack.base.route_prefix', 'admin'),
     'middleware' => ['web', config('backpack.base.middleware_key', 'admin')],
