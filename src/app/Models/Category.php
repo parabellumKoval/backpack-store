@@ -156,22 +156,43 @@ class Category extends Model
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
-    */
+    */ 
+
+    /**
+     * getSeoToArrayAttribute
+     *
+     * @return void
+     */
     public function getSeoToArrayAttribute() {
       return !empty($this->seo)? json_decode($this->seo): null;
     }
-
+    
+    /**
+     * getExtrasToArrayAttribute
+     *
+     * @return void
+     */
     public function getExtrasToArrayAttribute() {
       return !empty($this->extras)? json_decode($this->extras): null;
     }
-
+    
+    /**
+     * getImageAttribute
+     *
+     * @return void
+     */
     public function getImageAttribute() {
       if(isset($this->images[0]))
         return $this->images[0];
       else 
         return null;
     }
-
+    
+    /**
+     * getImageSrcAttribute
+     *
+     * @return void
+     */
     public function getImageSrcAttribute() {
       $base_path = config('backpack.store.category.image.base_path', '/');
 
@@ -181,7 +202,12 @@ class Category extends Model
         return null;
       }
     }
-    
+        
+    /**
+     * getSlugOrNameAttribute
+     *
+     * @return void
+     */
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
@@ -212,6 +238,22 @@ class Category extends Model
 				
 			  return array_merge($carry, $ids);
 			}, $start_carry);
+    }
+
+    
+    /**
+     * getRootCategory
+     *
+     * @return void
+     */
+    public function getRootCategory() {
+      $this_category = $this;
+      
+      while($this_category->parent) {
+        $this_category = $this_category->parent;
+      }
+
+      return $this_category;
     }
     
     /*
