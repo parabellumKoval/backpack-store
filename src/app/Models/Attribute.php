@@ -340,7 +340,29 @@ class Attribute extends Model
 
         return $values;
     }
-          
+        
+        
+    /**
+     * getTransValue
+     *
+     * @param  mixed $value
+     * @return void
+     */
+    public function getExtrasTrans($value) {
+      if(!$this->extras_trans) {
+        return null;
+      }
+
+      $array = json_decode($this->extras_trans, true);
+
+      if(isset($array[$value])){
+        return $array[$value];
+      }else {
+        return null;
+      }
+    }
+
+
     /**
      * getPivotValueAttribute
      * 

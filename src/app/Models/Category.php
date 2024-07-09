@@ -246,7 +246,7 @@ class Category extends Model
      *
      * @return void
      */
-    public function getRootCategory() {
+    public function getRootCategoryAttribute() {
       $this_category = $this;
       
       while($this_category->parent) {
