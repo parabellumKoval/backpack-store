@@ -442,12 +442,12 @@ class ProductCrudController extends CrudController
       // $this->entry - current product data from DB
       // $this->attrs - collection of all attributes for attached categories
       if(isset($this->attrs) && $this->entry) {
-        
+
         // Adding hidden field
         $this->crud->addField([
           'name' => 'props',
           'type' => 'hidden',
-          'value' => null
+          'value' => null,
         ]);
 
         $attr_fields = [];
@@ -476,10 +476,15 @@ class ProductCrudController extends CrudController
           }
           
           // Create base attribute field template
+          $si = $attribute->getExtrasTrans('si');
+          $base_hint = 'В характеристиках товара: ' . ($attribute->in_properties? '<b>Да</b>': '<b>Нет</b>');
+          $base_hint .= ', В фильтрах: ' . ($attribute->in_filters? '<b>Да</b>': '<b>Нет</b>');
+          
           $attr_fields[$index] = [
             'name' => "props[{$id}]",
-            'label' => $attribute->name,
-            'tab' => 'Характеристики'
+            'label' => $attribute->name . ($si? ' (' . $si . ')': ''),
+            'tab' => 'Характеристики',
+            'hint' => $base_hint
           ];
 
           // Set correct options for different attribute types
@@ -528,6 +533,9 @@ class ProductCrudController extends CrudController
             $options['max'] = $settings['max'] ?? 999999999999;
             $options['step'] = $settings['step'] ?? 0.1;         
 
+            $hint = $attr_fields[$index]['hint'] . ', ';
+            $hint .= "мин значение: {$options['min']}, макс значение: {$options['max']}, шаг: {$options['step']}";
+
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
@@ -538,22 +546,25 @@ class ProductCrudController extends CrudController
                   'step' => $options['step'],
                 ],
                 'value' => $value,
-                'hint' => "min: {$options['min']}, max: {$options['max']}, step: {$options['step']}"
+                'hint' => $hint
               ]
             );
           }
           // For string
-          // else if($attribute->type === 'string')
-          // {
-          //   $attr_fields[$index] = array_merge(
-          //     $attr_fields[$index],
-          //     [
-          //       'type' => 'text',
-          //       'value' => $value,
-          //     ]
-          //   );
-          // }
+          else if($attribute->type === 'string')
+          {
+            $value = $model_attribute->first()->value_trans ?? null;
+
+            $attr_fields[$index] = array_merge(
+              $attr_fields[$index],
+              [
+                'type' => 'text',
+                'value' => $value,
+              ]
+            );
+          }
         }
+        
 
         // Set all prepared fields
         foreach($attr_fields as $attr_field) {

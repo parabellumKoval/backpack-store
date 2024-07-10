@@ -19,6 +19,9 @@ class CreateAkAttributeProductTable extends Migration
             // Only used when attribute type: number
             $table->double('value')->nullable();
 
+            // Only used when attribute type: string
+            $table->json('value_trans')->nullable();
+
             // Only used when attribute type: checkbox, radio
             $table->foreignId('attribute_value_id')->nullable();
 

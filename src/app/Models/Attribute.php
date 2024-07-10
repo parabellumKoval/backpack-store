@@ -80,7 +80,8 @@ class Attribute extends Model
       self::$TYPES = [
         'checkbox' => __('shop.fieldType.checkbox'),
         'radio' => __('shop.fieldType.radio'),
-        'number' => __('shop.fieldType.number')
+        'number' => __('shop.fieldType.number'),
+        'string' => __('shop.fieldType.string')
       ];
     }
 
@@ -116,14 +117,11 @@ class Attribute extends Model
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'attribute_group_id' => $this->attribute_group_id,
         'icon' => $this->icon,
         'description' => $this->description,
-        'si' => $this->si,
         'default_value' => $this->default_value,
         'values' => $this->values,
         'type' => $this->type,
-        'is_important' => $this->is_important,
         'is_active' => $this->is_active,
         'in_filters' => $this->in_filters,
         'in_properties' => $this->in_properties,
@@ -361,7 +359,15 @@ class Attribute extends Model
         return null;
       }
     }
-
+    
+    /**
+     * getSiAttribute
+     *
+     * @return void
+     */
+    public function getSiAttribute() {
+      return $this->getExtrasTrans('si');
+    }
 
     /**
      * getPivotValueAttribute

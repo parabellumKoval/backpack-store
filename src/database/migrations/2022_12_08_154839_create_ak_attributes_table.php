@@ -26,7 +26,7 @@ class CreateAkAttributesTable extends Migration
             $table->json('content')->nullable();
 
             // $table->json('values')->nullable();
-            $table->enum('type', ['checkbox','radio','number'])->default('checkbox');
+            $table->enum('type', ['checkbox','radio','number','string'])->default('checkbox');
             
             // Is attribute active
             $table->boolean('is_active')->default(1);

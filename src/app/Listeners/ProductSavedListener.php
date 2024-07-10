@@ -63,6 +63,18 @@ class ProductSavedListener
               ['value' => $prop_value]
             );
           }
+        }elseif($attribute->type === 'string') {
+          
+          // Delete record if is empty value
+          if(empty($prop_value)) {
+            AttributeProduct::where('product_id', $event->product->id)->where('attribute_id', $prop_id)->delete();
+          }else {
+
+            AttributeProduct::updateOrCreate(
+              ['product_id' => $event->product->id, 'attribute_id' => $prop_id],
+              ['value_trans' => $prop_value]
+            );
+          }
         }
       }
     }

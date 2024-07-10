@@ -492,11 +492,16 @@ class Product extends Model
         $attribute = $this->ap[$i]->attribute;
 
         if(!isset($attrs[$attribute->id])) {
+          // Skip if this attributes denny to properties
+          if(!$attribute->in_properties) {
+            continue;
+          };
+
           $attrs[$attribute->id] = [
             'id' => $attribute->id,
             'name' => $attribute->name,
             'slug' => $attribute->slug,
-            'defaultValue' => $attribute->default_value,
+            // 'defaultValue' => $attribute->default_value,
             'si' => $attribute->si,
             'type' => $attribute->type,
             'value' => null
@@ -507,6 +512,8 @@ class Product extends Model
           $attrs[$attribute->id]['value'][] = $this->ap[$i]->attribute_value;
         }elseif($this->ap[$i]->value) {
           $attrs[$attribute->id]['value'] = $this->ap[$i]->value;
+        }elseif($this->ap[$i]->value_trans) {
+          $attrs[$attribute->id]['value'] = $this->ap[$i]->value_trans;
         }
       }
 

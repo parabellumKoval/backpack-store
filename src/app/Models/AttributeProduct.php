@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\AttributeProductFactory;
 
+// TRANSLATIONS
+use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
+
 // MODELS
 use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\AttributeValue;
@@ -16,6 +19,7 @@ use Backpack\Store\app\Models\Product;
 class AttributeProduct extends Pivot
 {
   use HasFactory;
+  use HasTranslations;
 
   /*
   |--------------------------------------------------------------------------
@@ -25,9 +29,11 @@ class AttributeProduct extends Pivot
 
   protected $table = 'ak_attribute_product';
   
-  protected $fillable = ['value', 'attribute_value_id', 'attribute_id', 'product_id', 'type'];
+  protected $fillable = ['value', 'value_trans', 'attribute_value_id', 'attribute_id', 'product_id'];
 
   protected $with = ['attribute', 'attribute_value'];
+
+  protected $translatable = ['value_trans'];
 
   // protected $guarded = ['id'];
 

@@ -35,8 +35,11 @@ class AttributeController extends \App\Http\Controllers\Controller
 
       ->distinct('ak_attributes.id')
 
-      // Getting only products that "is_active" param set to true
+      // Getting only attributes that "is_active" param set to true
       ->where('ak_attributes.is_active', 1)
+
+      // Getting only attributes that "is_filters" param set to true
+      ->where('ak_attributes.in_filters', 1)
       
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){

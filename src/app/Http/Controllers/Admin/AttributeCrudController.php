@@ -159,9 +159,9 @@ class AttributeCrudController extends CrudController
 
         $this->crud->addField([
           'name' => 'slug',
-          'label' => 'URL',
-          'prefix' => url('/attributes').'/',
-          'hint' => 'По умолчанию будет сгенерирован из названия.',
+          'label' => 'Slug',
+          // 'prefix' => url('/attributes').'/',
+          'hint' => 'По умолчанию будет сгенерирован из названия',
           'type' => 'text',
         ]);
 
@@ -174,13 +174,14 @@ class AttributeCrudController extends CrudController
 
         $this->setTypeFields();
 
-        $this->crud->addField([
-          'name' => 'default_value',
-          'label' => 'Значение по-умолчанию',
-          'type' => 'text',
-          'fake' => true,
-          'store_in' => 'extras',
-        ]);
+        // $this->crud->addField([
+        //   'name' => 'default_value',
+        //   'label' => 'Значение по-умолчанию',
+        //   'type' => 'text',
+        //   'fake' => true,
+        //   'store_in' => 'extras',
+        // ]);
+
 
         $this->crud->addField([
           'name' => 'si',
@@ -206,18 +207,19 @@ class AttributeCrudController extends CrudController
           }),
         ]);
 
-        $this->crud->addField([
-          'name' => 'is_important',
-          'label' => 'Добавить в основные характеристики',
-          'type' => 'checkbox',
-          'hint' => 'Если включено, то данный атрибут будет отображаться в основных характеристиках товара',
-        ]);
+        // $this->crud->addField([
+        //   'name' => 'is_important',
+        //   'label' => 'Добавить в основные характеристики',
+        //   'type' => 'checkbox',
+        //   'hint' => 'Если включено, то данный атрибут будет отображаться в основных характеристиках товара',
+        // ]);
 
         $this->crud->addField([
           'name' => 'in_filters',
           'label' => 'Добавить в фильтрацию',
           'type' => 'checkbox',
           'hint' => 'Если включено, то данный атрибут будет отображаться в фильтрации в каталоге',
+          'default' => 1
         ]);
 
         $this->crud->addField([
@@ -225,13 +227,15 @@ class AttributeCrudController extends CrudController
           'label' => 'Добавить в характеристики',
           'type' => 'checkbox',
           'hint' => 'Если включено, то данный атрибут будет отображаться в характеристиках товара',
+          'default' => 1
         ]);
 
         $this->crud->addField([
           'name' => 'is_active',
           'label' => 'Активен',
           'type' => 'checkbox',
-          'hint' => 'Если включено, то данный тип будет активен',
+          'hint' => 'Если включено, то данный атрибут будет активен',
+          'default' => 1
         ]);
 
         if(config('backpack.store.attribute.enable_icon')) {
@@ -327,7 +331,7 @@ class AttributeCrudController extends CrudController
             'force_select' => true
           ]
         ]);
-      } else {
+      } else if($this->type === 'number') {
         $this->crud->addField([
           'name' => 'min',
           'label' => 'Минимальное значение',
