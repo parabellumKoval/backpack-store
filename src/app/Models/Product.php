@@ -243,6 +243,16 @@ class Product extends Model
       return $this->hasMany(AttributeProduct::class);
     }
 
+    /**
+     * AttributeValue
+     *
+     * @return void
+     */
+    public function av()
+    {
+      return $this->hasManyThrough(AttributeValue::class, AttributeProduct::class);
+    }
+
     // public function attributes() 
     // {
     //   return $this->hasManyThrough(Attribute::class, AttributeProduct::class, 'product_id', 'id');

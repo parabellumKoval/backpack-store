@@ -2,7 +2,9 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
+use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\ProductRequest;
+
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
@@ -429,7 +431,31 @@ class ProductCrudController extends CrudController
     {
       $this->setupCreateOperation();
     }
-    
+        
+    /**
+     * getAttributeValues
+     *
+     * @param  mixed $request
+     * @param  mixed $attribute_id
+     * @return void
+     */
+    public function getAttributeValues(Request $request, $attribute_id) {
+      $search_term = $request->input('q');
+
+      if ($search_term)
+      {
+          $results = AttributeValue::
+                        where('attribute_id', $attribute_id)
+                      ->where('value', 'LIKE', '%'.$search_term.'%')
+                      ->paginate(20);
+      }
+      else
+      {
+          $results = AttributeValue::where('attribute_id', $attribute_id)->paginate(20);
+      }
+
+      return $results;
+    }
     /**
      * setAttributesFields
      * 
@@ -458,9 +484,9 @@ class ProductCrudController extends CrudController
           $id = $attribute->id;
 
           // Attribute Model values list
-          $available_values = $attribute->values->mapWithKeys(function ($item, $key) {
-            return [$item['id'] => $item['value']];
-          });
+          // $available_values = $attribute->values->mapWithKeys(function ($item, $key) {
+          //   return [$item['id'] => $item['value']];
+          // });
 
           // Attribute settings
           $settings = $attribute->extras;
@@ -494,15 +520,36 @@ class ProductCrudController extends CrudController
             // IMPORTANT !!!!! CHANGE THIS
             // If exists get pivot value 
             $value = $model_attribute? $model_attribute->pluck('attribute_value_id')->unique()->toArray(): null;
-
+            // dd($value);
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
+              // [
+              //   // 'name' => 'av',
+              //   'type'    => 'relationship',
+              //   'model'     => 'Backpack\Store\app\Models\AttributeValue',
+              //   'attribute' => 'value',
+              //   'value' => $value,
+              //   'ajax' => true,
+              //   'multiple' => true,
+              //   // 'entity' => Backpack\Store\app\Models\AttributeValue::class,
+              //   // 'entity' => \Backpack\Store\app\Models\AttributeValue::first(),
+              //   'entity' => 'av',
+              //   'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
+              //   'placeholder' => "Поиск по названию параметра",
+              //   'minimum_input_length' => 0,
+              //   'inline_create' => [
+              //     'entity' => 'value',
+              //     'force_select' => true
+              //   ]
+              // ],
               [
-                'type' => 'select2_from_array',
-                'allows_multiple' => true,
-                'options' => $available_values ?? [],
+                'type'    => 'select2_from_ajax_multiple',
+                'model'     => 'Backpack\Store\app\Models\AttributeValue',
+                'attribute' => 'value',
                 'value' => $value,
-                'allows_null' => true
+                'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
+                'placeholder' => "Поиск по названию параметра",
+                'minimum_input_length' => 0
               ]
             );
           }
@@ -510,15 +557,21 @@ class ProductCrudController extends CrudController
           else if($attribute->type === 'radio')
           {
             // IMPORTANT !!!!! CHANGE THIS
-            $value = $model_attribute? $model_attribute->pluck('attribute_value_id')->unique()->toArray(): null;
+            // $value = $model_attribute? $model_attribute->pluck('attribute_value_id')->unique()->toArray(): null;
+            // dd($model_attribute);
+            $value = $model_attribute->first();
+            // dd($value->attribute_value_id);
 
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
-                'type' => 'select2_from_array',
-                'options' => $available_values ?? [],
-                'value' => $value[0] ?? null,
-                'allows_null' => true
+                'type'    => 'select2_from_ajax',
+                'model'     => 'Backpack\Store\app\Models\AttributeValue',
+                'attribute' => 'value',
+                'value' => $value->attribute_value_id,
+                'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
+                'placeholder' => "Поиск по названию параметра",
+                'minimum_input_length' => 0
               ]
             );
           }
