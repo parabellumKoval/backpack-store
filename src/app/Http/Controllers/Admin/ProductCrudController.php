@@ -546,7 +546,7 @@ class ProductCrudController extends CrudController
                 'type'    => 'select2_from_ajax_multiple',
                 'model'     => 'Backpack\Store\app\Models\AttributeValue',
                 'attribute' => 'value',
-                'value' => $value,
+                'value' => $value ?? null,
                 'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
                 'placeholder' => "Поиск по названию параметра",
                 'minimum_input_length' => 0
@@ -568,7 +568,7 @@ class ProductCrudController extends CrudController
                 'type'    => 'select2_from_ajax',
                 'model'     => 'Backpack\Store\app\Models\AttributeValue',
                 'attribute' => 'value',
-                'value' => $value->attribute_value_id,
+                'value' => $value->attribute_value_id ?? null,
                 'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
                 'placeholder' => "Поиск по названию параметра",
                 'minimum_input_length' => 0
