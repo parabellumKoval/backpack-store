@@ -158,6 +158,8 @@ class ProductCrudController extends CrudController
           // 'type' => 'relationship',
           // 'attribute' => 'id',
         ]);
+
+        $this->listOperation();
     }
 
     protected function setupCreateOperation()
