@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Builder;
 // MODELS
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\AttributeValue;
-use Backpack\Store\app\Models\Admin\Product as ProductAdmin;
 
 //EVENTS
 use Backpack\Store\app\Events\ProductSaved;
@@ -44,26 +43,16 @@ class ProductCrudController extends CrudController
     private $brands;
     private $attrs;
     
-
-
-    // public function update($id)
-    // {
-    //   dd($this->crud);
-    //   $response = $this->traitUpdate();
-    //   return $response;
-    // }
-
-    // public function store()
-    // {
-    //   $response = $this->traitStore();
-    //   return $response;
-    // }
+    private $product_class = null;
 
     public function setup()
     {
-      $this->crud->setModel(ProductAdmin::class);
+      $this->product_class = config('backpack.store.product.class_admin', 'Backpack\Store\app\Models\Admin\Product');
+
+      $this->crud->setModel($this->product_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
       $this->crud->setEntityNameStrings('товар', 'товары');
+
 
       // SET LOCALE
       $this->setLocale();
@@ -96,7 +85,7 @@ class ProductCrudController extends CrudController
       // $this->crud->model->clearGlobalScopes();
 
       // Set event listiner to Model
-      ProductAdmin::saved(function($entry) {
+      $this->product_class::saved(function($entry) {
         // Attach attributes here
         ProductSaved::dispatch($entry);
       });

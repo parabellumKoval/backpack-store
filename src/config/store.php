@@ -151,6 +151,7 @@ return [
     // PROPUCT
     'product' => [
       'class' => 'Backpack\Store\app\Models\Product',
+      'class_admin' => 'Backpack\Store\app\Models\Admin\Product',
 
       'seo' => [
         'enable' => true
