@@ -6,10 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 
 use Backpack\Store\app\Models\Product as BaseProduct;
+use Backpack\Store\app\Models\AttributeProduct;
+use Backpack\Store\app\Models\AttributeValue;
+use Backpack\Store\app\Models\Attribute;
 
 class Product extends BaseProduct
 {
-  public $props = null;
+    public $props = null;
+
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -38,7 +42,13 @@ class Product extends BaseProduct
     | RELATIONS
     |--------------------------------------------------------------------------
     */
+    public function avsFake($value = null) {
+      return new FakeRelation;
+    }
 
+    public function props($value = null) {
+      return new FakeRelation;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -71,7 +81,6 @@ class Product extends BaseProduct
     |--------------------------------------------------------------------------
     */
 
-
     public function setPropsAttribute($attributes) {
       //$this->attrs()->detach();
       if(!$attributes)
@@ -97,4 +106,15 @@ class Product extends BaseProduct
     }
 
 
+}
+
+
+class FakeRelation {
+  public function sync($value){
+    dd($value);
+  }
+
+  public function getRelated() {
+    return new AttributeValue;
+  }
 }

@@ -32,7 +32,6 @@ class AttributeValueCrudController extends CrudController
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/value');
         $this->crud->setEntityNameStrings('значение', 'значения');
 
-
         // SET OPERATION
         $this->setOperation();
     }
@@ -60,13 +59,19 @@ class AttributeValueCrudController extends CrudController
         // TODO: remove setFromDb() and manually define Fields
         // $this->crud->setFromDb();
         
-        if($this->opr !== 'InlineCreate') {
-          $this->crud->addField([
-            'name' => 'attribute',
-            'label' => 'Атрибут',
-            'type' => 'relationship'
-          ]);
-        }
+        // if($this->opr !== 'InlineCreate') {
+        //   $this->crud->addField([
+        //     'name' => 'attribute',
+        //     'label' => 'Атрибут',
+        //     'type' => 'relationship'
+        //   ]);
+        // }
+
+        $this->crud->addField([
+          'name' => 'attribute',
+          'label' => 'Атрибут',
+          'type' => 'relationship'
+        ]);
 
         $this->crud->addField([
           'name' => 'value',
@@ -79,7 +84,6 @@ class AttributeValueCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
-
 
     private function setOperation() {
       $this->opr = $this->crud->getCurrentOperation();

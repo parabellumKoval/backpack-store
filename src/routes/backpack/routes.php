@@ -4,7 +4,7 @@
 
 Route::get('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\OrderCrudController@getProducts');
 Route::get('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getAttributeValues');
-// Route::post('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getAttributeValues');
+Route::post('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getAttributeValues');
 
 Route::group([
     'prefix'     => config('backpack.base.route_prefix', 'admin'),

@@ -346,11 +346,16 @@ class ProductCrudController extends CrudController
             'label' => 'Изображения',
             'type'  => 'repeatable',
             'fields' => [
+              // [
+              //   'name' => 'src',
+              //   'label' => 'Изображение',
+              //   'type' => 'browse',
+              //   'hint' => 'Названия файлов загруженных через файловый менеджен должны быть на латинице и без пробелов.'
+              // ],
               [
                 'name' => 'src',
                 'label' => 'Изображение',
-                'type' => 'browse',
-                'hint' => 'Названия файлов загруженных через файловый менеджен должны быть на латинице и без пробелов.'
+                'type' => 'image'
               ],
               [
                 'name' => 'alt',
@@ -494,8 +499,11 @@ class ProductCrudController extends CrudController
           
           // Create base attribute field template
           $si = $attribute->getExtrasTrans('si');
-          $base_hint = 'В характеристиках товара: ' . ($attribute->in_properties? '<b>Да</b>': '<b>Нет</b>');
-          $base_hint .= ', В фильтрах: ' . ($attribute->in_filters? '<b>Да</b>': '<b>Нет</b>');
+
+          $base_hint = '';
+          $base_hint .= $attribute->in_properties? '<b>В характеристиках</b>': '';
+          $base_hint .= $base_hint && mb_strlen($base_hint) > 0 && $attribute->in_filters? ' и ': '';
+          $base_hint .= $attribute->in_filters? '<b>В фильтрах</b>': '';
           
           $attr_fields[$index] = [
             'name' => "props[{$id}]",
@@ -514,34 +522,37 @@ class ProductCrudController extends CrudController
             // dd($value);
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
-              // [
-              //   // 'name' => 'av',
-              //   'type'    => 'relationship',
-              //   'model'     => 'Backpack\Store\app\Models\AttributeValue',
-              //   'attribute' => 'value',
-              //   'value' => $value,
-              //   'ajax' => true,
-              //   'multiple' => true,
-              //   // 'entity' => Backpack\Store\app\Models\AttributeValue::class,
-              //   // 'entity' => \Backpack\Store\app\Models\AttributeValue::first(),
-              //   'entity' => 'av',
-              //   'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
-              //   'placeholder' => "Поиск по названию параметра",
-              //   'minimum_input_length' => 0,
-              //   'inline_create' => [
-              //     'entity' => 'value',
-              //     'force_select' => true
-              //   ]
-              // ],
               [
-                'type'    => 'select2_from_ajax_multiple',
-                'model'     => 'Backpack\Store\app\Models\AttributeValue',
+                // 'name' => 'avsFake',
+                'type'    => 'relationship_custom',
+                'model2'     => 'Backpack\Store\app\Models\AttributeValue',
                 'attribute' => 'value',
-                'value' => $value ?? null,
+                'value' => $value,
+                'ajax' => true,
+                'multiple' => true,
+                // 'entity' => Backpack\Store\app\Models\AttributeValue::class,
+                // 'entity' => \Backpack\Store\app\Models\AttributeValue::first(),
+                // 'entity' => 'av',
                 'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
                 'placeholder' => "Поиск по названию параметра",
-                'minimum_input_length' => 0
-              ]
+                'minimum_input_length' => 0,
+                'inline_create' => [
+                  'entity' => 'value',
+                  'force_select' => true,
+                  'params' => [
+                    'attribute_id' => $id
+                  ]
+                ]
+              ],
+              // [
+              //   'type'    => 'select2_from_ajax_multiple',
+              //   'model'     => 'Backpack\Store\app\Models\AttributeValue',
+              //   'attribute' => 'value',
+              //   'value' => $value ?? null,
+              //   'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
+              //   'placeholder' => "Поиск по названию параметра",
+              //   'minimum_input_length' => 0
+              // ]
             );
           }
           // For radio
