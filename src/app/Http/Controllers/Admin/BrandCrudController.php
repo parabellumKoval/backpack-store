@@ -28,7 +28,7 @@ class BrandCrudController extends CrudController
 
     public function setup()
     {
-      $this->brand_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Brand');
+      $this->brand_class = config('backpack.store.brand.class', 'Backpack\Store\app\Models\Brand');
 
         $this->crud->setModel($this->brand_class );
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/brand');
