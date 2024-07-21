@@ -531,7 +531,6 @@ class ProductCrudController extends CrudController
                 'ajax' => true,
                 'multiple' => true,
                 // 'entity' => Backpack\Store\app\Models\AttributeValue::class,
-                // 'entity' => \Backpack\Store\app\Models\AttributeValue::first(),
                 // 'entity' => 'av',
                 'data_source' => url("/admin/api/attribute_values/" . $attribute->id),
                 'placeholder' => "Поиск по названию параметра",
@@ -539,9 +538,6 @@ class ProductCrudController extends CrudController
                 'inline_create' => [
                   'entity' => 'value',
                   'force_select' => true,
-                  'params' => [
-                    'attribute_id' => $id
-                  ]
                 ]
               ],
               // [

@@ -35,7 +35,12 @@ class AttributeValueCrudController extends CrudController
         // SET OPERATION
         $this->setOperation();
     }
-
+    
+    /**
+     * setupListOperation
+     *
+     * @return void
+     */
     protected function setupListOperation()
     {
         // TODO: remove setFromDb() and manually define Columns, maybe Filters
@@ -52,7 +57,12 @@ class AttributeValueCrudController extends CrudController
        'type' => 'relationship'
      ]);
     }
-
+    
+    /**
+     * setupCreateOperation
+     *
+     * @return void
+     */
     protected function setupCreateOperation()
     {
 
@@ -79,12 +89,22 @@ class AttributeValueCrudController extends CrudController
           'type' => 'text'
         ]);
     }
-
+    
+    /**
+     * setupUpdateOperation
+     *
+     * @return void
+     */
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
     }
-
+    
+    /**
+     * setOperation
+     *
+     * @return void
+     */
     private function setOperation() {
       $this->opr = $this->crud->getCurrentOperation();
     }

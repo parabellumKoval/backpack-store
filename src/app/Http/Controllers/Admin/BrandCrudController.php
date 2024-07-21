@@ -20,14 +20,17 @@ class BrandCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+
+
+    use \App\Http\Controllers\Admin\Traits\BrandCrud;
     
-    private $languages = 'ru';
-    
-    private $countries;
+    private $brand_class = null;
 
     public function setup()
     {
-        $this->crud->setModel('Backpack\Store\app\Models\Brand');
+      $this->brand_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Brand');
+
+        $this->crud->setModel($this->brand_class );
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/brand');
         $this->crud->setEntityNameStrings('бренд', 'бренды');
         
@@ -64,6 +67,9 @@ class BrandCrudController extends CrudController
             'name' => 'slug',
             'label' => 'Slug',
         ]);
+
+        $this->listOperation();
+
     }
 
     protected function setupCreateOperation()
@@ -174,6 +180,9 @@ class BrandCrudController extends CrudController
           'store_in' => 'seo',
           'tab' => 'SEO'
         ]);
+
+
+      $this->createOperation();
     }
 
     protected function setupUpdateOperation()
