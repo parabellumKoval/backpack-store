@@ -78,9 +78,7 @@ class Product extends Model
       'images' => 'array',
     ];
 
-    protected $fakeColumns = [
-      'meta_description', 'meta_title', 'seo', 'extras_trans', 'extras', 'images'
-    ];
+    protected $fakeColumns = ['meta_description', 'meta_title', 'seo', 'extras_trans', 'extras', 'images', 'custom_attrs'];
     
     protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
     
@@ -493,8 +491,31 @@ class Product extends Model
 
     //   return array_values($attrs);
     // }
+    
+    /**
+     * getCustomPropertiesAttribute
+     *
+     * @return void
+     */
+    public function getCustomPropertiesAttribute() {
+      if(empty($this->extras_trans)) {
+        return null;
+      }
 
+      $extras = json_decode($this->extras_trans, true);
 
+      if(!isset($extras['custom_attrs']) || empty($extras['custom_attrs'])) {
+        return null;
+      }
+      
+      return json_decode($extras['custom_attrs'], true);
+    }
+    
+    /**
+     * getPropertiesAttribute
+     *
+     * @return void
+     */
     public function getPropertiesAttribute () {
       $attrs = [];
 

@@ -346,16 +346,10 @@ class ProductCrudController extends CrudController
             'label' => 'Изображения',
             'type'  => 'repeatable',
             'fields' => [
-              // [
-              //   'name' => 'src',
-              //   'label' => 'Изображение',
-              //   'type' => 'browse',
-              //   'hint' => 'Названия файлов загруженных через файловый менеджен должны быть на латинице и без пробелов.'
-              // ],
               [
                 'name' => 'src',
                 'label' => 'Изображение',
-                'type' => 'image'
+                'type' => 'browse',
               ],
               [
                 'name' => 'alt',
@@ -384,6 +378,43 @@ class ProductCrudController extends CrudController
         }
         
         
+        // CUSTOM PROPERTIES
+        $this->crud->addField([
+          'name' => 'delim',
+          'type' => 'custom_html',
+          'value' => '<h3>Индивидуальные атрибуты</h3>
+            <p class="help-block">Уникальные, индивидуальные или малораспространенные свойства товаров.
+            Заполняются индивидуально к каждому товару. Выводятся только в характеристиках товара (в фильтрах не исспользуются).
+            (Переводы для каждой языковой версии заполняются отдельно).
+            </p>',
+          'tab' => 'Характеристики'
+        ]);
+
+        $this->crud->addField([
+          'name' => 'custom_attrs',
+          'label' => 'Индивидуальные характеристики',
+          'type' => 'table',
+          'entity_singular' => 'атрибут',
+          'columns'         => [
+              'name'  => 'Название',
+              'value'  => 'Значение',
+          ],
+          'min' => 0,
+          'fake' => true, 
+          'store_in' => 'extras_trans',
+          'tab' => 'Характеристики'
+        ]);
+
+
+        $this->crud->addField([
+          'name' => 'delim_2',
+          'type' => 'custom_html',
+          'value' => '<h3>Атрибуты</h3><p class="help-block">Универсальные свойства товаров.
+            Создаются и управляются отдельно в разделе <a href="'.url('/admin/attribute').'">Атрибуты</a>.
+            Могут быть исспользованы в фильтрах и в характеристиках товара.</p>',
+          'tab' => 'Характеристики'
+        ]);
+
         // ATTRIBUTES
         if(config('backpack.store.attributes.enable', true)){
           $this->setAttributesFields();
