@@ -163,6 +163,15 @@ class BrandCrudController extends CrudController
           'tab' => 'Изображения'
         ]);
 
+
+        $this->crud->addField([
+          'name' => 'h1',
+          'label' => 'H1 заголовок',
+          'fake' => true,
+          'store_in' => 'seo',
+          'tab' => 'SEO'
+        ]);
+        
         $this->crud->addField([
           'name' => 'meta_title',
           'label' => "Meta Title", 
