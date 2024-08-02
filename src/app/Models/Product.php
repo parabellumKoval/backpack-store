@@ -508,7 +508,11 @@ class Product extends Model
         return null;
       }
       
-      return json_decode($extras['custom_attrs'], true);
+      if(is_array($extras['custom_attrs'])) {
+        return $extras['custom_attrs'];
+      }else {
+        return json_decode($extras['custom_attrs'], true);
+      }
     }
     
     /**
