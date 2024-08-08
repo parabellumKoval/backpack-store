@@ -124,20 +124,20 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // filtering by attributes if "attrs" is presented in request
-      ->when(($request->input('attrs') && !empty($ap)), function($query) use($ap) {
+      ->when(($request->input('attrs') && !empty($ap)), function($query) use($ap, $request) {
         $query->rightJoinSub($ap, 'ap', function ($join) {
             $join->on('ap.product_id', '=', 'ak_products.id');
         });
       })
 
       // filtering by brand
-      ->when($request->input('brand_slug'), function($query) {
+      ->when($request->input('brand_slug'), function($query) use($request) {
         $query->leftJoin('ak_brands as br', 'ak_products.brand_id', '=', 'br.id');
         $query->where('br.slug', $request->input('brand_slug'));
       })
 
       // filtering by brands id's list
-      ->when($request->input('brands'), function($query) {
+      ->when($request->input('brands'), function($query) use($request) {
         $query->leftJoin('ak_brands as brnd', 'ak_products.brand_id', '=', 'brnd.id');
         $query->whereIn('brnd.id', $request->input('brands'));
       })
@@ -170,12 +170,12 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // Price filter
-      ->when($request->input('price') && is_array($request->input('price')), function($query) {
+      ->when($request->input('price') && is_array($request->input('price')), function($query) use($request) {
         $query->whereBetween('price', array_values($request->input('price')));
       })
 
       // filtering by search query if "q" is presented in request
-      ->when($request->input('q'), function($query) {
+      ->when($request->input('q'), function($query) use($request) {
         $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower($request->input('q')) . '%')
               ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower($request->input('q')) . '%')
               ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower($request->input('q')) . '%');
@@ -323,12 +323,12 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function brands(Request $request, bool $json_response = true) {
-    $sortBy = request('sort_by', 'name');
+    $sortBy = $request->input('sort_by', 'name');
 
     $products_query = $this->getQuery($request, false);
     $fields_array = [];
 
-    if(request('only_meta')) {
+    if($request->input('only_meta')) {
       $fields_array = ['br.id', DB::raw('COUNT(br.id) as count')];
     }else {
       $fields_array = ['br.id', 'br.name', 'br.slug', 'br.images', DB::raw('COUNT(br.id) as count')];
@@ -348,7 +348,7 @@ class ProductController extends \App\Http\Controllers\Controller
     // Convert array to collection
     $brands = Brand::hydrate($brands_collection->sortBy($sortBy)->all());
 
-    return request('only_meta')?
+    return $request->input('only_meta')?
             self::$resources['brand']['filter_tiny']::collection($brands):
             self::$resources['brand']['filter']::collection($brands);
   }
@@ -590,12 +590,12 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function random(Request $request) {
-    $limit = request('limit') ?? 4;
+    $limit = $request->input('limit') ?? 4;
     
     $products = $this->product_class::base()
                 ->active()
-                ->when(request('not_id'), function($query) {
-                  $query->where('id', '!=', request('not_id'));
+                ->when($request->input('not_id'), function($query) use($request) {
+                  $query->where('id', '!=', $request->input('not_id'));
                 })
                 ->inRandomOrder()
                 ->limit($limit)
