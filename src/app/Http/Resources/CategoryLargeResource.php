@@ -18,7 +18,8 @@ class CategoryLargeResource extends BaseResource
         'slug' => $this->slug,
         'content' => $this->content,
         'excerpt' => $this->excerpt,
-        'extras' => $this->extrasToArray,
+        // 'extras' => $this->extrasToArray,
+        'extras' => $this->extras,
         'images' => $this->images,
         'children' => $this->children,
         'seo' => $this->seoToArray

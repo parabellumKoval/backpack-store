@@ -23,9 +23,9 @@ class AttributeController extends \App\Http\Controllers\Controller
     self::resources_init();
   }
 
-  public function index(Request $request) {
+  public function index(Request $request, bool $json_response = true) {
 
-    $node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
+    $node_ids = Category::getCategoryNodeIdList($request->input('category_slug'), $request->input('category_id'));
 
     // dd(request('brand_slug'));
     // $start = microtime(true);
@@ -48,24 +48,27 @@ class AttributeController extends \App\Http\Controllers\Controller
       })
 
       // Get by brand
-      ->when(request('brand_slug'), function($query) {
+      ->when($request->input('brand_slug'), function($query) {
         $query->leftJoin('ak_attribute_product as ap', 'ap.attribute_id', '=', 'ak_attributes.id');
         
         $query->leftJoin('ak_products as pr', 'pr.id', '=', 'ap.product_id');
         $query->where('pr.is_active', 1);
 
         $query->leftJoin('ak_brands as br', 'br.id', '=', 'pr.brand_id');
-        $query->where('br.slug', request('brand_slug'));
+        $query->where('br.slug', $request->input('brand_slug'));
       })
 
       ->orderBy('lft')
       
       ->get();
       
-    // dd(microtime(true) - $start);
-    $attributes = self::$resources['attribute']['large']::collection($attributes);
 
-    return response()->json($attributes);
+    if($json_response) {
+      $attributes = self::$resources['attribute']['large']::collection($attributes);
+      return response()->json($attributes);
+    }else {
+      return self::$resources['attribute']['large']::collection($attributes);
+    }
   }
 
   public function show(Request $request, $id) {

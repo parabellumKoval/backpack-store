@@ -28,5 +28,7 @@ Route::prefix('api/product')->controller(ProductController::class)->group(functi
 
   Route::get('/ids', 'getByIds')->middleware('api');
 
+  Route::get('/category', 'category')->middleware('api');
+
   Route::get('/{slug}', 'show')->middleware('api');
 });

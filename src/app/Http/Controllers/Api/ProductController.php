@@ -40,16 +40,53 @@ class ProductController extends \App\Http\Controllers\Controller
    *
    * @return void
    */
-  public function setSelections() {
-    if(request('selections') && is_array(request('selections'))) {
-      $this->is_with_sales = in_array('with_sales', request('selections'));
-      $this->is_top_price = in_array('top_price', request('selections'));
-      $this->is_top_sales = in_array('top_sales', request('selections'));
-      $this->is_with_rating = in_array('with_rating', request('selections'));
-      $this->is_in_stock = in_array('in_stock', request('selections'));
+  public function setSelections(Request $request) {
+    if($request->input('selections') && is_array($request->input('selections'))) {
+      $this->is_with_sales = in_array('with_sales', $request->input('selections'));
+      $this->is_top_price = in_array('top_price', $request->input('selections'));
+      $this->is_top_sales = in_array('top_sales', $request->input('selections'));
+      $this->is_with_rating = in_array('with_rating', $request->input('selections'));
+      $this->is_in_stock = in_array('in_stock', $request->input('selections'));
     }
   }
-  
+    
+  /**
+   * category
+   *Request $request
+   * @param  mixed $request
+   * @param  mixed $slug
+   * @return void
+   */
+  public function category(Request $request) {
+
+    $fake_request = new \Illuminate\Http\Request();
+    $fake_request->replace(['category_slug' => $request->input('category_slug')]);
+
+    // First page products and all filters meta
+    $products_page_1 = $this->index($fake_request, false);
+
+    // Brands
+    $brands = $this->index($fake_request, false);
+
+    // Category
+    $category_controller = new \Backpack\Store\app\Http\Controllers\Api\CategoryController;
+    $category = $category_controller->show($fake_request, $request->input('category_slug'));
+
+    // Attributes
+    $attributes_controller = new \Backpack\Store\app\Http\Controllers\Api\AttributeController;
+    $attributes = $attributes_controller->index($fake_request, false);
+
+
+    return response()->json([
+      'products' => $products_page_1['products'] ?? null,
+      'filters' => $products_page_1['filters'] ?? null,
+      'brands' => $brands,
+      'category' => $category,
+      'attributes' => $attributes
+    ]);
+  }
+
+
   /**
    * getQuery
    *
@@ -57,13 +94,13 @@ class ProductController extends \App\Http\Controllers\Controller
    * @param  mixed $includeAvailable
    * @return void
    */
-  public function getQuery($isQuery = true, $where = 'and') {
+  public function getQuery(Request $request, $isQuery = true, $where = 'and') {
 
     // Array of category id and all offspring ids
-    $node_ids = Category::getCategoryNodeIdList(request('category_slug'), request('category_id'));
+    $node_ids = Category::getCategoryNodeIdList($request->input('category_slug'), $request->input('category_id'));
     
     // ak_attribute_product subquery
-    $ap = $this->getAttributesQuery(request('attrs'), $where);
+    $ap = $this->getAttributesQuery($request->input('attrs'), $where);
 
     if($isQuery) {
       $products = $this->product_class::query();
@@ -87,22 +124,22 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // filtering by attributes if "attrs" is presented in request
-      ->when((request('attrs') && !empty($ap)), function($query) use($ap) {
+      ->when(($request->input('attrs') && !empty($ap)), function($query) use($ap) {
         $query->rightJoinSub($ap, 'ap', function ($join) {
             $join->on('ap.product_id', '=', 'ak_products.id');
         });
       })
 
       // filtering by brand
-      ->when(request('brand_slug'), function($query) {
+      ->when($request->input('brand_slug'), function($query) {
         $query->leftJoin('ak_brands as br', 'ak_products.brand_id', '=', 'br.id');
-        $query->where('br.slug', request('brand_slug'));
+        $query->where('br.slug', $request->input('brand_slug'));
       })
 
       // filtering by brands id's list
-      ->when(request('brands'), function($query) {
+      ->when($request->input('brands'), function($query) {
         $query->leftJoin('ak_brands as brnd', 'ak_products.brand_id', '=', 'brnd.id');
-        $query->whereIn('brnd.id', request('brands'));
+        $query->whereIn('brnd.id', $request->input('brands'));
       })
 
       // only with sales 
@@ -133,15 +170,15 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // Price filter
-      ->when(request('price') && is_array(request('price')), function($query) {
-        $query->whereBetween('price', array_values(request('price')));
+      ->when($request->input('price') && is_array($request->input('price')), function($query) {
+        $query->whereBetween('price', array_values($request->input('price')));
       })
 
       // filtering by search query if "q" is presented in request
-      ->when(request('q'), function($query) {
-        $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower(request('q')) . '%')
-              ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower(request('q')) . '%')
-              ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower(request('q')) . '%');
+      ->when($request->input('q'), function($query) {
+        $query->where(\DB::raw('lower(ak_products.name)'), 'like', '%' . strtolower($request->input('q')) . '%')
+              ->orWhere(\DB::raw('lower(ak_products.short_name)'), 'like', '%' . strtolower($request->input('q')) . '%')
+              ->orWhere(\DB::raw('lower(ak_products.code)'), 'like', '%' . strtolower($request->input('q')) . '%');
       });
 
     return $products;
@@ -171,25 +208,25 @@ class ProductController extends \App\Http\Controllers\Controller
   *      ]
    * @return string JSON
    */
-  public function index(Request $request) {
+  public function index(Request $request, bool $json_response = true) {
 
-    $order_by = request('order_by', null);
-    $order_dir = request('order_dir', 'desc');
+    $order_by = $request->input('order_by', null);
+    $order_dir = $request->input('order_dir', 'desc');
 
-    $this->setSelections();
+    $this->setSelections($request);
 
     // Get filters count meta
     $attributes_count = null;
 
-    if(request('with_filters', true)) {
-      $attributes_count = $this->filters();
+    if($request->input('with_filters', true)) {
+      $attributes_count = $this->filters($request);
     }
 
     // Make pagination
-    $per_page = request('per_page', config('backpack.store.per_page', 12));
+    $per_page = $request->input('per_page', config('backpack.store.per_page', 12));
 
     // Base query
-    $products = $this->getQuery();
+    $products = $this->getQuery($request);
     
     // and ordering to query
     if($order_by) {
@@ -231,7 +268,10 @@ class ProductController extends \App\Http\Controllers\Controller
     // Get values using collection resource (Resource configurates by backpack.store config)
     $products = new ProductCollection($products);
 
-    return response()->json(['products' => $products, 'filters' => $attributes_count]);
+    if($json_response)
+      return response()->json(['products' => $products, 'filters' => $attributes_count]);
+    else
+      return ['products' => $products, 'filters' => $attributes_count];
   }
     
   /**
@@ -240,9 +280,9 @@ class ProductController extends \App\Http\Controllers\Controller
    * @param  mixed $request
    * @return void
    */
-  public function filters() {
+  public function filters(Request $request) {
 
-    $products_query = $this->getQuery(false, 'or');
+    $products_query = $this->getQuery($request, false, 'or');
 
     // Get prices
     $prices = $products_query
@@ -282,10 +322,10 @@ class ProductController extends \App\Http\Controllers\Controller
    *
    * @return void
    */
-  public function brands() {
+  public function brands(Request $request, bool $json_response = true) {
     $sortBy = request('sort_by', 'name');
 
-    $products_query = $this->getQuery(false);
+    $products_query = $this->getQuery($request, false);
     $fields_array = [];
 
     if(request('only_meta')) {

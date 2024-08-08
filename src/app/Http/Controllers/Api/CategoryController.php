@@ -16,8 +16,8 @@ class CategoryController extends \App\Http\Controllers\Controller
 
   public function index(Request $request) {
 
-    $is_root = request('is_root', true);
-    $is_active = request('is_active', true);
+    $is_root = $request->input('is_root', true);
+    $is_active = $request->input('is_active', true);
 
     $categories = Category::query()
               ->select('ak_product_categories.*')
@@ -33,8 +33,8 @@ class CategoryController extends \App\Http\Controllers\Controller
               })
 
               // Filter by extras field
-              ->when(request('extras'), function($query) {
-                $extras = request('extras');
+              ->when($request->input('extras'), function($query) {
+                $extras = $request->input('extras');
                 foreach($extras as $key => $value) {
                   $value = is_numeric($value)? floatval($value): $value;
                   $query->whereJsonContains("extras->{$key}", $value);
@@ -48,8 +48,8 @@ class CategoryController extends \App\Http\Controllers\Controller
     // default resource
     $resource = self::$resources['category']['small'];
 
-    if(request('resource')) {
-      $resource = self::$resources['category'][request('resource')];
+    if($request->input('resource')) {
+      $resource = self::$resources['category'][$request->input('resource')];
     }
 
     $categories = $resource::collection($categories);
@@ -59,7 +59,8 @@ class CategoryController extends \App\Http\Controllers\Controller
 
   public function show(Request $request, $slug) {
     $category = Category::where('slug', $slug)->first();
-
-    return new self::$resources['category']['large']($category);
+    $resource = new self::$resources['category']['large']($category);
+    // return new self::$resources['category']['large']($category);
+    return $resource;
   }
 }
