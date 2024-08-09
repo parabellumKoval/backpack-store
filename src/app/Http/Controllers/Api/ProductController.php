@@ -111,7 +111,7 @@ class ProductController extends \App\Http\Controllers\Controller
     $products = $products
       ->selectRaw('ak_products.*')
       // Getting only unique rows
-      // ->distinct('ak_products.id')
+      ->distinct('ak_products.id')
       // Getting only products that have not "parent_id" param
       ->whereNull('ak_products.parent_id')
       // Getting only products that "is_active" param set to true
