@@ -99,7 +99,7 @@ class ProductCrudController extends CrudController
     protected function setupListOperation()
     {
         //remove product modifications from list view
-        $this->crud->addClause('base');
+        // $this->crud->addClause('base');
 
         // Filter by category
         $this->crud->addFilter([
@@ -164,12 +164,40 @@ class ProductCrudController extends CrudController
         }
         
         if(config('backpack.store.product.modifications.enable', true)) {
+          // $this->crud->addField([
+          //   'name' => 'modifications',
+          //   'label' => 'Модификации',
+          //   'type' => 'modification_switcher',
+          //   'tab' => 'Основное'
+          // ]);
+
+          // $this->crud->addField([
+          //   'name' => 'parent_id',
+          //   'value' => null,
+          //   'type' => 'hidden'
+          // ]);
+
           $this->crud->addField([
             'name' => 'modifications',
             'label' => 'Модификации',
-            'type' => 'modification_switcher',
+            'type'    => 'relationship',
+            'model'     => 'Backpack\Store\app\Models\Product',
+            'attribute' => 'name',
+            'ajax' => true,
+            'multiple' => true,
+            // 'entity' => Backpack\Store\app\Models\Product::class,
+            'entity' => 'children',
+            'data_source' => url("/admin/api/product"),
+            'placeholder' => "Поиск по названию товара",
+            'minimum_input_length' => 0,
+            // 'inline_create' => true,
+            'inline_create' => [
+              'entity' => 'product',
+              'force_select' => true,
+            ],
             'tab' => 'Основное'
           ]);
+
         }
 
         // BRAND

@@ -19,7 +19,7 @@
         // if the field is beeing inserted in an inline create modal
         // we don't allow modal over modal (for now ...) so we load fetch or select accordingly to field type.
         if(!isset($inlineCreate)) {
-            $field['type'] = 'fetch_or_create';
+            $field['type'] = 'fetch_or_create_custom';
         }else{
             if($field['ajax']) {
                 $field['type'] = 'fetch';

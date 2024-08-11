@@ -17,6 +17,7 @@ class ProductLargeResource extends BaseResource
       return [
         'id' => $this->id,
         'name' => $this->name,
+        'short_name' => $this->short_name,
         'slug' => $this->slug,
         'price' => $this->price,
         'code' => $this->code,

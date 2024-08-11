@@ -67,7 +67,7 @@ class Product extends Model
       'seo',
       'extras',
       'extras_trans',
-
+      'modifications',
       'props',
     ];
     // protected $hidden = [];
@@ -83,6 +83,7 @@ class Product extends Model
     protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
     
     public $images_array = [];
+    public $modificationsToSave = [];
     
     /*
     |--------------------------------------------------------------------------
@@ -400,21 +401,44 @@ class Product extends Model
      * 
      * @return collection
      */
+    // public function getModificationsAttribute() {
+    //   if($this->children->count())
+    //   {
+    //     $children = clone $this->children;
+    //     return $children->prepend($this);
+    //   }
+    //   else if($this->parent)
+    //   {
+    //     $parent_children = clone $this->parent->children;
+    //     return $parent_children->prepend($this->parent);
+    //   }
+    //   else 
+    //   {
+    //     return collect([])->prepend($this);
+    //   }
+    // }
+
+    /**
+     * getModificationsAttribute
+     *
+     * Return all product modifications includes self model
+     * 
+     * @return collection
+     */
     public function getModificationsAttribute() {
       if($this->children->count())
       {
-        $children = clone $this->children;
-        return $children->prepend($this);
+        return $this->children;
       }
       else if($this->parent)
       {
-        $parent_children = clone $this->parent->children;
+        $parent_children = clone $this->parent->children()->where('id', '!=', $this->id)->get();
         return $parent_children->prepend($this->parent);
       }
-      else 
-      {
-        return collect([])->prepend($this);
-      }
+      // else 
+      // {
+      //   return collect([])->prepend($this);
+      // }
     }
     
     /**
@@ -580,4 +604,7 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function setModificationsAttribute($value) {
+      $this->modificationsToSave = $value;
+    }
 }

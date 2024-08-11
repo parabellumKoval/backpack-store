@@ -4,6 +4,7 @@
 use Backpack\Store\app\Events\ProductSaved;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Attribute;
+use Backpack\Store\app\Models\Product;
  
 class ProductSavedListener
 {
@@ -22,9 +23,29 @@ class ProductSavedListener
      */
     public function handle(ProductSaved $event)
     {
+
+      // Save modifications
+      $mods = $event->product->modificationsToSave;
+      
+      if(!empty($mods) && is_array($mods)) {
+        // Reset old relations
+        if($event->product->parent_id) {
+          Product::where('parent_id', $event->product->parent_id)->update([
+            'parent_id' => null
+          ]);
+        }
+
+        // Set new Relations
+        Product::whereIn('id', $mods)->update([
+          'parent_id' => $event->product->id
+        ]);
+      }
+
+
       if(!$event->product->props)
         return;
 
+      // Product properties
       foreach($event->product->props as $prop_id => $prop_value) {
         $attribute = Attribute::find($prop_id);
 
