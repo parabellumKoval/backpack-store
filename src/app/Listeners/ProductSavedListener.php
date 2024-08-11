@@ -36,8 +36,13 @@ class ProductSavedListener
 
         // Save modifications
         $mods = $event->product->modificationsToSave;
+        $this_id = $event->product->id;
 
         if(!empty($mods) && is_array($mods)) {
+          $mods = array_filter($mods, function($id) use($this_id) {
+            return $id != $this_id;
+          });
+
           // Set new Relations
           Product::whereIn('id', $mods)->update([
             'parent_id' => $event->product->id

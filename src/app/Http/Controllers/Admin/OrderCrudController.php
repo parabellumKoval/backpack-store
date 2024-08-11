@@ -591,7 +591,11 @@ class OrderCrudController extends CrudController
 
     if ($search_term)
     {
-        $results = Product::where('name', 'LIKE', '%'.$search_term.'%')->paginate(10);
+        $results = Product::where('name', 'LIKE', '%'.$search_term.'%')
+          ->orWhere('code', 'LIKE', '%'.$search_term.'%')
+          ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
+          ->orWhere('short_name', 'LIKE', '%'.$search_term.'%')
+          ->paginate(20);
     }
     else
     {
