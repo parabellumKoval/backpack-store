@@ -23,22 +23,26 @@ class ProductSavedListener
      */
     public function handle(ProductSaved $event)
     {
-
-      // Save modifications
-      $mods = $event->product->modificationsToSave;
       
-      if(!empty($mods) && is_array($mods)) {
+
+      if(config('backpack.store.product.modifications.enable', true)) {
+
         // Reset old relations
-        if($event->product->parent_id) {
-          Product::where('parent_id', $event->product->parent_id)->update([
+        Product::where('parent_id', $event->product->parent_id)
+          ->orWhere('parent_id', $event->product->id)
+          ->update([
             'parent_id' => null
           ]);
-        }
 
-        // Set new Relations
-        Product::whereIn('id', $mods)->update([
-          'parent_id' => $event->product->id
-        ]);
+        // Save modifications
+        $mods = $event->product->modificationsToSave;
+
+        if(!empty($mods) && is_array($mods)) {
+          // Set new Relations
+          Product::whereIn('id', $mods)->update([
+            'parent_id' => $event->product->id
+          ]);
+        }
       }
 
 

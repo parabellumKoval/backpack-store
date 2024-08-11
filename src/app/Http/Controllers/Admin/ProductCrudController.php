@@ -155,51 +155,6 @@ class ProductCrudController extends CrudController
     {
         $this->crud->setValidation(ProductRequest::class);
 
-        if(config('backpack.store.product.modifications.enable', true)) {
-          $this->crud->addField([
-            'name' => 'parent_id',
-            'type' => 'hidden',
-            'value' => \Request::query('parent_id') ?? null
-          ]);
-        }
-        
-        if(config('backpack.store.product.modifications.enable', true)) {
-          // $this->crud->addField([
-          //   'name' => 'modifications',
-          //   'label' => 'Модификации',
-          //   'type' => 'modification_switcher',
-          //   'tab' => 'Основное'
-          // ]);
-
-          // $this->crud->addField([
-          //   'name' => 'parent_id',
-          //   'value' => null,
-          //   'type' => 'hidden'
-          // ]);
-
-          $this->crud->addField([
-            'name' => 'modifications',
-            'label' => 'Модификации',
-            'type'    => 'relationship',
-            'model'     => 'Backpack\Store\app\Models\Product',
-            'attribute' => 'name',
-            'ajax' => true,
-            'multiple' => true,
-            // 'entity' => Backpack\Store\app\Models\Product::class,
-            'entity' => 'children',
-            'data_source' => url("/admin/api/product"),
-            'placeholder' => "Поиск по названию товара",
-            'minimum_input_length' => 0,
-            // 'inline_create' => true,
-            'inline_create' => [
-              'entity' => 'product',
-              'force_select' => true,
-            ],
-            'tab' => 'Основное'
-          ]);
-
-        }
-
         // BRAND
         if(config('backpack.store.brands.enable')) {
           $this->crud->addField([
@@ -230,17 +185,6 @@ class ProductCrudController extends CrudController
           'tab' => 'Основное'
         ]);
 
-        // SHORT NAME FOR MODIFICATIONS
-        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
-        if(config('backpack.store.product.modifications.enable', true)) {
-          $this->crud->addField([
-            'name' => 'short_name',
-            'label' => 'Краткое название модификации',
-            'type' => 'text',
-            'tab' => 'Основное'
-          ]);
-        }
-        // }
         
         // SLUG
         $this->crud->addField([
@@ -366,6 +310,73 @@ class ProductCrudController extends CrudController
           ]);
         }
         
+
+        // MODIFICATIONS
+        $this->crud->addField([
+          'name' => 'delim_mod',
+          'type' => 'custom_html',
+          'value' => '<h3>Модификации</h3>',
+          'tab' => 'Основное'
+        ]);
+
+        if(config('backpack.store.product.modifications.enable', true)) {
+          $this->crud->addField([
+            'name' => 'parent_id',
+            'type' => 'hidden',
+            'value' => \Request::query('parent_id') ?? null
+          ]);
+        }
+        
+        if(config('backpack.store.product.modifications.enable', true)) {
+          // $this->crud->addField([
+          //   'name' => 'modifications',
+          //   'label' => 'Модификации',
+          //   'type' => 'modification_switcher',
+          //   'tab' => 'Основное'
+          // ]);
+
+          // $this->crud->addField([
+          //   'name' => 'parent_id',
+          //   'value' => null,
+          //   'type' => 'hidden'
+          // ]);
+
+          $this->crud->addField([
+            'name' => 'modifications',
+            'label' => 'Связанные товары',
+            'type'    => 'relationship',
+            'model'     => 'Backpack\Store\app\Models\Product',
+            'attribute' => 'name',
+            'ajax' => true,
+            'multiple' => true,
+            // 'entity' => Backpack\Store\app\Models\Product::class,
+            'entity' => 'children',
+            'data_source' => url("/admin/api/product"),
+            'placeholder' => "Поиск по названию товара",
+            'minimum_input_length' => 0,
+            // 'inline_create' => true,
+            'inline_create' => [
+              'entity' => 'product',
+              'force_select' => true,
+            ],
+            'hint' => 'Связанные товары - это другие разновидности этого же товара. Найдите и прикрепите модификации к товару, чтобы связать их в одну группу.',
+            'tab' => 'Основное'
+          ]);
+
+        }
+
+        // SHORT NAME FOR MODIFICATIONS
+        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
+        if(config('backpack.store.product.modifications.enable', true)) {
+          $this->crud->addField([
+            'name' => 'short_name',
+            'label' => 'Краткое название этой модификации',
+            'type' => 'text',
+            'hint' => 'Краткое название этой модификации товара, будет исспользовано в списке модификаций на сайте. Это может быть вкус/цвет и т.п.',
+            'tab' => 'Основное'
+          ]);
+        }
+        // }
         
         // IMAGES
         if(config('backpack.store.product.images.enable', true)) {
