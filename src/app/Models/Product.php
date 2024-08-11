@@ -83,7 +83,6 @@ class Product extends Model
     protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
     
     public $images_array = [];
-    public $modificationsToSave = [];
     
     /*
     |--------------------------------------------------------------------------

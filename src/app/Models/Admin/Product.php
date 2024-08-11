@@ -13,7 +13,7 @@ use Backpack\Store\app\Models\Attribute;
 class Product extends BaseProduct
 {
     public $props = null;
-
+    public $modificationsToSave = [];
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -105,6 +105,10 @@ class Product extends BaseProduct
       }
     }
 
+
+    public function setModificationsAttribute($value) {
+      $this->modificationsToSave = $value;
+    }
 
 }
 
