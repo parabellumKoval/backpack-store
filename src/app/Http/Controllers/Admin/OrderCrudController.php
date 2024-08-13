@@ -586,20 +586,32 @@ class OrderCrudController extends CrudController
       ]);
   }
 
+  // public static function mssql_escape($unsafe_str) 
+  // {
+  //     if (get_magic_quotes_gpc())
+  //     {
+  //         $unsafe_str = stripslashes($unsafe_str);
+  //     }
+  //     return $escaped_str = str_replace("'", "''", $unsafe_str);
+  // }
+
   public function getProducts(Request $request) {
     $search_term = $request->input('q');
 
+
     if ($search_term)
     {
-        $results = Product::where('name', 'LIKE', '%'.$search_term.'%')
-          ->orWhere('code', 'LIKE', '%'.$search_term.'%')
-          ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
-          ->orWhere('short_name', 'LIKE', '%'.$search_term.'%')
-          ->paginate(20);
+      $locale = \Lang::locale();
+
+      $results = Product::where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+        ->orWhere('code', 'LIKE', '%'.$search_term.'%')
+        ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
+        ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
+        ->paginate(20);
     }
     else
     {
-        $results = Product::paginate(10);
+        $results = Product::paginate(20);
     }
 
     return $results;

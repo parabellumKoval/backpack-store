@@ -53,7 +53,6 @@ class ProductCrudController extends CrudController
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
       $this->crud->setEntityNameStrings('товар', 'товары');
 
-
       // SET LOCALE
       $this->setLocale();
 
@@ -98,6 +97,9 @@ class ProductCrudController extends CrudController
 
     protected function setupListOperation()
     {
+      //
+      // $this->crud->disableResponsiveTable();
+
         //remove product modifications from list view
         // $this->crud->addClause('base');
 
@@ -113,39 +115,109 @@ class ProductCrudController extends CrudController
               $query->where('category_id', $cat_id);
           });
         });
+
+        $this->crud->addFilter([
+          'name' => 'is_active',
+          'label' => 'Активный',
+          'type' => 'select2',
+        ], function(){
+          return [
+            0 => 'Не активный',
+            1 => 'Активный',
+          ];
+        }, function($is_active){
+          $this->crud->query = $this->crud->query->where('is_active', $is_active);
+        });
+
+        $this->crud->addFilter([
+          'name' => 'in_stock',
+          'label' => 'Наличие',
+          'type' => 'select2',
+        ], function(){
+          return [
+            0 => 'Нет в наличие',
+            1 => 'В наличие',
+          ];
+        }, function($in_stock){
+          if($in_stock == 0) {
+            $this->crud->query = $this->crud->query->where('in_stock', 0);
+          }else {
+            $this->crud->query = $this->crud->query->where('in_stock', '>', 0);
+          }
+        });
+
+
+        $this->crud->addFilter([
+          'name' => 'price',
+          'label' => 'Цена',
+          'type' => 'range',
+        ], false, function($value){
+          $range = json_decode($value);
+          
+          if ($range->from) {
+            $this->crud->addClause('where', 'price', '>=', (float) $range->from);
+          }
+          if ($range->to) {
+            $this->crud->addClause('where', 'price', '<=', (float) $range->to);
+          }
+        });
         
+        $this->crud->addColumn([
+          'name' => 'code',
+          'label' => '#️⃣',
+          'searchLogic' => true,
+          'priority' => 1,
+        ]);
+
         $this->crud->addColumn([
           'name' => 'imageSrc',
           'label' => '📷',
           'type' => 'image',
           'height' => '60px',
           'width'  => '40px',
+          'priority' => 2,
         ]);
         
         $this->crud->addColumn([
           'name' => 'is_active',
           'label' => '✅',
-          'type' => 'check'
+          'type' => 'check',
+          'priority' => 5,
         ]);
         
         $this->crud->addColumn([
           'name' => 'in_stock',
           'label' => '📦',
-          'type' => 'number'
+          'type' => 'number',
+          'priority' => 4,
         ]);
 
         $this->crud->addColumn([
           'name' => 'name',
-          'label' => 'Название'
+          'label' => 'Название',
+          'type' => 'textarea',
+          'limit' => 100,
+          'priority' => 1,
+          'searchLogic' => function ($query, $column, $searchTerm) {
+            $locale = \Lang::locale();
+            $query->orWhere("name->{$locale}", 'like', '%'.$searchTerm.'%');
+          },
+        ]);
+
+        $this->crud->addColumn([
+          'name' => 'price',
+          'label' => 'Цена',
+          'type' => 'number',
+          'priority' => 6,
         ]);
 
         $this->crud->addColumn([
           'name' => 'categories',
           'label' => 'Категории',
           'type'  => 'model_function',
-          'function_name' => 'getCategoriesString'
-          // 'type' => 'relationship',
-          // 'attribute' => 'id',
+          'function_name' => 'getCategoriesString',
+          'limit' => 200,
+          'priority' => 7
         ]);
 
         $this->listOperation();
