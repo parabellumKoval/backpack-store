@@ -27,7 +27,7 @@ class ProductRequest extends FormRequest
     {
         return [
           'name' => 'required|min:1|max:255',
-          'short_name' => 'required_with:parent_id|min:1|max:255',
+          // 'short_name' => 'required_with:parent_id|min:1|max:255',
           'categories' => 'required_without:parent_id',
         ];
     }

@@ -307,11 +307,11 @@ class ProductCrudController extends CrudController
         // ];
 
         // disable if product is not base but modification of other product
-        if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
-          $category_attributes['disabled'] = 'disabled';
-        } else {
-          $category_attributes = [];
-        }
+        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
+        //   $category_attributes['disabled'] = 'disabled';
+        // } else {
+        //   $category_attributes = [];
+        // }
 
         $this->crud->addField([
           'name' => 'categories',
@@ -323,7 +323,7 @@ class ProductCrudController extends CrudController
           'tab' => 'Основное',
           'hint' => 'Характеристики товара зависят от выбранных категорий. После сохранения записи характеристики будут синхронизированы с категориями.',
           'value' => $this->categories? $this->categories: null,
-          'attributes' => $category_attributes
+          // 'attributes' => $category_attributes
         ]);
 
         // PRICE
