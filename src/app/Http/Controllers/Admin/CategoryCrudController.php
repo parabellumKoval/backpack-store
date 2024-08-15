@@ -25,6 +25,7 @@ class CategoryCrudController extends CrudController
     use \App\Http\Controllers\Admin\Traits\CategoryCrud;
 
     private $category_class = null;
+    private $filter_categories = [];
 
     public function setup()
     {
@@ -33,6 +34,11 @@ class CategoryCrudController extends CrudController
       $this->crud->setModel($this->category_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/category');
       $this->crud->setEntityNameStrings('категорию', 'категории');
+
+      $this->filter_categories = $this->category_class::withoutGlobalScopes()
+            ->whereNull('parent_id')
+            ->pluck('name', 'id')
+            ->toArray();
     }
 
     protected function setupReorderOperation()
@@ -46,24 +52,133 @@ class CategoryCrudController extends CrudController
     
     protected function setupListOperation()
     {
+
+      // Filter by category
+      $this->crud->addFilter([
+        'name' => 'category',
+        'label' => 'Родительская категория',
+        'type' => 'select2',
+      ], function(){
+        return $this->filter_categories;
+      }, function($id){
+        $this->crud->query->where('parent_id', $id);
+      });
+
+      $this->crud->addFilter([
+        'name' => 'is_active',
+        'label' => 'Активная',
+        'type' => 'select2',
+      ], function(){
+        return [
+          0 => 'Не активная',
+          1 => 'Активная',
+        ];
+      }, function($is_active){
+        $this->crud->query = $this->crud->query->where('is_active', $is_active);
+      });
+
+      $this->crud->addFilter([
+        'name' => 'is_products',
+        'label' => 'С товарами',
+        'type' => 'select2',
+      ], function(){
+        return [
+          0 => 'Без товаров',
+          1 => 'С товарами',
+        ];
+      }, function($is_products){
+        if($is_products) {
+          $this->crud->query->has('products', '>=', 1);
+        }else {
+          $this->crud->query->has('products', '=', 0);
+        }
+      });
+
+      $this->crud->addFilter([
+        'name' => 'is_seo',
+        'label' => 'Заполнено SEO',
+        'type' => 'select2',
+      ], function(){
+        return [
+          0 => 'Не заполнено SEO',
+          // 1 => 'Частично заполнено',
+          2 => 'Заполнено SEO',
+        ];
+      }, function($is_seo){
+        $locale = \Lang::locale();
+
+        if($is_seo == 0) {
+          $this->crud->query
+            ->where('seo', null)
+            ->orWhere(function ($query) use ($locale) {
+              $query
+                ->where("seo->{$locale}->meta_title", '=', null)
+                ->where("seo->{$locale}->meta_description", '!=', null)
+                ->where("seo->{$locale}->h1", '=', null);
+            });
+        }elseif($is_seo == 1){
+          // $this->crud->query->where("seo->{$locale}->meta_title", '!=', null);
+              // ->where(function ($query) use ($locale) {
+              //   $query->where("seo->{$locale}->meta_title", '!=', null, 'xor');
+              //   $query->where("seo->{$locale}->meta_description", '!=', null, 'xor');
+              //   $query->where("seo->{$locale}->h1", '!=', null, 'xor');
+              // });
+
+            // $this->crud->query
+            //     ->whereJsonContains("seo->{$locale}->meta_title", null)
+            //     ->whereJsonContains("seo->{$locale}->meta_description", null)
+            //     ->whereJsonContains("seo->{$locale}->h1", null);
+                // ->where("seo->{$locale}->meta_title", '=', null, 'xor')
+                // ->where("seo->{$locale}->meta_description", '=', null, 'xor')
+                // ->where("seo->{$locale}->h1", '=', null, 'xor');
+        }elseif($is_seo == 2){
+          $this->crud->query->where("seo->{$locale}->meta_title", '!=', null);
+          $this->crud->query->orWhere("seo->{$locale}->meta_description", '!=', null);
+          $this->crud->query->orWhere("seo->{$locale}->h1", '!=', null);
+        }
+      });
+
       // TODO: remove setFromDb() and manually define Columns, maybe Filters
       // $this->crud->setFromDb(); 
       $this->crud->addColumn([
         'name' => 'imageSrc',
-        'label' => 'Фото',
+        'label' => '📷',
         'type' => 'image',
         'height' => '50px',
         'width'  => '50px',
       ]);
       
+      // $this->crud->addColumn([
+      //   'name' => 'id',
+      //   'label' => 'ID',
+      // ]);
+
+      // IS ACTIVE
       $this->crud->addColumn([
-        'name' => 'id',
-        'label' => 'ID',
+        'name' => 'is_active',
+        'label' => '✅',
+        'type' => 'check'
+      ]);
+
+      $this->crud->addColumn([
+        'name' => 'products',
+        'label' => '📦',
+        'type' => 'relationship_count',
+        'suffix' => ' тов.'
+      ]);
+
+      $this->crud->addColumn([
+        'name' => 'is_seo',
+        'label' => 'SEO',
+        'type' => 'model_function',
+        'function_name' => 'getAdminColumnSeo',
+        'limit' => 1000,
       ]);
 
       $this->crud->addColumn([
         'name' => 'name',
         'label' => 'Название',
+        'limit' => 200,
       ]);
       
       $this->crud->addColumn([

@@ -26,5 +26,9 @@ Route::group([
     if(config('backpack.store.brands.enable')) {
       Route::crud('brand', 'BrandCrudController');
     }
+
+    if(config('backpack.store.supplier.enable')) {
+      Route::crud('supplier', 'SupplierCrudController');
+    }
     
 }); // this should be the absolute last line of this file

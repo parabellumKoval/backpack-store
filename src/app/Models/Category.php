@@ -158,13 +158,47 @@ class Category extends Model
     |--------------------------------------------------------------------------
     */ 
 
+    public function getAdminColumnSeo() {
+      $html = "";
+      // $html .= "T: <span>🔴</span>";
+      // $html .= "D: <span>🟢</span>";
+      // $html .= "H1: <span>🔴</span>";
+
+      $common_style = "display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-right: 3px; border-radius: 9px; color: #fff; font-size: 12px; font-weight: bold;";
+
+      // $arr = $this->seoToArray;
+      // foreach($arr as $k => $v) {
+      //   \Log::info($k . ' - ' . $v);
+      // }
+
+      if(!$this->seoToArray || !isset($this->seoToArray['meta_title']) || empty($this->seoToArray['meta_title'])) {
+        $html .= "<div style='" . $common_style ." background: red;'>T</div>";
+      }else {
+        $html .= "<div style='" . $common_style ." background: #00a65a;'>T</div>";
+      }
+
+      if(!$this->seoToArray || !isset($this->seoToArray['meta_description']) ||empty($this->seoToArray['meta_description'])) {
+        $html .= "<div style='" . $common_style ." background: red;'>D</div>";
+      }else {
+        $html .= "<div style='" . $common_style ." background: #00a65a;'>D</div>";
+      }
+
+      if(!$this->seoToArray || !isset($this->seoToArray['h1']) || empty($this->seoToArray['h1'])) {
+        $html .= "<div style='" . $common_style ." background: red;'>H1</div>";
+      }else {
+        $html .= "<div style='" . $common_style ." background: #00a65a;'>H1</div>";
+      }
+
+      return $html;
+    }
+
     /**
      * getSeoToArrayAttribute
      *
      * @return void
      */
     public function getSeoToArrayAttribute() {
-      return !empty($this->seo)? json_decode($this->seo): null;
+      return !empty($this->seo)? json_decode($this->seo, true): null;
     }
     
     /**

@@ -250,5 +250,11 @@ return [
           '/[A-Za-z]/u',
         ]
       ]
+    ],
+
+    // SUPPLIER
+    'supplier' => [
+      'enable' => true,
+      'class' => 'Backpack\Store\app\Models\Supplier',
     ]
 ];
