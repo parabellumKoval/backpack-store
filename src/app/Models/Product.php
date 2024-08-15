@@ -25,6 +25,8 @@ use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Brand;
+use Backpack\Store\app\Models\Suppliers;
+use Backpack\Store\app\Models\SupplierProduct;
 
 // RESOURCES
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
@@ -68,11 +70,12 @@ class Product extends Model
       'extras',
       'extras_trans',
       'modifications',
+      'suppliersData',
       'props',
     ];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $with = ['categories', 'ap'];
+    protected $with = ['categories', 'ap', 'suppliers'];
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
@@ -179,12 +182,39 @@ class Product extends Model
     | RELATIONS
     |--------------------------------------------------------------------------
     */
-    
+        
+    /**
+     * categories
+     *
+     * @return void
+     */
     public function categories()
     {
       return $this->belongsToMany(Category::class, 'ak_category_product');
     }
-    
+        
+    /**
+     * suppliers
+     *
+     * @return void
+     */
+    public function suppliers()
+    {
+      return $this->belongsToMany(Supplier::class, 'ak_supplier_product')
+            ->withTimestamps()
+            ->withPivot('in_stock', 'code', 'price', 'old_price', 'updated_at');
+            // ->withSum('in_stock');
+    }
+
+    /**
+     * sp
+     *
+     * @return void
+     */
+    public function sp()
+    {
+      return $this->hasMany(SupplierProduct::class);
+    }
     
     /**
      * brand

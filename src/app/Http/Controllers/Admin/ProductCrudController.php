@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\AttributeValue;
 
 //EVENTS
@@ -40,6 +41,7 @@ class ProductCrudController extends CrudController
     
     private $categories;
     private $filter_categories;
+    private $suppliers_list;
     private $brands;
     private $attrs;
     
@@ -77,6 +79,7 @@ class ProductCrudController extends CrudController
       
       $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
       
+      $this->suppliers_list = Supplier::pluck('name', 'id')->toArray();
       // if(config('backpack.store.brands.enable')) {
       //   $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
       // }
@@ -102,6 +105,7 @@ class ProductCrudController extends CrudController
 
         //remove product modifications from list view
         // $this->crud->addClause('base');
+        $this->crud->addClause('withSum', 'sp', 'in_stock');
 
         // Filter by category
         $this->crud->addFilter([
@@ -109,11 +113,16 @@ class ProductCrudController extends CrudController
           'label' => 'Категория',
           'type' => 'select2',
         ], function(){
-          return $this->filter_categories;
-        }, function($cat_id){
-          $this->crud->query = $this->crud->query->whereHas('categories', function ($query) use ($cat_id) {
-              $query->where('category_id', $cat_id);
-          });
+          $list = ['empty' => '🔴 Без категории'] + $this->filter_categories;
+          return $list;
+        }, function($id){
+          if($id === 'empty') {
+            $this->crud->query->has('categories', '=', 0);
+          }else {
+            $this->crud->query->whereHas('categories', function ($query) use ($id) {
+                $query->where('category_id', $id);
+            });
+          }
         });
 
         $this->crud->addFilter([
@@ -122,11 +131,11 @@ class ProductCrudController extends CrudController
           'type' => 'select2',
         ], function(){
           return [
-            0 => 'Не активный',
-            1 => 'Активный',
+            0 => '🔴 Не активный',
+            1 => '🟢 Активный',
           ];
         }, function($is_active){
-          $this->crud->query = $this->crud->query->where('is_active', $is_active);
+          $this->crud->query->where('is_active', $is_active);
         });
 
         $this->crud->addFilter([
@@ -135,14 +144,27 @@ class ProductCrudController extends CrudController
           'type' => 'select2',
         ], function(){
           return [
-            0 => 'Нет в наличие',
-            1 => 'В наличие',
+            0 => '🔴 Нет в наличие',
+            1 => '🟢 В наличие',
           ];
         }, function($in_stock){
-          if($in_stock == 0) {
-            $this->crud->query = $this->crud->query->where('in_stock', 0);
+          if(config('backpack.store.supplier.enable')) {
+            if($in_stock == 0) {
+              $this->crud->query->has('suppliers', '=', 0);
+              $this->crud->query->orWhereHas('suppliers', function ($query) {
+                $query->where('in_stock', '>', 0);
+              }, '=', 0);
+            }else {
+              $this->crud->query->whereHas('suppliers', function ($query) {
+                $query->where('in_stock', '>', 0);
+              });
+            }
           }else {
-            $this->crud->query = $this->crud->query->where('in_stock', '>', 0);
+            if($in_stock == 0) {
+              $this->crud->query->where('in_stock', 0);
+            }else {
+              $this->crud->query->where('in_stock', '>', 0);
+            }
           }
         });
 
@@ -161,6 +183,25 @@ class ProductCrudController extends CrudController
             $this->crud->addClause('where', 'price', '<=', (float) $range->to);
           }
         });
+
+        if(config('backpack.store.supplier.enable')) {
+          $this->crud->addFilter([
+            'name' => 'supplier',
+            'label' => 'Поставщик',
+            'type' => 'select2',
+          ], function(){
+            $list = ['empty' => '🔴 Без поставщика'] + $this->suppliers_list;
+            return $list;
+          }, function($id){
+            if($id === 'empty') {
+              $this->crud->query->has('suppliers', '=', 0);
+            }else {
+              $this->crud->query->whereHas('suppliers', function ($query) use ($id) {
+                $query->where('supplier_id', $id);
+              });
+            }
+          });
+        }
         
         $this->crud->addColumn([
           'name' => 'code',
@@ -185,12 +226,21 @@ class ProductCrudController extends CrudController
           'priority' => 5,
         ]);
         
-        $this->crud->addColumn([
-          'name' => 'in_stock',
-          'label' => '📦',
-          'type' => 'number',
-          'priority' => 4,
-        ]);
+        if(config('backpack.store.supplier.enable')) {
+          $this->crud->addColumn([
+            'name' => 'inStockTotalSuppliers',
+            'label' => '📦',
+            'type' => 'number',
+            'priority' => 4,
+          ]);
+        }else {
+          $this->crud->addColumn([
+            'name' => 'in_stock',
+            'label' => '📦',
+            'type' => 'number',
+            'priority' => 4,
+          ]);
+        }
 
         $this->crud->addColumn([
           'name' => 'name',
@@ -553,14 +603,83 @@ class ProductCrudController extends CrudController
         }
 
 
-        $this->crud->addField([
+        // SUPPLIERS
+        if(config('backpack.store.supplier.enable')) {
+          $this->crud->addField([
+            'name'  => 'suppliersData',
+            'label' => 'Поставшики',
+            'type'  => 'repeatable',
+            'fields' => [
+                [
+                    'name'    => 'supplier',
+                    'type'    => 'select_from_array',
+                    'label'   => 'Поставщик',
+                    'options'     => $this->suppliers_list,
+                    'allows_null' => false,
+                    'wrapper' => ['class' => 'form-group col-md-7'],
+                ],
+                [
+                    'name'    => 'code',
+                    'type'    => 'text',
+                    'label'   => 'Артикул товара',
+                    'wrapper' => ['class' => 'form-group col-md-5'],
+                ],
+                [
+                    'name'    => 'in_stock',
+                    'type'    => 'number',
+                    'label'   => 'В наличие, шт',
+                    'wrapper' => ['class' => 'form-group col-md-4'],
+                ],
+                [
+                    'name'    => 'price',
+                    'type'    => 'number',
+                    'label'   => 'Цена',
+                    'prefix' => config('backpack.store.currency.symbol'),
+                    'attributes' => [
+                      'step' => 0.01,
+                      'min' => 0
+                    ],
+                    'wrapper' => ['class' => 'form-group col-md-4'],
+                ],
+                [
+                    'name'  => 'old_price',
+                    'type'  => 'number',
+                    'label' => 'Старая цена',
+                    'prefix' => config('backpack.store.currency.symbol'),
+                    'attributes' => [
+                      'step' => 0.01,
+                      'min' => 0
+                    ],
+                    'wrapper' => ['class' => 'form-group col-md-4'],
+                ],
+                [
+                    'name'  => 'updated_at',
+                    'type'  => 'text',
+                    'label' => 'Последнее обновление',
+                    'attributes' => [
+                      'readonly'  => 'readonly',
+                      'disabled'  => 'disabled'
+                    ]
+                ],
+            ],
+        
+            // optional
+            'new_item_label'  => 'Добавить поставщика',
+            'init_rows' => 1,
+            'min_rows' => 2,
+            'tab' => 'Склад',
+          ]);
+
+        }else {
+          $this->crud->addField([
             'name' => 'in_stock',
             'label' => "Количество в наличии", 
             'default' => 1,
             'type' => 'number',
             'tab' => 'Склад',
             'hint' => 'Кол-во товара будет автоматически вычитаться при совершении заказов на сайте.'
-        ]);
+          ]);
+        }
 
       $this->createOperation();
     }

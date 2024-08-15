@@ -14,6 +14,7 @@ class Product extends BaseProduct
 {
     public $props = null;
     public $modificationsToSave = [];
+    public $suppliers_data = null;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -74,7 +75,41 @@ class Product extends BaseProduct
 
       // return $props;
     }
+    
+    /**
+     * getInStockTotalSuppliersAttribute
+     *
+     * @return void
+     */
+    public function getInStockTotalSuppliersAttribute() {
+      return $this->sp_sum_in_stock ?? 0;
+      // return 0;
+    }
+    
+    /**
+     * getSuppliersDataAttribute
+     *
+     * @return void
+     */
+    public function getSuppliersDataAttribute() {
+      $suppliers = $this->suppliers;
+      
+      $data_array = [];
+      foreach($suppliers as $supplier) {
+        $data_array[] = [
+          'supplier' => $supplier->id,
+          'code' => $supplier->pivot->code,
+          'in_stock' => $supplier->pivot->in_stock,
+          'price' => $supplier->pivot->price,
+          'old_price' => $supplier->pivot->old_price,
+          'updated_at' => $supplier->pivot->updated_at->format('Y-m-d @ H:i:s'),
+        ];
+      }
 
+      // dd($data_array);
+
+      return $data_array;
+    }
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
@@ -105,11 +140,27 @@ class Product extends BaseProduct
       }
     }
 
-
+    
+    /**
+     * setModificationsAttribute
+     *
+     * @param  mixed $value
+     * @return void
+     */
     public function setModificationsAttribute($value) {
       $this->modificationsToSave = $value;
     }
 
+    
+    /**
+     * setSuppliersAttribute
+     *
+     * @param  mixed $value
+     * @return void
+     */
+    public function setSuppliersDataAttribute($value) {
+      $this->suppliers_data = json_decode($value, true);
+    }
 }
 
 

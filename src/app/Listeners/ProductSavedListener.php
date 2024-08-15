@@ -23,6 +23,20 @@ class ProductSavedListener
      */
     public function handle(ProductSaved $event)
     {
+      $suppliers = $event->product->suppliers_data ?? null;
+      if(config('backpack.store.supplier.enable', false) && !empty($suppliers)) {
+        $sync_pivot_data = [];
+
+        foreach($suppliers as $supplier) {
+          $supplier_id = $supplier['supplier'];
+          unset($supplier['updated_at']);
+          unset($supplier['supplier']);
+
+          $sync_pivot_data[$supplier_id] = $supplier;
+        }
+
+        $event->product->suppliers()->sync($sync_pivot_data);
+      }
       
 
       if(config('backpack.store.product.modifications.enable', true)) {
