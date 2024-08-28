@@ -71,12 +71,22 @@ class Brand extends Model
     {
       return BrandFactory::new();
     }
-    
+        
+    /**
+     * clearGlobalScopes
+     *
+     * @return void
+     */
     public function clearGlobalScopes()
     {
         static::$globalScopes = [];
     }
-    
+        
+    /**
+     * sluggable
+     *
+     * @return array
+     */
     public function sluggable():array
     {
       return [
@@ -84,6 +94,19 @@ class Brand extends Model
           'source' => 'slug_or_name',
         ],
       ];
+    }
+    
+    /**
+     * toArray
+     *
+     * @return void
+     */
+    public function toArray(){
+      return [
+        'id' => $this->id,
+        'name' => $this->name,
+        'slug' => $this->slug,
+      ];    
     }
     /*
     |--------------------------------------------------------------------------

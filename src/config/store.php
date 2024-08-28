@@ -180,7 +180,6 @@ return [
 
       'in_stock' => [
         'enable' => true,
-        'fixed' => false
       ],
 
 
@@ -256,5 +255,12 @@ return [
     'supplier' => [
       'enable' => true,
       'class' => 'Backpack\Store\app\Models\Supplier',
+    ],
+
+    // XML SOURCE
+    'source' => [
+      'enable' => true,
+      'class' => 'Backpack\Store\app\Models\Source',
+      'upload_class' => 'Backpack\Store\app\Models\UploadHistory',
     ]
 ];

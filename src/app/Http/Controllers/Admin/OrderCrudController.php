@@ -595,25 +595,4 @@ class OrderCrudController extends CrudController
   //     return $escaped_str = str_replace("'", "''", $unsafe_str);
   // }
 
-  public function getProducts(Request $request) {
-    $search_term = $request->input('q');
-
-
-    if ($search_term)
-    {
-      $locale = \Lang::locale();
-
-      $results = Product::where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
-        ->orWhere('code', 'LIKE', '%'.$search_term.'%')
-        ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
-        ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
-        ->paginate(20);
-    }
-    else
-    {
-        $results = Product::paginate(20);
-    }
-
-    return $results;
-  }
 }

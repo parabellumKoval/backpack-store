@@ -19,7 +19,7 @@ class SupplierCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    // use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
 
     use \App\Http\Controllers\Admin\Traits\SupplierCrud;
@@ -45,13 +45,6 @@ class SupplierCrudController extends CrudController
       ]);
 
       $this->crud->addColumn([
-        'name' => 'products',
-        'label' => '📦',
-        'type' => 'relationship_count',
-        'suffix' => ' тов.'
-      ]);
-
-      $this->crud->addColumn([
         'name' => 'name',
         'label' => 'Название'
       ]);
@@ -59,6 +52,13 @@ class SupplierCrudController extends CrudController
       $this->crud->addColumn([
         'name' => 'type',
         'label' => 'Тип'
+      ]);
+
+      $this->crud->addColumn([
+        'name' => 'products',
+        'label' => 'Товары поставщика',
+        'type' => 'relationship_count',
+        'suffix' => ' тов.'
       ]);
 
       $this->listOperation();

@@ -5,6 +5,7 @@ use Backpack\Store\app\Events\ProductSaved;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\Product;
+use Backpack\Store\app\Models\SupplierProduct;
  
 class ProductSavedListener
 {
@@ -15,6 +16,8 @@ class ProductSavedListener
      */
     public function __construct(){}
  
+
+
     /**
      * Handle the event.
      *
@@ -23,19 +26,13 @@ class ProductSavedListener
      */
     public function handle(ProductSaved $event)
     {
-      $suppliers = $event->product->suppliers_data ?? null;
-      if(config('backpack.store.supplier.enable', false) && !empty($suppliers)) {
-        $sync_pivot_data = [];
-
-        foreach($suppliers as $supplier) {
-          $supplier_id = $supplier['supplier'];
-          unset($supplier['updated_at']);
-          unset($supplier['supplier']);
-
-          $sync_pivot_data[$supplier_id] = $supplier;
+      $suppliers = $event->product->suppliers_data ?? $event->product->default_supplier ?? null;
+      if(!empty($suppliers)) {
+        if(config('backpack.store.supplier.enable', false)) {
+          $this->setMultipleSuppliers($event->product, $suppliers);
+        }else {
+          $this->setDefaultSupplier($event->product, $suppliers);
         }
-
-        $event->product->suppliers()->sync($sync_pivot_data);
       }
       
 
@@ -121,5 +118,55 @@ class ProductSavedListener
           }
         }
       }
+    }
+
+    
+    /**
+     * setMultipleSuppliers
+     *
+     * @param  mixed $product
+     * @param  mixed $suppliers
+     * @return void
+     */
+    private function setMultipleSuppliers($product, $suppliers){
+      $sync_pivot_data = [];
+
+      foreach($suppliers as $key => $supplier) {
+        $supplier_id = $supplier['supplier'];
+
+        $sync_pivot_data[$supplier_id] = [
+          'code' => (isset($supplier['code']) && !empty($supplier['code']))? $supplier['code']: null,
+          'barcode' => (isset($supplier['barcode']) && !empty($supplier['barcode']))? $supplier['barcode']: null,
+          'in_stock' => (isset($supplier['in_stock']) && !empty($supplier['in_stock']))? intval($supplier['in_stock']): 0,
+          'price' => (isset($supplier['price']) && !empty($supplier['price']))? doubleval($supplier['price']): null,
+          'old_price' => (isset($supplier['old_price']) && !empty($supplier['old_price']))? doubleval($supplier['old_price']): null,
+        ];
+        
+      }
+
+      $product->suppliers()->sync($sync_pivot_data);
+    }
+    
+    /**
+     * setDefaultSupplier
+     *
+     * @param  mixed $product
+     * @param  mixed $supplier
+     * @return void
+     */
+    private function setDefaultSupplier($product, $supplier) {
+      $data = [
+        'supplier_id' => null,
+        'code' => (isset($supplier['code']) && !empty($supplier['code']))? $supplier['code']: null,
+        'barcode' => (isset($supplier['barcode']) && !empty($supplier['barcode']))? $supplier['barcode']: null,
+        'in_stock' => (isset($supplier['in_stock']) && !empty($supplier['in_stock']))? intval($supplier['in_stock']): 0,
+        'price' => (isset($supplier['price']) && !empty($supplier['price']))? doubleval($supplier['price']): null,
+        'old_price' => (isset($supplier['old_price']) && !empty($supplier['old_price']))? doubleval($supplier['old_price']): null,
+      ];
+
+      $sp = SupplierProduct::updateOrCreate(
+        ['product_id' => $product->id],
+        $data
+      );
     }
 }

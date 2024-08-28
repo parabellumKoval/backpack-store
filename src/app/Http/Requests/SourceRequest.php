@@ -5,7 +5,7 @@ namespace Backpack\Store\app\Http\Requests;
 use App\Http\Requests\Request;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ProductRequest extends FormRequest
+class SourceRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -27,8 +27,18 @@ class ProductRequest extends FormRequest
     {
         return [
           'name' => 'required|min:1|max:255',
-          // 'short_name' => 'required_with:parent_id|min:1|max:255',
-          // 'categories' => 'required_without:parent_id',
+          'key' => 'required|min:1|max:255',
+          'supplier' => 'required',
+          'every_minutes' => 'required|integer|min:60',
+          'link' => 'required|url',
+          'item' => 'required',
+          'fieldName' => 'required',
+          'fieldPrice' => 'required',
+          'fieldInStock' => 'required',
+          'fieldCode' => 'required_without:fieldBarcode',
+          'fieldBarcode' => 'required_without:fieldCode',
+          // 'brandsData.*.brand_id' => 'required',
+          // 'brandsData.*.brand' => 'required'
         ];
     }
 

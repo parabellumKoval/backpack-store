@@ -12,13 +12,25 @@ use Backpack\Store\app\Models\Cart;
 
 class CartController extends \App\Http\Controllers\Controller
 { 
-
+  
+  /**
+   * index
+   *
+   * @param  mixed $request
+   * @return void
+   */
   public function index(Request $request) {
     $auth_user_id = 1;
     $user = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile')::findOrFail($auth_user_id);
     return response()->json($user->cart);
   }
-
+  
+  /**
+   * updateOrCreate
+   *
+   * @param  mixed $request
+   * @return void
+   */
   public function updateOrCreate(Request $request) {
     $data = $request->only(['product_id', 'amount']);
 
@@ -51,7 +63,14 @@ class CartController extends \App\Http\Controllers\Controller
 
     return response()->json($cart);
   }
-
+  
+  /**
+   * delete
+   *
+   * @param  mixed $request
+   * @param  mixed $id
+   * @return void
+   */
   public function delete(Request $request, $id) {
     try {
       $cart = Cart::findOrFail($id);

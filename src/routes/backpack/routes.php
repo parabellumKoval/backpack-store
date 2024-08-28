@@ -1,9 +1,10 @@
 <?php
 
 
-
-Route::any('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\OrderCrudController@getProducts');
-Route::any('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getAttributeValues');
+Route::any('/admin/api/brand', 'Backpack\Store\app\Http\Controllers\Admin\BrandCrudController@getBrands');
+Route::any('/admin/api/category', 'Backpack\Store\app\Http\Controllers\Admin\CategoryCrudController@getCategories');
+Route::any('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getProducts');
+Route::any('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\AttributeCrudController@getAttributeValues');
 
 Route::group([
     'prefix'     => config('backpack.base.route_prefix', 'admin'),
@@ -29,6 +30,11 @@ Route::group([
 
     if(config('backpack.store.supplier.enable')) {
       Route::crud('supplier', 'SupplierCrudController');
+    }
+
+    if(config('backpack.store.source.enable')) {
+      Route::crud('source', 'SourceCrudController');
+      Route::crud('upload', 'UploadCrudController');
     }
     
 }); // this should be the absolute last line of this file

@@ -19,7 +19,7 @@ class ProductSmallResource extends BaseResource
         'price' => $this->price,
         'old_price' => $this->old_price,
         'rating' => $this->rating,
-        'in_stock' => $this->in_stock,
+        'in_stock' => $this->simpleInStock,
         'image' => $this->image,
         'excerpt' => substr(strip_tags($this->content), 0, 500).'...',
         'modifications' => $this->modifications && $this->modifications->count()? 

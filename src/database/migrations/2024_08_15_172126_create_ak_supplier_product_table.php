@@ -18,7 +18,9 @@ class CreateAkSupplierProductTable extends Migration
           $table->foreignId('supplier_id');
           $table->foreignId('product_id');
           $table->integer('in_stock')->default(1);
+          // Articul
           $table->string('code')->nullable();
+          $table->string('barcode')->nullable();
           $table->double('price', 8, 2)->nullable();
           $table->double('old_price', 8, 2)->nullable();
           $table->timestamps();

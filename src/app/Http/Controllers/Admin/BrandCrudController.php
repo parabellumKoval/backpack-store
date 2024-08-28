@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
+use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\BrandRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
@@ -197,5 +198,37 @@ class BrandCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+
+    public function getBrands(Request $request) {
+      $search_term = $request->input('q');
+      $id = $request->input('keys');
+
+      if($id) {
+        $brands = [];
+        $brand = $this->brand_class::find($id);
+
+        if($brand) {
+          $brands[] = $brand;
+        }
+        return $brands;
+      }
+
+      if ($search_term)
+      {
+        $locale = \Lang::locale();
+
+        $results = $this->brand_class::
+            where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+          ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
+          ->paginate(20);
+      }
+      else
+      {
+        $results = $this->brand_class::paginate(20);
+      }
+
+      return $results;
     }
 }

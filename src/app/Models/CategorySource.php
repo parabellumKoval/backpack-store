@@ -6,12 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 
-
-// MODEL
-use Backpack\Store\app\Models\Product;
-use Backpack\Store\app\Models\Supplier;
-
-class SupplierProduct extends Model
+class CategorySource extends Model
 {
     use CrudTrait;
 
@@ -21,9 +16,9 @@ class SupplierProduct extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected $table = 'ak_supplier_product';
+    protected $table = 'ak_category_source';
     // protected $primaryKey = 'id';
-    // public $timestamps = false;
+    public $timestamps = false;
     protected $guarded = ['id'];
     // protected $fillable = [];
     // protected $hidden = [];
@@ -33,6 +28,8 @@ class SupplierProduct extends Model
 
     protected $fakeColumns = [];
     
+    private $source_class = null;
+    private $category_class = null;
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -49,14 +46,21 @@ class SupplierProduct extends Model
     | RELATIONS
     |--------------------------------------------------------------------------
     */
-    public function product()
+    public function source()
     {
-      return $this->belongsTo(Product::class);
+      $this->source_class = config('backpack.store.source.class', 'Backpack\Store\app\Models\Source');
+      return $this->belongsTo($this->source_class);
     }
 
-    public function supplier()
+    /**
+     * categories
+     *
+     * @return void
+     */
+    public function category()
     {
-      return $this->belongsTo(Supplier::class);
+      $this->category_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Category');
+      return $this->belongsTo($this->category_class);
     }
     /*
     |--------------------------------------------------------------------------

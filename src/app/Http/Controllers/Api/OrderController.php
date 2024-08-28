@@ -40,7 +40,13 @@ class OrderController extends \App\Http\Controllers\Controller
     // Rd 
     $this->rd_fields = config('backpack.store.order.fields');
   }
-
+  
+  /**
+   * index
+   *
+   * @param  mixed $request
+   * @return void
+   */
   public function index(Request $request) {
 
     $profile = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();

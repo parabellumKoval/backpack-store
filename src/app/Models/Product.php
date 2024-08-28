@@ -72,6 +72,8 @@ class Product extends Model
       'modifications',
       'suppliersData',
       'props',
+      'defaultSupplier',
+      'defaultSupplierVirtual'
     ];
     // protected $hidden = [];
     // protected $dates = [];
@@ -81,7 +83,15 @@ class Product extends Model
       'images' => 'array',
     ];
 
-    protected $fakeColumns = ['meta_description', 'meta_title', 'seo', 'extras_trans', 'extras', 'images', 'custom_attrs'];
+    protected $fakeColumns = [
+      'meta_description',
+      'meta_title',
+      'seo',
+      'extras_trans',
+      'extras',
+      'images',
+      'custom_attrs',
+    ];
     
     protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
     
@@ -202,7 +212,7 @@ class Product extends Model
     {
       return $this->belongsToMany(Supplier::class, 'ak_supplier_product')
             ->withTimestamps()
-            ->withPivot('in_stock', 'code', 'price', 'old_price', 'updated_at');
+            ->withPivot('in_stock', 'barcode', 'code', 'price', 'old_price', 'updated_at');
             // ->withSum('in_stock');
     }
 
@@ -337,7 +347,34 @@ class Product extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    
         
+    /**
+     * getCodeAttribute
+     *
+     * @return void
+     */
+    // public function getCodeAttribute() {
+    //   $sp = $this->currentSp;
+
+    //   if($sp) {
+    //     return $sp->code;
+    //   }
+    // }
+
+    /**
+     * getPriceAttribute
+     *
+     * @return void
+     */
+    public function getPriceAttribute() {
+      $sp = $this->currentSp;
+
+      if($sp) {
+        return $sp->price;
+      }
+    }
+
     /**
      * getCategoryAttribute
      * 
@@ -607,7 +644,49 @@ class Product extends Model
 
       return array_values($attrs);
     }
+        
+    /**
+     * getCurrentSpAttribute
+     *
+     * @return void
+     */
+    public function getCurrentSpAttribute() {
+      $sp = $this->sp()
+          // reduce integer value to boolean
+        ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
+        ->orderBy('price')
+        ->first();
+
+      return $sp;
+    }
     
+    /**
+     * getSimpleInStockAttribute
+     *
+     * @return void
+     */
+    public function getSimpleInStockAttribute() {
+      if(config('backpack.store.supplier.enable', false)) {
+        return $this->currentSp->in_stock ?? 0;
+      }else {
+        return $this->in_stock;
+      }
+    }
+
+    
+    /**
+     * getSimpleInStockAttribute
+     *
+     * @return void
+     */
+    public function getSimplePriceAttribute() {
+      if(config('backpack.store.supplier.enable', false)) {
+        return $this->currentSp->price ?? 0;
+      }else {
+        return $this->price;
+      }
+    }
+
     /**
      * getRatingDetailedAttribute
      *
@@ -632,7 +711,6 @@ class Product extends Model
     | MUTATORS
     |--------------------------------------------------------------------------
     */
-
     public function setModificationsAttribute($value) {
       $this->modificationsToSave = $value;
     }

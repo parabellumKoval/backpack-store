@@ -14,9 +14,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\AttributeValue;
+use Backpack\Store\app\Models\SupplierProduct;
 
 //EVENTS
 use Backpack\Store\app\Events\ProductSaved;
+use Backpack\Store\app\Events\ProductCreating;
 
 /**
  * Class ProductCrudController
@@ -38,6 +40,8 @@ class ProductCrudController extends CrudController
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
     use \App\Http\Controllers\Admin\Traits\ProductCrud;
+
+    protected $setupDetailsRowRoutes = true;
     
     private $categories;
     private $filter_categories;
@@ -47,6 +51,54 @@ class ProductCrudController extends CrudController
     
     private $product_class = null;
 
+    public function showDetailsRow($id) {
+      $sps = SupplierProduct::
+                where('product_id', $id)
+              ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
+              ->orderBy('price')
+              ->get();
+
+      if($sps->count()){
+        $html = '<b>Поставщики</b>';
+  
+        $html .= '<table>';
+        $html .= "<tr>
+          <th>Название</th>
+          <th>Артикул</th>
+          <th>Код/баркод</th>
+          <th>В наличии</th>
+          <th>Цена</th>
+          <th>Старая цена</th>
+          <th>Последнее обновление</th>
+        </tr>";
+
+        $currency = config('backpack.store.currency.symbol');
+
+        foreach($sps as $sp) {
+          $supplierName = $sp->supplier->name ?? '-';
+          $price = $sp->price !== null? $sp->price . $currency: '';
+          $old_price = $sp->old_price !== null? $sp->old_price . $currency: '';
+
+          $html .= '<tr>';
+          $html .= "<td><b style='color: green'>{$supplierName}</b></td>";
+          $html .= "<td>{$sp->code}</td>";
+          $html .= "<td>{$sp->barcode}</td>";
+          $html .= "<td>{$sp->in_stock}</td>";
+          $html .= "<td>{$price}</td>";
+          $html .= "<td>{$old_price}</td>";
+          $html .= "<td>{$sp->updated_at}</td>";
+
+          $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+      }else {
+        $html = 'Информация по поставщикам отсутсвует';
+      }
+
+      return $html;
+    }
+
     public function setup()
     {
       $this->product_class = config('backpack.store.product.class_admin', 'Backpack\Store\app\Models\Admin\Product');
@@ -54,6 +106,10 @@ class ProductCrudController extends CrudController
       $this->crud->setModel($this->product_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
       $this->crud->setEntityNameStrings('товар', 'товары');
+
+      if(config('backpack.store.supplier.enable', false)) {
+        $this->crud->enableDetailsRow();
+      }
 
       // SET LOCALE
       $this->setLocale();
@@ -90,6 +146,13 @@ class ProductCrudController extends CrudController
       $this->product_class::saved(function($entry) {
         // Attach attributes here
         ProductSaved::dispatch($entry);
+      });
+
+
+      // Set event listiner to Model
+      $this->product_class::creating(function($entry) {
+        // Attach attributes here
+        ProductCreating::dispatch($entry);
       });
     }
 
@@ -148,7 +211,7 @@ class ProductCrudController extends CrudController
             1 => '🟢 В наличие',
           ];
         }, function($in_stock){
-          if(config('backpack.store.supplier.enable')) {
+          if(config('backpack.store.supplier.enable', false)) {
             if($in_stock == 0) {
               $this->crud->query->has('suppliers', '=', 0);
               $this->crud->query->orWhereHas('suppliers', function ($query) {
@@ -205,7 +268,7 @@ class ProductCrudController extends CrudController
         
         $this->crud->addColumn([
           'name' => 'code',
-          'label' => '#️⃣',
+          'label' => '<span title="Артикул товара или баркод">#️⃣</span>',
           'searchLogic' => true,
           'priority' => 1,
         ]);
@@ -221,26 +284,39 @@ class ProductCrudController extends CrudController
         
         $this->crud->addColumn([
           'name' => 'is_active',
-          'label' => '✅',
+          'label' => '<span title="Активный ли товар?">✅</span>',
           'type' => 'check',
           'priority' => 5,
+          'orderable'   => true,
         ]);
-        
+
         if(config('backpack.store.supplier.enable')) {
           $this->crud->addColumn([
-            'name' => 'inStockTotalSuppliers',
-            'label' => '📦',
-            'type' => 'number',
-            'priority' => 4,
-          ]);
-        }else {
-          $this->crud->addColumn([
-            'name' => 'in_stock',
-            'label' => '📦',
-            'type' => 'number',
-            'priority' => 4,
+            'name' => 'suppliers',
+            'label' => '<span title="Колличество поставщиков">🚚</span>',
+            'type' => 'relationship_count',
+            'suffix' => '',
+            'priority' => 5,
+            'orderable'   => true,
+            'orderLogic' => function ($query, $column, $columnDirection) {
+              return $query->withCount('suppliers')
+                    ->orderBy('suppliers_count', $columnDirection);
+              }
           ]);
         }
+        
+        
+        $this->crud->addColumn([
+          'name' => 'inStockTotalSuppliers',
+          'label' => '<span title="Сумарно товаров в наличие">📦</span>',
+          'type' => 'number',
+          'priority' => 4,
+          'orderable'   => true,
+          'orderLogic' => function ($query, $column, $columnDirection) {
+            return $query->withSum('sp', 'in_stock')
+                  ->orderBy('sp_sum_in_stock', $columnDirection);
+          },
+        ]);
 
         $this->crud->addColumn([
           'name' => 'name',
@@ -258,6 +334,13 @@ class ProductCrudController extends CrudController
           'name' => 'price',
           'label' => 'Цена',
           'type' => 'number',
+          'orderable'   => true,
+          'orderLogic' => function ($query, $column, $columnDirection) {
+            return $query
+            ->leftJoin('ak_supplier_product', 'ak_supplier_product.product_id', '=', 'ak_products.id')
+            ->orderBy('ak_supplier_product.price', $columnDirection)
+            ->select('ak_products.*');
+          },
           'priority' => 6,
         ]);
 
@@ -277,19 +360,6 @@ class ProductCrudController extends CrudController
     {
         $this->crud->setValidation(ProductRequest::class);
 
-        // BRAND
-        if(config('backpack.store.brands.enable')) {
-          $this->crud->addField([
-            'name' => 'brand',
-            'label' => 'Бренд',
-            'type' => 'select2',
-            'entity' => 'brand',
-            'attribute' => 'name',
-            'model' => 'Backpack\Store\app\Models\Brand',
-            'tab' => 'Основное',
-          ]);
-        }
-
         // IS ACTIVE
         $this->crud->addField([
           'name' => 'is_active',
@@ -299,6 +369,31 @@ class ProductCrudController extends CrudController
           'tab' => 'Основное'
         ]);
         
+
+        // CODE
+        if(config('backpack.store.product.code.enable', true)) {
+          $this->crud->addField([
+            'name' => 'code',
+            'label' => 'Артикул',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-6'
+            ],
+            'tab' => 'Основное'
+          ]);
+        }
+
+        if(!config('backpack.store.supplier.enable', false)) {
+          $this->crud->addField([
+            'name' => 'defaultSupplier[barcode]',
+            'label' => 'Баркод/код',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-6'
+            ],
+            'value' => $this->entry->defaultSupplier['barcode'] ?? null,
+            'tab' => 'Основное'
+          ]);
+        }
+
         // NAME
         $this->crud->addField([
           'name' => 'name',
@@ -315,53 +410,68 @@ class ProductCrudController extends CrudController
           'hint' => 'По умолчанию будет сгенерирован из названия.',
           'tab' => 'Основное'
         ]);
+
+
+        if(!config('backpack.store.supplier.enable', false)) {
+          $this->crud->addField([
+            'name' => 'defaultSupplierVirtual',
+            'type' => 'hidden',
+            'value' => 'fakevalue'
+          ]);
+
+          // PRICE
+          if(config('backpack.store.product.price.enable', true)) {
+            $this->crud->addField([
+              'name' => 'defaultSupplier[price]',
+              'label' => 'Цена',
+              'type' => 'number',
+              'value' => $this->entry->defaultSupplier['price'] ?? null,
+              'prefix' => config('backpack.store.currency.symbol'),
+              'wrapper'   => [ 
+                'class' => 'form-group col-md-4'
+              ],
+              'attributes' => [
+                'step' => 0.01,
+                'min' => 0
+              ],
+              'tab' => 'Основное'
+            ]);
+          }
+  
+          // OLD PRICE
+          if(config('backpack.store.product.old_price.enable', true)) {
+            $this->crud->addField([
+              'name' => 'defaultSupplier[old_price]',
+              'label' => 'Старая цена',
+              'type' => 'number',
+              'value' => $this->entry->defaultSupplier['old_price'] ?? null,
+              'prefix' => config('backpack.store.currency.symbol'),
+              'wrapper'   => [ 
+                'class' => 'form-group col-md-4'
+              ],
+              'attributes' => [
+                'step' => 0.01,
+                'min' => 0
+              ],
+              'tab' => 'Основное'
+            ]);
+          }
+
+          // IN STOCK
+          $this->crud->addField([
+            'name' => 'defaultSupplier[in_stock]',
+            'label' => "Количество в наличии",
+            'type' => 'number',
+            'value' => $this->entry->defaultSupplier['in_stock'] ?? null,
+            'tab' => 'Основное',
+            'hint' => 'Кол-во товара будет автоматически вычитаться при совершении заказов на сайте.',
+            'wrapper'   => [ 
+              'class' => 'form-group col-md-4'
+            ],
+          ]);
+        }
         
-        // CATEGORY
-        // $category_attributes = [
-        //   'onchange' => "
-        //     reload_page(event);
 
-        //     function reload_page(event) {
-        //       const value = event.target.value
-        //       url = insertParam('category_id', value)
-        //     };
-
-        //     function insertParam(key, value) {
-        //       key = encodeURIComponent(key);
-        //       value = encodeURIComponent(value);
-          
-        //       // kvp looks like ['key1=value1', 'key2=value2', ...]
-        //       var kvp = document.location.search.substr(1).split('&');
-        //       let i=0;
-          
-        //       for(; i<kvp.length; i++){
-        //           if (kvp[i].startsWith(key + '=')) {
-        //               let pair = kvp[i].split('=');
-        //               pair[1] = value;
-        //               kvp[i] = pair.join('=');
-        //               break;
-        //           }
-        //       }
-          
-        //       if(i >= kvp.length){
-        //           kvp[kvp.length] = [key,value].join('=');
-        //       }
-          
-        //       // can return this or...
-        //       let params = kvp.join('&');
-          
-        //       // reload page with new params
-        //       document.location.search = params;
-        //   }
-        //   "
-        // ];
-
-        // disable if product is not base but modification of other product
-        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
-        //   $category_attributes['disabled'] = 'disabled';
-        // } else {
-        //   $category_attributes = [];
-        // }
 
         $this->crud->addField([
           'name' => 'categories',
@@ -376,42 +486,20 @@ class ProductCrudController extends CrudController
           // 'attributes' => $category_attributes
         ]);
 
-        // PRICE
-        if(config('backpack.store.product.price.enable', true)) {
+
+        // BRAND
+        if(config('backpack.store.brands.enable')) {
           $this->crud->addField([
-            'name' => 'price',
-            'label' => 'Цена',
-            'type' => 'number',
-            'prefix' => config('backpack.store.currency.symbol'),
-            'wrapper'   => [ 
-              'class' => 'form-group col-md-6'
-            ],
-            'attributes' => [
-              'step' => 0.01,
-              'min' => 0
-            ],
-            'tab' => 'Основное'
+            'name' => 'brand',
+            'label' => 'Бренд',
+            'type' => 'select2',
+            'entity' => 'brand',
+            'attribute' => 'name',
+            'model' => 'Backpack\Store\app\Models\Brand',
+            'tab' => 'Основное',
           ]);
         }
 
-        // OLD PRICE
-        if(config('backpack.store.product.old_price.enable', true)) {
-          $this->crud->addField([
-            'name' => 'old_price',
-            'label' => 'Старая цена',
-            'type' => 'number',
-            'prefix' => config('backpack.store.currency.symbol'),
-            'wrapper'   => [ 
-              'class' => 'form-group col-md-6'
-            ],
-            'attributes' => [
-              'step' => 0.01,
-              'min' => 0
-            ],
-            'tab' => 'Основное'
-          ]);
-        }
-        
         // DESCRIPTION
         $this->crud->addField([
           'name' => 'content',
@@ -422,15 +510,6 @@ class ProductCrudController extends CrudController
           ],
           'tab' => 'Основное'
         ]);
-
-        // CODE
-        if(config('backpack.store.product.code.enable', true)) {
-          $this->crud->addField([
-            'name' => 'code',
-            'label' => 'Артикул',
-            'tab' => 'Основное'
-          ]);
-        }
         
 
         // MODIFICATIONS
@@ -616,13 +695,19 @@ class ProductCrudController extends CrudController
                     'label'   => 'Поставщик',
                     'options'     => $this->suppliers_list,
                     'allows_null' => false,
-                    'wrapper' => ['class' => 'form-group col-md-7'],
+                    'wrapper' => ['class' => 'form-group col-md-4'],
                 ],
                 [
                     'name'    => 'code',
                     'type'    => 'text',
                     'label'   => 'Артикул товара',
-                    'wrapper' => ['class' => 'form-group col-md-5'],
+                    'wrapper' => ['class' => 'form-group col-md-4'],
+                ],
+                [
+                    'name'    => 'barcode',
+                    'type'    => 'text',
+                    'label'   => 'Код/баркод',
+                    'wrapper' => ['class' => 'form-group col-md-4'],
                 ],
                 [
                     'name'    => 'in_stock',
@@ -669,16 +754,6 @@ class ProductCrudController extends CrudController
             'min_rows' => 2,
             'tab' => 'Склад',
           ]);
-
-        }else {
-          $this->crud->addField([
-            'name' => 'in_stock',
-            'label' => "Количество в наличии", 
-            'default' => 1,
-            'type' => 'number',
-            'tab' => 'Склад',
-            'hint' => 'Кол-во товара будет автоматически вычитаться при совершении заказов на сайте.'
-          ]);
         }
 
       $this->createOperation();
@@ -688,31 +763,7 @@ class ProductCrudController extends CrudController
     {
       $this->setupCreateOperation();
     }
-        
-    /**
-     * getAttributeValues
-     *
-     * @param  mixed $request
-     * @param  mixed $attribute_id
-     * @return void
-     */
-    public function getAttributeValues(Request $request, $attribute_id) {
-      $search_term = $request->input('q');
-
-      if ($search_term)
-      {
-          $results = AttributeValue::
-                        where('attribute_id', $attribute_id)
-                      ->where('value', 'LIKE', '%'.$search_term.'%')
-                      ->paginate(20);
-      }
-      else
-      {
-          $results = AttributeValue::where('attribute_id', $attribute_id)->paginate(20);
-      }
-
-      return $results;
-    }
+    
     /**
      * setAttributesFields
      * 
@@ -1028,5 +1079,33 @@ class ProductCrudController extends CrudController
     private function setLocale() {
       if(\Request::query('locale'))
         app()->setLocale(\Request::query('locale'));
+    }
+
+    
+    /**
+     * getProducts
+     *
+     * @param  mixed $request
+     * @return void
+     */
+    public function getProducts(Request $request) {
+      $search_term = $request->input('q');
+
+      if ($search_term)
+      {
+        $locale = \Lang::locale();
+
+        $results = $this->product_class::where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+          ->orWhere('code', 'LIKE', '%'.$search_term.'%')
+          ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
+          ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
+          ->paginate(20);
+      }
+      else
+      {
+          $results = $this->product_class::paginate(20);
+      }
+
+      return $results;
     }
 }

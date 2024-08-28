@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
+use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\CategoryRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
@@ -297,4 +298,36 @@ class CategoryCrudController extends CrudController
     {
       $this->setupCreateOperation();
     }
+
+
+    public function getCategories(Request $request) {
+      $search_term = $request->input('q');
+      $id = $request->input('keys');
+
+      if($id) {
+        $categories = [];
+        $category = $this->category_class::find($id);
+
+        if($category) {
+          $categories[] = $category;
+        }
+        return $categories;
+      }
+
+      if ($search_term)
+      {
+        $locale = \Lang::locale();
+
+        $results = $this->category_class::where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+          ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
+          ->paginate(20);
+      }
+      else
+      {
+        $results = $this->category_class::paginate(20);
+      }
+
+      return $results;
+    }
+
 }

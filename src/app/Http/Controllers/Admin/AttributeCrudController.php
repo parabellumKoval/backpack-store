@@ -2,7 +2,9 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin;
 
+use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\AttributeRequest;
+
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
@@ -411,5 +413,32 @@ class AttributeCrudController extends CrudController
       }else {
         $this->type = 'checkbox';
       }
+    }
+
+
+        
+    /**
+     * getAttributeValues
+     *
+     * @param  mixed $request
+     * @param  mixed $attribute_id
+     * @return void
+     */
+    public function getAttributeValues(Request $request, $attribute_id) {
+      $search_term = $request->input('q');
+
+      if ($search_term)
+      {
+          $results = AttributeValue::
+                        where('attribute_id', $attribute_id)
+                      ->where('value', 'LIKE', '%'.$search_term.'%')
+                      ->paginate(20);
+      }
+      else
+      {
+          $results = AttributeValue::where('attribute_id', $attribute_id)->paginate(20);
+      }
+
+      return $results;
     }
 }

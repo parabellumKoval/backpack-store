@@ -5,7 +5,7 @@ namespace Backpack\Store;
 use Backpack\Store\app\Providers\EventServiceProvider;
 // use Spatie\LaravelPackageTools\Package;
 // use Spatie\LaravelPackageTools\PackageServiceProvider;
-// use ParabellumKoval\Product\Commands\ProductCommand;
+use Backpack\Store\app\Console\Commands\XmlSource;
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
@@ -58,6 +58,13 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
        __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
     ], 'traits');
+
+
+    if ($this->app->runningInConsole()) {
+      $this->commands([
+        XmlSource::class,
+      ]);
+    }
   }
 
   public function register()

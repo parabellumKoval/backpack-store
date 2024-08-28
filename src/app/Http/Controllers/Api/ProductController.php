@@ -113,7 +113,9 @@ class ProductController extends \App\Http\Controllers\Controller
       // Getting only unique rows
       ->distinct('ak_products.id')
       // Getting only products that have not "parent_id" param
-      ->whereNull('ak_products.parent_id')
+      ->when(config('backpack.store.product.modifications.show_only_base_product_in_catalog', false), function($query) {
+        $query->whereNull('ak_products.parent_id');
+      })
       // Getting only products that "is_active" param set to true
       ->where('ak_products.is_active', 1)
       
@@ -247,9 +249,18 @@ class ProductController extends \App\Http\Controllers\Controller
         $products = $products->orderBy($order_by, $order_dir);
       }
     }else {
+      // at first in_stock > 0
+      if(config('backpack.store.supplier.enable', false)) {
+        $products = $products
+          ->leftJoin('ak_supplier_product as sp', 'ak_products.id', '=', 'sp.product_id')
+          ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) DESC', [0, 1, 0])
+          ->groupBy('ak_products.id');
+      }else {
+        $products = $products
+          ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0]);
+      }
+
       $products = $products
-        // at first in_stock > 0
-        ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
         // at first with images
         ->orderBy('images', 'desc')
         // new at first

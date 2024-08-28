@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Models\Admin;
 
+use Illuminate\Support\Facades\Request;
 use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 
@@ -15,6 +16,7 @@ class Product extends BaseProduct
     public $props = null;
     public $modificationsToSave = [];
     public $suppliers_data = null;
+    public $default_supplier = null;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -64,6 +66,11 @@ class Product extends BaseProduct
     |--------------------------------------------------------------------------
     */
     
+    /**
+     * getPropsAttribute
+     *
+     * @return void
+     */
     public function getPropsAttribute() {
       // $attributes = $this->attrs;
       // $props = [];
@@ -99,6 +106,7 @@ class Product extends BaseProduct
         $data_array[] = [
           'supplier' => $supplier->id,
           'code' => $supplier->pivot->code,
+          'barcode' => $supplier->pivot->barcode,
           'in_stock' => $supplier->pivot->in_stock,
           'price' => $supplier->pivot->price,
           'old_price' => $supplier->pivot->old_price,
@@ -110,6 +118,11 @@ class Product extends BaseProduct
 
       return $data_array;
     }
+
+    public function getDefaultSupplierAttribute() {
+      return $this->currentSp->toArray();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
@@ -160,6 +173,18 @@ class Product extends BaseProduct
      */
     public function setSuppliersDataAttribute($value) {
       $this->suppliers_data = json_decode($value, true);
+    }
+
+
+    
+    /**
+     * setSupplierAttribute
+     *
+     * @param  mixed $value
+     * @return void
+     */
+    public function setDefaultSupplierVirtualAttribute($value) {
+      $this->default_supplier = Request::input('defaultSupplier', []);
     }
 }
 
