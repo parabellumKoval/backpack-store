@@ -15,7 +15,7 @@ class CreateAkSupplierProductTable extends Migration
     {
         Schema::create('ak_supplier_product', function (Blueprint $table) {
           $table->id();
-          $table->foreignId('supplier_id');
+          $table->foreignId('supplier_id')->nullable();
           $table->foreignId('product_id');
           $table->integer('in_stock')->default(1);
           // Articul
