@@ -13,6 +13,9 @@ class CreateForeignKeys extends Migration
      */
     public function up()
     {
+      Schema::disableForeignKeyConstraints();
+
+
       // PRODUCTS
       // Schema::table('ak_products', function(Blueprint $table) {
       //   $table->foreign('parent_id')->references('id')->on('ak_products')
@@ -184,6 +187,8 @@ class CreateForeignKeys extends Migration
               ->on('ak_brands')
               ->onDelete('cascade');
       });
+
+      Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -193,6 +198,8 @@ class CreateForeignKeys extends Migration
      */
     public function down()
     {
+      Schema::disableForeignKeyConstraints();
+      
       Schema::table('ak_category_product', function(Blueprint $table) {
         $table->dropForeign(['category_id']);
         $table->dropForeign(['product_id']);
@@ -242,5 +249,7 @@ class CreateForeignKeys extends Migration
         $table->dropForeign(['source_id']);
         $table->dropForeign(['brand_id']);
       });
+
+      Schema::enableForeignKeyConstraints();
     }
 }
