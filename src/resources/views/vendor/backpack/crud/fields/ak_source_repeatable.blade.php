@@ -1,4 +1,4 @@
-{{-- REPEATABLE FIELD TYPE --}}
+{{-- AK_REPEATABLE FIELD TYPE --}}
 
 @php
   $field['value'] = old($field['name']) ? old($field['name']) : (isset($field['value']) ? $field['value'] : (isset($field['default']) ? $field['default'] : '' ));
@@ -16,7 +16,7 @@
   <input
       type="hidden"
       name="{{ $field['name'] }}"
-      data-init-function="bpFieldInitRepeatableElement"
+      data-init-function="bpFieldInitAkSourceRepeatableElement"
       value="{{ $field['value'] }}"
       @include('crud::fields.inc.attributes')
   >
@@ -152,7 +152,7 @@
         /**
          * The method that initializes the javascript on this field type.
          */
-        function bpFieldInitRepeatableElement(element) {
+        function bpFieldInitAkSourceRepeatableElement(element) {
 
             var field_name = element.attr('name');
 
@@ -215,7 +215,6 @@
                 })
             }
 
-            console.log(element.val());
             setVisibilityOnElements(element.val())
         }
 
@@ -245,9 +244,11 @@
             wrapper = el.querySelector('[data-target=max-price]');
             wrapper2 = el.querySelector('[data-target=min-price]');
           }else if(target === 'inStock') {
-            wrapper = el.querySelector('[data-target=code-list]');
+            wrapper = el.querySelector('[data-target=in-stock]');
           }else if(target === 'name') {
             wrapper = el.querySelector('[data-target=name-list]');
+          }else if(target === 'category') {
+            wrapper = el.querySelector('[data-target=category-list]');
           }
 
           if(wrapper) {
