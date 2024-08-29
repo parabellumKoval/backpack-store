@@ -354,13 +354,13 @@ class Product extends Model
      *
      * @return void
      */
-    // public function getCodeAttribute() {
-    //   $sp = $this->currentSp;
+    public function getSpCodeAttribute() {
+      $sp = $this->currentSp;
 
-    //   if($sp) {
-    //     return $sp->code;
-    //   }
-    // }
+      if($sp) {
+        return $sp->code;
+      }
+    }
 
     /**
      * getPriceAttribute

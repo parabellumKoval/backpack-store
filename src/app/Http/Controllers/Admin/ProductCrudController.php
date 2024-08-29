@@ -35,6 +35,7 @@ class ProductCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\InlineCreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
     
 
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
@@ -211,23 +212,15 @@ class ProductCrudController extends CrudController
             1 => '🟢 В наличие',
           ];
         }, function($in_stock){
-          if(config('backpack.store.supplier.enable', false)) {
-            if($in_stock == 0) {
-              $this->crud->query->has('suppliers', '=', 0);
-              $this->crud->query->orWhereHas('suppliers', function ($query) {
-                $query->where('in_stock', '>', 0);
-              }, '=', 0);
-            }else {
-              $this->crud->query->whereHas('suppliers', function ($query) {
-                $query->where('in_stock', '>', 0);
-              });
-            }
+          if($in_stock == 0) {
+            $this->crud->query->has('suppliers', '=', 0);
+            $this->crud->query->orWhereHas('suppliers', function ($query) {
+              $query->where('in_stock', '>', 0);
+            }, '=', 0);
           }else {
-            if($in_stock == 0) {
-              $this->crud->query->where('in_stock', 0);
-            }else {
-              $this->crud->query->where('in_stock', '>', 0);
-            }
+            $this->crud->query->whereHas('suppliers', function ($query) {
+              $query->where('in_stock', '>', 0);
+            });
           }
         });
 
@@ -240,10 +233,14 @@ class ProductCrudController extends CrudController
           $range = json_decode($value);
           
           if ($range->from) {
-            $this->crud->addClause('where', 'price', '>=', (float) $range->from);
+            $this->crud->addClause('whereHas', 'sp', function($query) use ($range) {
+              $query->where('in_stock', '>', 0)->where('price', '>=', $range->from);
+            });
           }
           if ($range->to) {
-            $this->crud->addClause('where', 'price', '<=', (float) $range->to);
+            $this->crud->addClause('whereHas', 'sp', function($query) use ($range) {
+              $query->where('in_stock', '>', 0)->where('price', '<=', $range->to);
+            });
           }
         });
 
@@ -267,10 +264,17 @@ class ProductCrudController extends CrudController
         }
         
         $this->crud->addColumn([
-          'name' => 'code',
+          'name' => 'spCode',
           'label' => '<span title="Артикул товара или баркод">#️⃣</span>',
           'searchLogic' => true,
           'priority' => 1,
+          'searchLogic' => function ($query, $column, $searchTerm) {
+            $query
+            ->whereHas('sp', function($query) use($searchTerm) {
+              $query->where('code', 'LIKE', '%'.$searchTerm.'%')->orWhere('barcode', 'LIKE', '%'.$searchTerm.'%');
+            })
+            ->orWhere('code', 'LIKE', '%'.$searchTerm.'%');
+          },
         ]);
 
         $this->crud->addColumn([
@@ -1095,8 +1099,12 @@ class ProductCrudController extends CrudController
       {
         $locale = \Lang::locale();
 
-        $results = $this->product_class::where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+        $results = $this->product_class::
+            where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
           ->orWhere('code', 'LIKE', '%'.$search_term.'%')
+          ->orWhereHas('sp', function($query) use($search_term) {
+            $query->where('code', 'LIKE', '%'.$search_term.'%')->orWhere('barcode', 'LIKE', '%'.$search_term.'%');
+          })
           ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
           ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
           ->paginate(20);
