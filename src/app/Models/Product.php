@@ -367,13 +367,13 @@ class Product extends Model
      *
      * @return void
      */
-    public function getPriceAttribute() {
-      $sp = $this->currentSp;
+    // public function getPriceAttribute() {
+    //   $sp = $this->currentSp;
 
-      if($sp) {
-        return $sp->price;
-      }
-    }
+    //   if($sp) {
+    //     return $sp->price;
+    //   }
+    // }
 
     /**
      * getCategoryAttribute

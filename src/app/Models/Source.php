@@ -110,7 +110,6 @@ class Source extends Model
       return $this->belongsToMany($this->category_class, 'ak_category_source')->withPivot('name');
     }
 
-
     /**
      * brands
      *
@@ -131,7 +130,6 @@ class Source extends Model
     {
       return $this->hasMany(CategorySource::class);
     }
-    
 
     /**
      * BrandSource
@@ -142,6 +140,7 @@ class Source extends Model
     {
       return $this->hasMany(BrandSource::class);
     }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES

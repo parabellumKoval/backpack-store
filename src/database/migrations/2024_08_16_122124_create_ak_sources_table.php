@@ -24,7 +24,7 @@ class CreateAkSourcesTable extends Migration
           $table->enum('type', ['xml_link'])->default('xml_link');
           // Common overprice
           $table->double('overprice', 8, 2)->default(1);
-          $table->json('settigns')->nullable();
+          $table->json('settings')->nullable();
           $table->json('rules')->nullable();
           $table->timestamp('last_loading')->nullable();
           $table->integer('every_minutes')->default(60);
