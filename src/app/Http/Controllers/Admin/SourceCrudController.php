@@ -28,7 +28,7 @@ class SourceCrudController extends CrudController
 
     public function setup()
     {
-      $this->brand_class = config('backpack.store.source.class', 'Backpack\Store\app\Models\Source');
+      $this->brand_class = config('backpack.store.source.admin_class', 'Backpack\Store\app\Models\Admin\Source');
 
       $this->crud->setModel($this->brand_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/source');

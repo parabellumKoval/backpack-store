@@ -261,6 +261,7 @@ return [
     'source' => [
       'enable' => true,
       'class' => 'Backpack\Store\app\Models\Source',
+      'admin_class' => 'Backpack\Store\app\Models\Admin\Source',
       'upload_class' => 'Backpack\Store\app\Models\UploadHistory',
     ]
 ];
