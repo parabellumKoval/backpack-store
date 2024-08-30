@@ -269,21 +269,37 @@ class XmlSource extends Command
     private function updateOrCreateProduct($data) {
       $update_or_create = 'update';
 
-      $product = Product::
-                  when(!empty($data['code']), function($query) use($data) {
-                    $query->where('code', $data['code']);
-                  })
-                  ->when(!empty($data['barcode']), function($query) use($data) {
-                    if(!empty($data['code'])) {
-                      $function_name = 'orWhere';
-                    }else {
-                      $function_name = 'where';
-                    }
+      $product = Product::where('id', '>', 0);
 
-                    $query->{$function_name}('barcode', $data['barcode']);
-                  })
-                ->orWhereRaw("LOWER(`name->{$this->lang}`) LIKE ? ",[trim(strtolower($data['name'])).'%'])
-                ->first();
+      $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
+
+      if(!empty($data['code'])) {
+        $product = $product->where('code', $data['code'])
+            ->orWhere('barcode', $data['code']);
+      }
+      if(!empty($data['barcode'])) {
+        $product = $product->{$function_name}('code', $data['barcode'])
+            ->orWhere('barcode', $data['barcode']);
+      }
+
+      $product = $product
+                  ->orWhereRaw("LOWER(`name->{$this->lang}`) LIKE ? ",[trim(strtolower($data['name'])).'%'])
+                  ->first();
+
+                  // when(!empty($data['code']), function($query) use($data) {
+                  //   $query->where('code', $data['code']);
+                  // })
+                  // ->when(!empty($data['barcode']), function($query) use($data) {
+                  //   if(!empty($data['code'])) {
+                  //     $function_name = 'orWhere';
+                  //   }else {
+                  //     $function_name = 'where';
+                  //   }
+
+                  //   $query->{$function_name}('barcode', $data['barcode']);
+                  // })
+                // ->orWhereRaw("LOWER(`name->{$this->lang}`) LIKE ? ",[trim(strtolower($data['name'])).'%'])
+                // ->first();
 
       if(!$product) {
         $update_or_create = 'create';
@@ -312,22 +328,38 @@ class XmlSource extends Command
     private function updateOrCreateSupplierProduct($data) {
       $update_or_create = 'update';
 
-      $sp = SupplierProduct::
-              where('supplier_id', $this->currentSource->supplier_id)
-            ->when(!empty($data['code']), function($query) use($data) {
-              $query->where('code', $data['code']);
-            })
-            ->when(!empty($data['barcode']), function($query) use($data) {
-              if(!empty($data['code'])) {
-                $function_name = 'orWhere';
-              }else {
-                $function_name = 'where';
-              }
+      // $sp = SupplierProduct::
+      //         where('supplier_id', $this->currentSource->supplier_id)
+      //       ->when(!empty($data['code']), function($query) use($data) {
+      //         $query->where('code', $data['code']);
+      //       })
+      //       ->when(!empty($data['barcode']), function($query) use($data) {
+      //         if(!empty($data['code'])) {
+      //           $function_name = 'orWhere';
+      //         }else {
+      //           $function_name = 'where';
+      //         }
 
-              $query->{$function_name}('barcode', $data['barcode']);
-            })
-            ->first();
+      //         $query->{$function_name}('barcode', $data['barcode']);
+      //       })
+      //       ->first();
       
+      $sp = SupplierProduct::
+              where('supplier_id', $this->currentSource->supplier_id);
+
+      $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
+
+      if(!empty($data['code'])) {
+        $sp = $sp->where('code', $data['code'])
+            ->orWhere('barcode', $data['code']);
+      }
+      if(!empty($data['barcode'])) {
+        $sp = $sp->{$function_name}('code', $data['barcode'])
+            ->orWhere('barcode', $data['barcode']);
+      }
+
+      $sp = $sp->first();
+
       if(!$sp) {
         $update_or_create = 'create';
 
