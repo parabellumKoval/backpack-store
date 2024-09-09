@@ -118,7 +118,12 @@ class Product extends BaseProduct
 
       return $data_array;
     }
-
+    
+    /**
+     * getDefaultSupplierAttribute
+     *
+     * @return void
+     */
     public function getDefaultSupplierAttribute() {
       return $this->currentSp->toArray();
     }
@@ -128,7 +133,13 @@ class Product extends BaseProduct
     | MUTATORS
     |--------------------------------------------------------------------------
     */
-
+    
+    /**
+     * setPropsAttribute
+     *
+     * @param  mixed $attributes
+     * @return void
+     */
     public function setPropsAttribute($attributes) {
       //$this->attrs()->detach();
       if(!$attributes)
@@ -164,7 +175,6 @@ class Product extends BaseProduct
       $this->modificationsToSave = $value;
     }
 
-    
     /**
      * setSuppliersAttribute
      *
@@ -174,8 +184,6 @@ class Product extends BaseProduct
     public function setSuppliersDataAttribute($value) {
       $this->suppliers_data = json_decode($value, true);
     }
-
-
     
     /**
      * setSupplierAttribute

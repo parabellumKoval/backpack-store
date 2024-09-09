@@ -350,30 +350,20 @@ class Product extends Model
     
         
     /**
-     * getCodeAttribute
+     * getSimpleCodeAttribute
      *
      * @return void
      */
-    public function getSpCodeAttribute() {
+    public function getSimpleCodeAttribute() {
+      if($this->code)
+        return $this->code;
+
       $sp = $this->currentSp;
 
       if($sp) {
-        return $sp->code;
+        return $sp->code || $sp->barcode;
       }
     }
-
-    /**
-     * getPriceAttribute
-     *
-     * @return void
-     */
-    // public function getPriceAttribute() {
-    //   $sp = $this->currentSp;
-
-    //   if($sp) {
-    //     return $sp->price;
-    //   }
-    // }
 
     /**
      * getCategoryAttribute
@@ -387,7 +377,12 @@ class Product extends Model
       return $this->categories[0] ?? null;
     }
 
-    
+        
+    /**
+     * getCategoryOrParentCategory
+     *
+     * @return void
+     */
     public function getCategoryOrParentCategory() {
       if(!$this->category && $this->parent) {
         return $this->parent->category;
@@ -523,11 +518,21 @@ class Product extends Model
         'meta_description' => $this->seoDecoded->meta_description ?? null,
       ];
     }
-
+    
+    /**
+     * getSeoDecodedAttribute
+     *
+     * @return void
+     */
     public function getSeoDecodedAttribute() {
       return !empty($this->seo)? json_decode($this->seo): null;
     }
-
+    
+    /**
+     * getExtrasTransDecodedAttribute
+     *
+     * @return void
+     */
     public function getExtrasTransDecodedAttribute() {
       return !empty($this->extras_trans)? json_decode($this->extras_trans): null;
     }
@@ -673,9 +678,9 @@ class Product extends Model
       }
     }
 
-    
+        
     /**
-     * getSimpleInStockAttribute
+     * getSimplePriceAttribute
      *
      * @return void
      */
@@ -686,26 +691,20 @@ class Product extends Model
         return $this->price;
       }
     }
-
+    
     /**
-     * getRatingDetailedAttribute
+     * getSimpleOldPriceAttribute
      *
      * @return void
      */
-    // public function getReviewsRatingDetailesAttribute() {
-    //   return [
-    //     'reviews_count' => 0,
-    //     'rating_count' => 0,
-    //     'rating' => 0,
-    //     'rating_detailes' => [
-    //       'rating_5' => 0,
-    //       'rating_4' => 0,
-    //       'rating_3' => 0,
-    //       'rating_2' => 0,
-    //       'rating_1' => 0
-    //     ],
-    //   ];
-    // }
+    public function getSimpleOldPriceAttribute() {
+      if(config('backpack.store.supplier.enable', false)) {
+        return $this->currentSp->old_price ?? 0;
+      }else {
+        return $this->old_price;
+      }
+    }
+    
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

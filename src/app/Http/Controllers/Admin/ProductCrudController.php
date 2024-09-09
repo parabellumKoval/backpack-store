@@ -264,7 +264,7 @@ class ProductCrudController extends CrudController
         }
         
         $this->crud->addColumn([
-          'name' => 'spCode',
+          'name' => 'simpleCode',
           'label' => '<span title="Артикул товара или баркод">#️⃣</span>',
           'searchLogic' => true,
           'priority' => 1,
@@ -382,6 +382,7 @@ class ProductCrudController extends CrudController
             'wrapper'   => [ 
               'class' => 'form-group col-md-6'
             ],
+            'hint' => 'Заполните если хотите чтобы у товара был фиксированный артикул, иначе будут выводиться артикулы от поставщиков.',
             'tab' => 'Основное'
           ]);
         }
