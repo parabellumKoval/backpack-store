@@ -16,10 +16,10 @@ class ProductCartResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'code' => $this->code,
+        'code' => $this->simpleCode,
         'short_name' => $this->short_name,
-        'price' => $this->price,
-        'old_price' => $this->old_price,
+        'price' => $this->simplePrice,
+        'old_price' => $this->simpleOldPrice,
         'image' => $this->image,
         'amount' => $this->amount
       ];
