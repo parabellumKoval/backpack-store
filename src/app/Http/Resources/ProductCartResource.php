@@ -24,8 +24,4 @@ class ProductCartResource extends BaseResource
         'amount' => $this->amount
       ];
     }
-
-    // public static function collection(mixed $resource){
-    //   return $this->collection;
-    // }
 }

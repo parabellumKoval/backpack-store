@@ -150,19 +150,6 @@ class CreateForeignKeys extends Migration
 
 
       //
-      Schema::table('ak_supplier_source', function(Blueprint $table) {
-        $table->foreign('source_id')
-              ->references('id')
-              ->on('ak_sources')
-              ->onDelete('cascade');
-        
-        $table->foreign('supplier_id')
-              ->references('id')
-              ->on('ak_suppliers')
-              ->onDelete('cascade');
-      });
-
-      //
       Schema::table('ak_category_source', function(Blueprint $table) {
         $table->foreign('source_id')
               ->references('id')
@@ -232,11 +219,6 @@ class CreateForeignKeys extends Migration
 
       Schema::table('ak_supplier_product', function(Blueprint $table) {
         $table->dropForeign(['product_id']);
-        $table->dropForeign(['supplier_id']);
-      });
-
-      Schema::table('ak_supplier_source', function(Blueprint $table) {
-        $table->dropForeign(['source_id']);
         $table->dropForeign(['supplier_id']);
       });
 
