@@ -69,13 +69,6 @@ class XmlSource extends Command
      */
     public function handle()
     {
-      // $res = $this->searchInArray('sale_ggg', [
-      //   // '^sale_',
-      //   // '%_g%',
-      //   'sale_ggg'
-      // ]);
-
-      // dd($res);
       $sources = Source::active()->get();
 
       $bar = $this->output->createProgressBar(count($sources));
@@ -85,9 +78,9 @@ class XmlSource extends Command
       	$bar->advance();
 
         // skip if it's not time yet
-        // if($source->last_loading && $source->every_minutes && \Carbon\Carbon::now()->diffInMinutes($source->last_loading->addMinute($source->every_minutes), false) > 0) {
-        //   continue;
-        // }
+        if($source->last_loading && $source->every_minutes && \Carbon\Carbon::now()->diffInMinutes($source->last_loading->addMinute($source->every_minutes), false) > 0) {
+          continue;
+        }
 
         // update loading timestamp
         $source->last_loading = \Carbon\Carbon::now();
@@ -98,7 +91,6 @@ class XmlSource extends Command
         }catch (\Exception $e) {
           $this->setStatusUploadHistory('error');
         }
-        // uploadFromXmlSource::dispatch($source)->onQueue('xml-source');
       }
 
 			$bar->finish();
@@ -122,8 +114,6 @@ class XmlSource extends Command
       $item = array_reduce(explode('->', $this->settings['item']), function($model, $property) {
         return $model->{$property};
       }, $xml);
-
-      // dd(count($item));
 
       $this->totalRecords = count($item);
       
