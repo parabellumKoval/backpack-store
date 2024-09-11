@@ -138,6 +138,7 @@ class XmlSource extends Command
             $this->updateUploadHistory($response);
           }catch(\Exception $e) {
             $this->errorUploadHistory();
+				    \Log::channel('xml')->error($e->getMessage());
             // throw new \Exception $e;
           }
         }else {
@@ -337,16 +338,25 @@ class XmlSource extends Command
       $sp = SupplierProduct::
               where('supplier_id', $this->currentSource->supplier_id);
 
-      $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
 
-      if(!empty($data['code'])) {
-        $sp = $sp->where('code', $data['code'])
-            ->orWhere('barcode', $data['code']);
-      }
-      if(!empty($data['barcode'])) {
-        $sp = $sp->{$function_name}('code', $data['barcode'])
-            ->orWhere('barcode', $data['barcode']);
-      }
+      $sp = $sp->where(function($query) use($data) {
+        $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
+
+        if(!empty($data['code'])) {
+          $query->where(function($query) use($data) {
+            $query->where('code', $data['code'])
+                  ->orWhere('barcode', $data['code']);
+          });
+        }
+
+        if(!empty($data['barcode'])) {
+          $query->{$function_name}(function($query) use($data) {
+                  $query->where('code', $data['barcode'])
+                        ->orWhere('barcode', $data['barcode']);
+          }); 
+        }
+
+      });
 
       $sp = $sp->first();
 
@@ -481,8 +491,11 @@ class XmlSource extends Command
 
       // Try find brand by name in database
       $brand = Brand::
-        whereRaw('LOWER(JSON_EXTRACT(name, "$.ru")) like ?', ['"' . trim(strtolower($data['brand'])) . '"'])
-      ->first();
+          // !!!!!!!! CHANGE THIS !!!!!!!!!
+          whereRaw("LOWER(`name->ru`) LIKE ? ",[trim(strtolower($data['brand']))])
+        ->orWhereRaw("LOWER(`name->uk`) LIKE ? ",[trim(strtolower($data['brand']))])
+        // whereRaw('LOWER(JSON_EXTRACT(name, "$.ru")) like ?', ['"' . trim(strtolower($data['brand'])) . '"'])
+        ->first();
       
       if($brand) {
         $product->brand_id = $brand->id;
