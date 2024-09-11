@@ -49,6 +49,7 @@ class XmlSource extends Command
     protected $uploadHistory = null;
 
     protected $lang = 'en';
+    protected $available_languages;
     protected $exchange_rate = 1;
 
     /**
@@ -489,13 +490,18 @@ class XmlSource extends Command
         return;
       }
 
+      $langs_list = array_keys($this->available_languages);
       // Try find brand by name in database
       $brand = Brand::
-          // !!!!!!!! CHANGE THIS !!!!!!!!!
-          whereRaw("LOWER(`name->ru`) LIKE ? ",[trim(strtolower($data['brand']))])
-        ->orWhereRaw("LOWER(`name->uk`) LIKE ? ",[trim(strtolower($data['brand']))])
+          where(function($query) use ($data, $langs_list){
+            foreach($langs_list as $index => $lang_key) {
+              $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+              $query->{$function_name}("LOWER(`name->{$lang_key}`) LIKE ? ",[trim(strtolower($data['brand']))]);
+            }
+          })
+        // ->orWhereRaw("LOWER(`name->uk`) LIKE ? ",[trim(strtolower($data['brand']))])
         // whereRaw('LOWER(JSON_EXTRACT(name, "$.ru")) like ?', ['"' . trim(strtolower($data['brand'])) . '"'])
-        ->first();
+          ->first();
       
       if($brand) {
         $product->brand_id = $brand->id;
@@ -623,6 +629,7 @@ class XmlSource extends Command
       $this->settings = $source->settings;
 
       $this->lang = $this->settings['language'] ?? 'en';
+      $this->available_languages = config('backpack.crud.locales');
 
       // Fill rules
       $rules = [];
