@@ -496,7 +496,8 @@ class XmlSource extends Command
           where(function($query) use ($data, $langs_list){
             foreach($langs_list as $index => $lang_key) {
               $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
-              $query->{$function_name}("LOWER(`name->{$lang_key}`) LIKE ? ",[trim(strtolower($data['brand']))]);
+              // $query->{$function_name}("LOWER(`name->{$lang_key}`) LIKE ? ",[trim(strtolower($data['brand']))]);
+              $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ',['"' . trim(strtolower($data['brand'])) . '"']);
             }
           })
         // ->orWhereRaw("LOWER(`name->uk`) LIKE ? ",[trim(strtolower($data['brand']))])
