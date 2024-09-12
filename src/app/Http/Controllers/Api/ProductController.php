@@ -627,7 +627,7 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return string JSON
    */
   public function show(Request $request, $slug) {
-    $product = $this->product_class::where('slug', $slug)->firstOrFail();
+    $product = $this->product_class::where('slug', $slug)->where('is_active', 1)->firstOrFail();
     $product_resource = new self::$resources['product']['large']($product);
     return response()->json($product_resource);
   }
