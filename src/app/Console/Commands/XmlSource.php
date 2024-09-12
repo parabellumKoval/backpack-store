@@ -6,6 +6,8 @@ namespace Backpack\Store\app\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 
+use \Cviebrock\EloquentSluggable\Services\SlugService;
+
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Supplier;
@@ -604,6 +606,7 @@ class XmlSource extends Command
      */
     private function setProductName(&$product, $data) {
       $product->setTranslation('name', $this->lang, $data['name']);
+      $product->slug = SlugService::createSlug(Product::class, 'slug', $data['name']);
     }
 
 
