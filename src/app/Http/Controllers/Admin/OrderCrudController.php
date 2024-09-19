@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Mail;
 
 use app\Models\User;
 
+use Backpack\Store\app\Events\OrderUpdating;
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 
@@ -51,6 +52,11 @@ class OrderCrudController extends CrudController
     $this->current_status = \Request::input('status')? \Request::input('status') : null;
 
     $this->setStatusOptions();
+
+
+    // $this->ORDER_MODEL::updating(function($entry) {
+    //   OrderUpdating::dispatch($entry);
+    // });
 
     $this->ORDER_MODEL::created(function($entry) {
 

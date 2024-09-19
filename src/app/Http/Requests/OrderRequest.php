@@ -7,6 +7,9 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class OrderRequest extends FormRequest
 {
+
+    private $PRODUCT_MODEL = '';
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -25,32 +28,43 @@ class OrderRequest extends FormRequest
      */
     public function rules()
     {
-        $this->redirect = url()->previous();
-        // dd(session()->all());
-        session()->flash('inputs', $this->input());
+      $this->redirect = url()->previous();
 
-        $array = [
-            'firstname' => 'required_if:register,1|nullable|min:2|max:255',
-            'telephone' => 'nullable|min:5|max:20',
-            'email' => 'nullable|email|min:5|max:255',
-            'comment' => 'nullable|max:3000',
-            'productsRelated' => [
-              function ($attribute, $value, $fail) {
-                $decoded_value = json_decode($value);
-                if (!$decoded_value || !count($decoded_value)) {
-                    $fail('The '.$attribute.' is empty.');
+      $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+
+      // dd(session()->all());
+      session()->flash('inputs', $this->input());
+
+      $array = [
+          'firstname' => 'required_if:register,1|nullable|min:2|max:255',
+          'telephone' => 'nullable|min:5|max:20',
+          'email' => 'nullable|email|min:5|max:255',
+          'comment' => 'nullable|max:3000',
+          'productsRelated' => [
+            function ($attribute, $value, $fail) {
+              $decoded_value = json_decode($value);
+              if (!$decoded_value || !count($decoded_value)) {
+                  $fail('The '.$attribute.' is empty.');
+              }
+
+              foreach($decoded_value as $data) {
+                $product = $this->PRODUCT_MODEL::find($data->id);
+
+                if($product->in_stock < $data->amount) {
+                  $fail($product->name . ' максимально допустимое кол-во для заказа: ' . $product->in_stock . 'шт.');
                 }
               }
-            ]
-        ];
-        
-        if($this->input('register')) {
-          $array['email'] = 'required|email|unique:users,email|min:5|max:255';
-          $array['password'] = 'required|confirmed|min:5|max:255';
-          $this->redirect = $this->redirect . '#register';
-        }
-        
-        return $array;
+            }
+          ]
+      ];
+      
+      if($this->input('register')) {
+        $array['email'] = 'required|email|unique:users,email|min:5|max:255';
+        $array['password'] = 'required|confirmed|min:5|max:255';
+        $this->redirect = $this->redirect . '#register';
+      }
+      
+      return $array;
     }
 
     /**

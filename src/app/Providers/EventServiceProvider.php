@@ -13,6 +13,9 @@ use Backpack\Store\app\Listeners\ProductAttachedToOrderListener;
 use Backpack\Store\app\Events\PromocodeApplied;
 use Backpack\Store\app\Listeners\PromocodeAppliedListener;
 
+use \Backpack\Store\app\Models\Order;
+use \Backpack\Store\app\Observers\OrderObserver;
+
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
@@ -34,6 +37,11 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+
+        $order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order');
+        $order_model::observe(OrderObserver::class);
+
+
         parent::boot();
     }
 }

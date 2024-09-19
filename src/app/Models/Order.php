@@ -342,6 +342,20 @@ class Order extends Model
       }
     }
     
+        
+    /**
+     * getProductsInfoAttribute
+     *
+     * @return void
+     */
+    public function getProductsInfoAttribute() {
+      if(isset($this->info['products']) && $this->info['products'] && count($this->info['products'])) {
+        return $this->info['products'];
+      }else {
+        return [];
+      }
+    }
+
     
     /**
      * getPromocodeAttribute

@@ -472,9 +472,9 @@ class ProductCrudController extends CrudController
               [
                 'type' => 'number',
                 'attributes' => [
-                  'min' => $values->min,
-                  'max' => $values->max,
-                  'step' => $values->step,
+                  'min' => $values->min ?? 0,
+                  'max' => $values->max ?? 1000000000,
+                  'step' => $values->step ?? null,
                 ],
                 'value' => $value,
               ]

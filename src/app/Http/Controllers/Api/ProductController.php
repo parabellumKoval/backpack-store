@@ -166,7 +166,6 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function getByIds(Request $request){
-    
     if(empty($request->ids))
       return response()->json(['products' => []]);
       
