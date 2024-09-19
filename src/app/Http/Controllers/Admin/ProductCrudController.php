@@ -439,7 +439,6 @@ class ProductCrudController extends CrudController
           if($attribute->type === 'checkbox')
           {
             $value = json_decode($value);
-            dd($value);
 
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
@@ -456,7 +455,6 @@ class ProductCrudController extends CrudController
           else if($attribute->type === 'radio')
           {
             $value = json_decode($value);
-            dd($value);
 
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
