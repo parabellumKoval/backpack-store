@@ -438,6 +438,7 @@ class ProductCrudController extends CrudController
           // For checkbox
           if($attribute->type === 'checkbox')
           {
+            // dd($value);
             $value = json_decode($value);
 
             $attr_fields[$index] = array_merge(
@@ -454,6 +455,8 @@ class ProductCrudController extends CrudController
           // For radio
           else if($attribute->type === 'radio')
           {
+            $value = json_decode($value);
+            
             $attr_fields[$index] = array_merge(
               $attr_fields[$index],
               [
@@ -544,7 +547,12 @@ class ProductCrudController extends CrudController
         }
       }
     }
-
+    
+    /**
+     * setCategories
+     *
+     * @return void
+     */
     private function setCategories()
     {
       if(!in_array($this->opr, ['create', 'update']))
