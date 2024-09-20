@@ -38,6 +38,6 @@ Route::prefix('api/orders')->controller(OrderController::class)->group(function 
   Route::post('', 'create')->middleware('api');
 
   // Validate order without creation
-  Route::post('/validate', 'validateData')->middleware('api');
+  Route::post('/validate', 'validate')->middleware('api');
 
 });

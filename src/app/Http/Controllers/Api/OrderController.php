@@ -198,6 +198,17 @@ class OrderController extends \App\Http\Controllers\Controller
     }
   }
 
+  public function validate() {
+    try {
+      // Get only allowed fields
+      $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
+    }catch(OrderException $e) {
+      return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
+    }
+
+    return true;
+  }
+
   /**
    * create
    * 
