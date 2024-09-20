@@ -168,7 +168,33 @@ class OrderController extends \App\Http\Controllers\Controller
 
     return $data;
   }
-  
+    
+  /**
+   * validateProductsInStock
+   *
+   * @param  mixed $data
+   * @return void
+   */
+  private function validateProductsInStock($data) {
+    if(empty($data['products'])){
+      throw new OrderException('Order Validation Error', 403, null, [
+        'products' => 'В заказе должен быть хотя бы один товар'
+      ]);
+    }
+
+    $errors = ['products' => []];
+    foreach($data['products'] as $id => $amount) {
+      $in_stock = Product::findOrFail($id)->in_stock;
+      if($in_stock < $amount) {
+        $errors['products'][$id] = 'Максимальное кол-во для заказа: ' . $in_stock . 'шт.';
+      }
+    }
+
+    if(!empty($errors['products'])) {
+      throw new OrderException('Order Validation Error', 403, null, $errors);
+    }
+  }
+
   /**
    * create
    * 
@@ -182,6 +208,8 @@ class OrderController extends \App\Http\Controllers\Controller
     try {
       // Get only allowed fields
       $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
+      
+      $this->validateProductsInStock($data);
       
       // Create new empty Order 
       $order = new $this->ORDER_MODEL;
