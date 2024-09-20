@@ -198,7 +198,7 @@ class OrderController extends \App\Http\Controllers\Controller
     }
   }
 
-  public function validate(Request $request) {
+  public function validateRequest(Request $request) {
     try {
       // Get only allowed fields
       $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
