@@ -152,6 +152,9 @@ class OrderController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function validateData($data) {
+  
+    $this->validateProductsInStock($data);
+
     // Apply validation rules to data
     $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
 
@@ -208,8 +211,6 @@ class OrderController extends \App\Http\Controllers\Controller
     try {
       // Get only allowed fields
       $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
-      
-      $this->validateProductsInStock($data);
       
       // Create new empty Order 
       $order = new $this->ORDER_MODEL;
