@@ -152,8 +152,6 @@ class OrderController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function validateData($data) {
-  
-    $this->validateProductsInStock($data);
 
     // Apply validation rules to data
     $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
@@ -200,10 +198,18 @@ class OrderController extends \App\Http\Controllers\Controller
 
   public function validateRequest(Request $request) {
     try {
+      $request_data = $request->only($this->ORDER_MODEL::getFieldKeys());
+
+      $this->validateProductsInStock($request_data);
+      
       // Get only allowed fields
-      $data = $this->validateData($request->only($this->ORDER_MODEL::getFieldKeys()));
+      $this->validateData($request_data);
+
     }catch(OrderException $e) {
-      return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
+      return response()->json([
+        'message' => $e->getMessage(),
+        'options' => $e->getOptions()
+      ], $e->getCode());
     }
 
     return true;
@@ -263,7 +269,10 @@ class OrderController extends \App\Http\Controllers\Controller
       }
 
     }catch(OrderException $e) {
-      return response()->json($e->getMessage(), $e->getCode(), $e->getOptions());
+      return response()->json([
+        'message' => $e->getMessage(),
+        'options' => $e->getOptions()
+      ], $e->getCode());
     }
 
     return response()->json(new $this->ORDER_LARGE_RESOURCE($order));
