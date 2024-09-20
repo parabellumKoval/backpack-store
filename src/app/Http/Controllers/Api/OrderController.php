@@ -152,18 +152,27 @@ class OrderController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function validateData($data) {
+    $errors_array = [];
+
+    // Validate products amount
+    $product_errors = $this->validateProductsInStock($data);
 
     // Apply validation rules to data
     $validator = Validator::make($data, $this->ORDER_MODEL::getRules());
 
     if ($validator->fails()) {
       $errors = $validator->errors()->toArray();
-      $errors_array = [];
 
       foreach($errors as $key => $error){
         $this->assignArrayByPath($errors_array, $key, $error);
       }
+    }
 
+    if($product_errors) {
+      $errors_array = $errors_array + $product_errors;
+    }
+
+    if(!empty($errors_array)) {
       throw new OrderException('Order Validation Error', 403, null, $errors_array);
     }
 
@@ -177,13 +186,14 @@ class OrderController extends \App\Http\Controllers\Controller
    * @return void
    */
   private function validateProductsInStock($data) {
+    $errors = [];
+
     if(empty($data['products'])){
-      throw new OrderException('Order Validation Error', 403, null, [
-        'products' => 'В заказе должен быть хотя бы один товар'
-      ]);
+      $errors['products'] = 'Нет товаров';
+      return $errors;
     }
 
-    $errors = ['products' => []];
+    $errors['products'] = [];
     foreach($data['products'] as $id => $amount) {
       $in_stock = Product::findOrFail($id)->in_stock;
       if($in_stock < $amount) {
@@ -191,17 +201,18 @@ class OrderController extends \App\Http\Controllers\Controller
       }
     }
 
-    if(!empty($errors['products'])) {
-      throw new OrderException('Order Validation Error', 403, null, $errors);
-    }
+    return !empty($errors['products'])? $errors: null;
   }
-
+  
+  /**
+   * validateRequest
+   *
+   * @param  mixed $request
+   * @return void
+   */
   public function validateRequest(Request $request) {
     try {
       $request_data = $request->only($this->ORDER_MODEL::getFieldKeys());
-
-      $this->validateProductsInStock($request_data);
-      
       // Get only allowed fields
       $this->validateData($request_data);
 
