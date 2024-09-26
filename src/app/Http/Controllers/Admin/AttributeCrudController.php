@@ -194,20 +194,52 @@ class AttributeCrudController extends CrudController
           'store_in' => 'extras_trans',
         ]);
 
+        // $this->crud->addField([
+        //   'name' => 'categories',
+        //   'label' => 'Категории',
+        //   'type' => 'select2_multiple',
+        //   'select_all' => true,
+        //   'entity' => 'categories',
+        //   'attribute' => 'name',
+        //   'model' => Category::class,
+        //   'pivot' => true,
+        //   'hint' => 'Категории товаров к которым применимы данные характеристики',
+        //   'options'   => (function ($query) {
+        //       return $query->withoutGlobalScopes()->get();
+        //   }),
+        // ]);
+
+
         $this->crud->addField([
           'name' => 'categories',
           'label' => 'Категории',
-          'type' => 'select2_multiple',
+          'type' => 'select2_from_ajax_multiple',
           'select_all' => true,
           'entity' => 'categories',
           'attribute' => 'name',
           'model' => Category::class,
+          'data_source' => url("/admin/api/category"),
+          'placeholder' => "Выберите категории",
+          'delay' => 500,
           'pivot' => true,
+          'minimum_input_length' => 2,
           'hint' => 'Категории товаров к которым применимы данные характеристики',
-          'options'   => (function ($query) {
-              return $query->withoutGlobalScopes()->get();
-          }),
         ]);
+
+        // $this->crud->addField([
+        //   'name' => 'categories',
+        //   'label' => 'Категории',
+        //   'type' => 'relationship',
+        //   // 'select_all' => true,
+        //   // 'entity' => 'categories',
+        //   // 'attribute' => 'name',
+        //   // 'model' => Category::class,
+        //   // 'pivot' => true,
+        //   'hint' => 'Категории товаров к которым применимы данные характеристики',
+        //   // 'options'   => (function ($query) {
+        //   //     return $query->withoutGlobalScopes()->get();
+        //   // }),
+        // ]);
 
         // $this->crud->addField([
         //   'name' => 'is_important',
