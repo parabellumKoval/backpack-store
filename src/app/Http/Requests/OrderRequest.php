@@ -32,7 +32,6 @@ class OrderRequest extends FormRequest
 
       $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
 
-      // dd(session()->all());
       session()->flash('inputs', $this->input());
 
       $array = [
@@ -40,6 +39,7 @@ class OrderRequest extends FormRequest
           'telephone' => 'nullable|min:5|max:20',
           'email' => 'nullable|email|min:5|max:255',
           'comment' => 'nullable|max:3000',
+          'admin_comment' => 'required_if:status,failed,canceled|nullable',
           'productsRelated' => [
             function ($attribute, $value, $fail) {
               $decoded_value = json_decode($value);

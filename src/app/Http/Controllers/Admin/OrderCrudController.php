@@ -30,7 +30,7 @@ class OrderCrudController extends CrudController
   use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation { store as traitStore; }
   use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
-  use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
+  // use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
   use \App\Http\Controllers\Admin\Traits\OrderCrud;
@@ -476,54 +476,59 @@ class OrderCrudController extends CrudController
 
   protected function setupUpdateOperation()
   {
-      //$this->setupCreateOperation();
-      
-      $this->crud->addField([
-        'name' => 'code',
-        'label' => 'Номер заказа',
-        'attributes' => [
-          'readonly' => true
-        ]
-      ]);
-      
-      $this->crud->addField([
-        'name' => 'price',
-        'label' => 'Сумма заказа',
-        'prefix' => config('backpack.store.currency.symbol'),
-        'attributes' => [
-          'readonly' => true
-        ]
-      ]);
-      
-      $this->crud->addField([
-        'name' => 'status',
-        'label' => 'Статус заказа',
-        'type' => 'select2_from_array',
-        'options' => $this->status['order']
-      ]);
-      
-      $this->crud->addField([
-        'name' => 'pay_status',
-        'label' => 'Статус оплаты',
-        'type' => 'select2_from_array',
-        'options' => $this->status['pay']
-      ]);
-      
-      $this->crud->addField([
-        'name' => 'delivery_status',
-        'label' => 'Статус доставки',
-        'type' => 'select2_from_array',
-        'options' => $this->status['delivery']
-      ]);
+    $this->crud->setValidation(OrderRequest::class);
+    
+    $this->crud->addField([
+      'name' => 'code',
+      'label' => 'Номер заказа',
+      'attributes' => [
+        'readonly' => true
+      ]
+    ]);
+    
+    $this->crud->addField([
+      'name' => 'price',
+      'label' => 'Сумма заказа',
+      'prefix' => config('backpack.store.currency.symbol'),
+      'attributes' => [
+        'readonly' => true
+      ]
+    ]);
+    
+    $this->crud->addField([
+      'name' => 'status',
+      'label' => 'Статус заказа',
+      'type' => 'select2_from_array',
+      'options' => $this->status['order'],
+      'hint' => 'Если установить статус: <b>отменен</b> или <b>ошибка</b> товар будет возвращен на склад.'
+    ]);
+    
+    $this->crud->addField([
+      'name' => 'pay_status',
+      'label' => 'Статус оплаты',
+      'type' => 'select2_from_array',
+      'options' => $this->status['pay']
+    ]);
+    
+    $this->crud->addField([
+      'name' => 'delivery_status',
+      'label' => 'Статус доставки',
+      'type' => 'select2_from_array',
+      'options' => $this->status['delivery']
+    ]);
+
+    $this->crud->addField([
+      'name' => 'admin_comment',
+      'label' => 'Комментарий к заказу (ABU)',
+      'type' => 'ckeditor',
+      'attributes' => [
+        'rows' => 7
+      ],
+    ]);
   }
   
   protected function setupShowOperation()
-  {
-      //$this->crud->setValidation(OrderRequest::class);
-
-      // TODO: remove setFromDb() and manually define Fields
-      // $this->crud->setFromDb();
-      
+  {   
       $this->crud->addColumn([
         'name' => 'code',
         'label' => 'Номер заказа'
@@ -559,6 +564,12 @@ class OrderCrudController extends CrudController
         'name' => 'info',
         'label' => 'Информация о заказе',
         'type' => 'order_info'
+      ]);
+
+      $this->crud->addColumn([
+        'name' => 'admin_comment',
+        'label' => 'Комментарий к заказу (ABU)',
+        'escaped' => false
       ]);
   }
 }
