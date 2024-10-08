@@ -76,6 +76,9 @@ class Supplier extends Model
       return $this->extras['color'] ?? '#000000';
     }
 
+    public function getAdminColorAttribute() {
+      return "<div style='background: " . $this->color . "; width: 25px; height:25px; border-radius: 100%;'></div>";
+    }
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

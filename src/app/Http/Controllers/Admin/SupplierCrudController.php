@@ -54,6 +54,14 @@ class SupplierCrudController extends CrudController
         'label' => 'Тип'
       ]);
 
+
+      $this->crud->addColumn([
+        'name' => 'adminColor',
+        'label' => 'Цвет',
+        'escaped' => false,
+        'limit' => 1500,
+      ]);
+
       // $this->crud->addColumn([
       //   'name' => 'products',
       //   'label' => 'Товары поставщика',
