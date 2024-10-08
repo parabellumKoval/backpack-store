@@ -66,6 +66,19 @@ class Product extends BaseProduct
     |--------------------------------------------------------------------------
     */
     
+    public function getAdminCodeAttribute() {
+      $supplier = $this->currentSp->supplier;
+
+      $html = "<div>" . $this->simpleCode . "</div>";
+
+      if($supplier) {
+        $html .= "<b style='color: " . $supplier->color . ";'>(" . $supplier->name . ")</b>";
+      }
+
+      return $html;
+    }
+
+    
     /**
      * getPropsAttribute
      *

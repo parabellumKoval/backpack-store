@@ -32,9 +32,11 @@ class Supplier extends Model
     // protected $hidden = [];
     // protected $dates = [];
 
-    protected $casts = [];
+    protected $casts = [
+      'extras' => 'array',
+    ];
 
-    protected $fakeColumns = [];
+    protected $fakeColumns = ['extras'];
     
     /*
     |--------------------------------------------------------------------------
@@ -69,6 +71,10 @@ class Supplier extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getColorAttribute() {
+      return $this->extras['color'] ?? '#000000';
+    }
 
     /*
     |--------------------------------------------------------------------------

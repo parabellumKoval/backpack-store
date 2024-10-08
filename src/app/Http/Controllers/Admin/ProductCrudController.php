@@ -77,11 +77,12 @@ class ProductCrudController extends CrudController
 
         foreach($sps as $sp) {
           $supplierName = $sp->supplier->name ?? '-';
+          $supplierColor = $sp->supplier->color;
           $price = $sp->price !== null? $sp->price . $currency: '';
           $old_price = $sp->old_price !== null? $sp->old_price . $currency: '';
 
           $html .= '<tr>';
-          $html .= "<td><b style='color: green'>{$supplierName}</b></td>";
+          $html .= "<td><b style='color: " . $supplierColor . "'>{$supplierName}</b></td>";
           $html .= "<td>{$sp->code}</td>";
           $html .= "<td>{$sp->barcode}</td>";
           $html .= "<td>{$sp->in_stock}</td>";
@@ -264,8 +265,11 @@ class ProductCrudController extends CrudController
         }
         
         $this->crud->addColumn([
-          'name' => 'simpleCode',
+          // 'name' => 'simpleCode',
+          'name' => 'adminCode',
           'label' => '<span title="Артикул товара или баркод">#️⃣</span>',
+          'escaped' => false,
+          'limit' => 1500,
           'searchLogic' => true,
           'priority' => 1,
           'searchLogic' => function ($query, $column, $searchTerm) {
@@ -335,7 +339,7 @@ class ProductCrudController extends CrudController
         ]);
 
         $this->crud->addColumn([
-          'name' => 'price',
+          'name' => 'simplePrice',
           'label' => 'Цена',
           'type' => 'number',
           'orderable'   => true,

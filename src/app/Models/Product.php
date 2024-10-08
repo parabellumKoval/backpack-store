@@ -361,7 +361,13 @@ class Product extends Model
       $sp = $this->currentSp;
 
       if($sp) {
-        return $sp->code || $sp->barcode;
+        if(!empty($sp->code)) {
+          return $sp->code;
+        }elseif(!empty($sp->barcode)) {
+          return $sp->barcode;
+        }else {
+          return null;
+        }
       }
     }
 

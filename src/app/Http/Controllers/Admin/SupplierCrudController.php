@@ -54,12 +54,12 @@ class SupplierCrudController extends CrudController
         'label' => 'Тип'
       ]);
 
-      $this->crud->addColumn([
-        'name' => 'products',
-        'label' => 'Товары поставщика',
-        'type' => 'relationship_count',
-        'suffix' => ' тов.'
-      ]);
+      // $this->crud->addColumn([
+      //   'name' => 'products',
+      //   'label' => 'Товары поставщика',
+      //   'type' => 'relationship_count',
+      //   'suffix' => ' тов.'
+      // ]);
 
       $this->listOperation();
     }
@@ -85,6 +85,16 @@ class SupplierCrudController extends CrudController
           'name' => 'name',
           'label' => 'Название',
           'type' => 'text',
+        ]);
+
+        // COLOR
+        $this->crud->addField([
+          'name' => 'color',
+          'label' => 'Цвет',
+          'type' => 'color',
+          'fake' => true,
+          'store_in' => 'extras',
+          'hint' => 'Выберите цвет для визуального различения в админке поставщиков друг от друга.'
         ]);
 
         // DESCRIPTION
