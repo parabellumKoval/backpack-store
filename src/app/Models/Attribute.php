@@ -19,6 +19,7 @@ use Backpack\Store\database\factories\AttributeFactory;
 // MODELS
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
+use Backpack\Store\app\Models\Category;
 
 class Attribute extends Model
 {
@@ -50,7 +51,8 @@ class Attribute extends Model
       'in_filters',
       'in_properties',
       'si',
-      'default_value'
+      'default_value',
+      'categories'
     ];
     // protected $hidden = [];
     // protected $dates = [];
@@ -165,7 +167,8 @@ class Attribute extends Model
     */
     public function categories()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_attribute_category');
+      // return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_attribute_category');
+      return $this->belongsToMany(Category::class, 'ak_attribute_category');
     }
 
     public function values()
@@ -417,6 +420,9 @@ class Attribute extends Model
     // }
     
     
+    public function getCatsAttribute($value) {
+      return $this->categories;
+    }
     
     /*
     |--------------------------------------------------------------------------
@@ -424,4 +430,7 @@ class Attribute extends Model
     |--------------------------------------------------------------------------
     */
     
+    // public function setCatsAttribute($values){
+    //   dd($values);
+    // }
 }

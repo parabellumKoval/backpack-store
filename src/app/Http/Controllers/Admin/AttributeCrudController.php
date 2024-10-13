@@ -37,6 +37,8 @@ class AttributeCrudController extends CrudController
     // current model instance
     private $entry;
 
+    private $filter_categories;
+
     public function setup()
     {
         $this->crud->setModel(AttributeAdmin::class);
@@ -45,11 +47,12 @@ class AttributeCrudController extends CrudController
         
         $this->crud->query = $this->crud->query->withoutGlobalScopes();
         
-        // Category::first();
-
         $this->crud->model->clearGlobalScopes();
         
         $this->types = array_unique(Attribute::pluck('type', 'type')->toArray());
+
+        $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
+      
 
         // CURRENT MODEL
         $this->setEntry();
@@ -66,6 +69,26 @@ class AttributeCrudController extends CrudController
     {
         // TODO: remove setFromDb() and manually define Columns, maybe Filters
        //  $this->crud->setFromDb();
+
+        // Filter by category
+        $this->crud->addFilter([
+          'name' => 'category',
+          'label' => 'Категория',
+          'type' => 'select2',
+        ], function(){
+          $list = ['empty' => '🔴 Без категории'] + $this->filter_categories;
+          return $list;
+        }, function($id){
+          if($id === 'empty') {
+            $this->crud->query->has('categories', '=', 0);
+          }else {
+            $this->crud->query->whereHas('categories', function ($query) use ($id) {
+                $query->where('category_id', $id);
+            });
+          }
+        });
+
+        // Filter is active
        $this->crud->addFilter([
             'type' => 'simple',
             'name' => 'is_active',
@@ -76,6 +99,7 @@ class AttributeCrudController extends CrudController
               $this->crud->addClause('where', 'is_active', '0'); 
           });
           
+        // Filter attribute type
         $this->crud->addFilter([
             'name' => 'type',
             'type' => 'dropdown',
@@ -91,17 +115,6 @@ class AttributeCrudController extends CrudController
           'label' => 'Название',
         ]);
 
-      // if(config('backpack.store.attribute.enable_groups')) {
-      //   $this->crud->addColumn([
-      //     'name' => 'attribute_group_id',
-      //     'label' => 'Группа',
-      //     'type' => 'select',
-      //     'entity' => 'AttributeGroup',
-      //     'attribute' => 'name',
-      //     'model' => "Aimix\Shop\app\Models\AttributeGroup",
-      //   ]);
-      // }
-
         $this->crud->addColumn([
           'name' => 'is_active',
           'label' => 'Активен',
@@ -112,33 +125,6 @@ class AttributeCrudController extends CrudController
           'name' => 'type',
           'label' => 'Тип',
         ]);
-    }
-    
-    public function fetchValues()
-    {
-      // We have to get attribute id field
-      $request = request()->all();
-      
-      // Find attribute field
-      $id_field = array_filter($request['form'], function($item) {
-        if($item['name'] === 'id'){
-          return true;
-        }else {
-          return false;
-        }
-      });
-
-      // Get attribute id
-      $attribute_id = array_values($id_field)[0]['value'];
-
-      return $this->fetch([
-        'model' => AttributeValue::class,
-        'searchable_attributes' => ['value'],
-        'paginate' => 20,
-        'query' => function($model) use ($attribute_id) {
-            return $model->where('attribute_id', $attribute_id);
-        }
-      ]);
     }
     
     /**
@@ -167,23 +153,7 @@ class AttributeCrudController extends CrudController
           'type' => 'text',
         ]);
 
-        // $this->crud->addField([
-        //   'name' => 'type',
-        //   'label' => 'Тип значения',
-        //   'type' => 'type_configurator',
-        //   'options_name' => 'values'
-        // ]);
-
         $this->setTypeFields();
-
-        // $this->crud->addField([
-        //   'name' => 'default_value',
-        //   'label' => 'Значение по-умолчанию',
-        //   'type' => 'text',
-        //   'fake' => true,
-        //   'store_in' => 'extras',
-        // ]);
-
 
         $this->crud->addField([
           'name' => 'si',
@@ -194,37 +164,19 @@ class AttributeCrudController extends CrudController
           'store_in' => 'extras_trans',
         ]);
 
-        // $this->crud->addField([
-        //   'name' => 'categories',
-        //   'label' => 'Категории',
-        //   'type' => 'select2_multiple',
-        //   'select_all' => true,
-        //   'entity' => 'categories',
-        //   'attribute' => 'name',
-        //   'model' => Category::class,
-        //   'pivot' => true,
-        //   'hint' => 'Категории товаров к которым применимы данные характеристики',
-        //   'options'   => (function ($query) {
-        //       return $query->withoutGlobalScopes()->get();
-        //   }),
-        // ]);
-
-
         $this->crud->addField([
           'name' => 'categories',
           'label' => 'Категории',
-          'type' => 'relationship',
-          'ajax' => true,
+          'type' => 'select2_from_ajax_multiple',
+          'select_all' => true,
+          'entity' => 'categories',
+          'attribute' => 'name',
+          'model' => Category::class,
           'data_source' => url("/admin/api/category"),
+          'placeholder' => 'Выберите категорию',
+          'minimum_input_length' => 2,
           'hint' => 'Категории товаров к которым применимы данные характеристики',
         ]);
-
-        // $this->crud->addField([
-        //   'name' => 'is_important',
-        //   'label' => 'Добавить в основные характеристики',
-        //   'type' => 'checkbox',
-        //   'hint' => 'Если включено, то данный атрибут будет отображаться в основных характеристиках товара',
-        // ]);
 
         $this->crud->addField([
           'name' => 'in_filters',
@@ -425,6 +377,38 @@ class AttributeCrudController extends CrudController
       }
     }
 
+        
+    /**
+     * fetchValues
+     *
+     * @return void
+     */
+    public function fetchValues()
+    {
+      // We have to get attribute id field
+      $request = request()->all();
+      
+      // Find attribute field
+      $id_field = array_filter($request['form'], function($item) {
+        if($item['name'] === 'id'){
+          return true;
+        }else {
+          return false;
+        }
+      });
+
+      // Get attribute id
+      $attribute_id = array_values($id_field)[0]['value'];
+
+      return $this->fetch([
+        'model' => AttributeValue::class,
+        'searchable_attributes' => ['value'],
+        'paginate' => 20,
+        'query' => function($model) use ($attribute_id) {
+            return $model->where('attribute_id', $attribute_id);
+        }
+      ]);
+    }
 
         
     /**
