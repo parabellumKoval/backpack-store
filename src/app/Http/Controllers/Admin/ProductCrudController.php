@@ -1100,18 +1100,28 @@ class ProductCrudController extends CrudController
     public function getProducts(Request $request) {
       $search_term = $request->input('q');
 
+      // langs
+      $available_languages = config('backpack.crud.locales');
+      $langs_list = array_keys($available_languages);
+
       if ($search_term)
       {
         $locale = \Lang::locale();
 
         $results = $this->product_class::
-            where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+            // where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
+            where(function($query) use ($search_term, $langs_list){
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+              }
+            })
           ->orWhere('code', 'LIKE', '%'.$search_term.'%')
           ->orWhereHas('sp', function($query) use($search_term) {
             $query->where('code', 'LIKE', '%'.$search_term.'%')->orWhere('barcode', 'LIKE', '%'.$search_term.'%');
           })
           ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
-          ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
+          // ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
           ->paginate(20);
       }
       else

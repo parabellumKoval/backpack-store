@@ -299,10 +299,20 @@ class CategoryCrudController extends CrudController
       $this->setupCreateOperation();
     }
 
-
+    
+    /**
+     * getCategories
+     *
+     * @param  mixed $request
+     * @return void
+     */
     public function getCategories(Request $request) {
       $search_term = $request->input('q');
       $id = $request->input('keys');
+
+      // langs
+      $available_languages = config('backpack.crud.locales');
+      $langs_list = array_keys($available_languages);
 
       if($id) {
         $categories = [];
@@ -316,11 +326,15 @@ class CategoryCrudController extends CrudController
 
       if ($search_term)
       {
-        $locale = \Lang::locale();
 
-        $results = $this->category_class::where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
-          ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
-          ->paginate(20);
+        $results = $this->category_class::
+                            where(function($query) use ($search_term, $langs_list){
+                              foreach($langs_list as $index => $lang_key) {
+                                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+                              }
+                            })
+                            ->paginate(20);
       }
       else
       {

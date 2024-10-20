@@ -421,11 +421,19 @@ class AttributeCrudController extends CrudController
     public function getAttributeValues(Request $request, $attribute_id) {
       $search_term = $request->input('q');
 
+      // langs
+      $available_languages = config('backpack.crud.locales');
+      $langs_list = array_keys($available_languages);
+
       if ($search_term)
       {
           $results = AttributeValue::
-                        where('attribute_id', $attribute_id)
-                      ->where('value', 'LIKE', '%'.$search_term.'%')
+                      where(function($query) use ($search_term, $langs_list){
+                        foreach($langs_list as $index => $lang_key) {
+                          $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                          $query->{$function_name}('LOWER(JSON_EXTRACT(value, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+                        }
+                      })
                       ->paginate(20);
       }
       else
