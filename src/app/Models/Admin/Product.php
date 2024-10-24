@@ -69,9 +69,13 @@ class Product extends BaseProduct
     public function getAdminCodeAttribute() {
       $supplier = $this->currentSp->supplier;
 
+      $is_static_code = !empty($this->code)? true: false;
+
       $html = "<div>" . $this->simpleCode . "</div>";
 
-      if($supplier) {
+      if($is_static_code) {
+        $html .= "<b style='color: grey'>(САЙТ)</b>";
+      }else if($supplier) {
         $html .= "<b style='color: " . $supplier->color . ";'>(" . $supplier->name . ")</b>";
       }
 

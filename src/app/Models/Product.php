@@ -355,7 +355,7 @@ class Product extends Model
      * @return void
      */
     public function getSimpleCodeAttribute() {
-      if($this->code)
+      if(!empty($this->code))
         return $this->code;
 
       $sp = $this->currentSp;
