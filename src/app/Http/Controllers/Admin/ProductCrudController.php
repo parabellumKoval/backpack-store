@@ -339,6 +339,15 @@ class ProductCrudController extends CrudController
         ]);
 
         $this->crud->addColumn([
+          'name' => 'adminTranslations',
+          'label' => '<span title="Переводы">🌐</span>',
+          'escaped' => false,
+          'limit' => 1500,
+          'searchLogic' => false,
+          'priority' => 7
+        ]);
+
+        $this->crud->addColumn([
           'name' => 'simplePrice',
           'label' => 'Цена',
           'type' => 'number',

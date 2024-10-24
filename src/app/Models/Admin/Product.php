@@ -17,6 +17,8 @@ class Product extends BaseProduct
     public $modificationsToSave = [];
     public $suppliers_data = null;
     public $default_supplier = null;
+
+    public $available_languages = [];
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -28,7 +30,25 @@ class Product extends BaseProduct
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+      
+    /**
+     * __construct
+     *
+     * @param  mixed $attributes
+     * @return void
+     */
+    public function __construct(array $attributes = array()) {
+      parent::__construct($attributes);
+      
+      $langs = config('backpack.crud.locales');
+      $this->available_languages = array_keys($langs);
+    }
     
+    /**
+     * getCategoriesString
+     *
+     * @return void
+     */
     public function getCategoriesString() {
       if(!$this->categories || !$this->categories->count())
         return '-';
@@ -65,7 +85,46 @@ class Product extends BaseProduct
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+        
+    /**
+     * getAdminTranslationsAttribute
+     *
+     * @return void
+     */
+    public function getAdminTranslationsAttribute(){
+
+      $translations = [];
+
+      foreach($this->available_languages as $lang) {
+        $content = $this->getTranslation('content', $lang, false);
+
+        if(mb_strlen($content) > 150) {
+          
+          switch($lang) {
+            case 'ru':
+              $color = 'red';
+              break;
+            case 'uk':
+              $color = 'blue';
+              break;
+            default:
+              $color = 'black';
+          }
+
+          $translations[] = '<b style="color: ' . $color . '">' . mb_strtoupper($lang) . '</b>';
+        }
+      }
+
+      $html = implode(', ', $translations);
+
+      return $html;
+    }
     
+    /**
+     * getAdminCodeAttribute
+     *
+     * @return void
+     */
     public function getAdminCodeAttribute() {
       $supplier = $this->currentSp->supplier;
 
