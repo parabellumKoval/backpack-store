@@ -6,6 +6,7 @@ use Backpack\Store\app\Providers\EventServiceProvider;
 // use Spatie\LaravelPackageTools\Package;
 // use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Backpack\Store\app\Console\Commands\XmlSource;
+use Backpack\Store\app\Console\Commands\AttributesTransform;
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
@@ -63,6 +64,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     if ($this->app->runningInConsole()) {
       $this->commands([
         XmlSource::class,
+        AttributesTransform::class,
       ]);
     }
   }

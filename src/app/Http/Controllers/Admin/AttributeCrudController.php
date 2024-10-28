@@ -8,11 +8,13 @@ use Backpack\Store\app\Http\Requests\AttributeRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
+// MODELS
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\Admin\Attribute as AttributeAdmin;
 
+//EVENTS
 use Backpack\Store\app\Events\AttributeSaved;
 
 /**
@@ -34,10 +36,16 @@ class AttributeCrudController extends CrudController
 
     // current active attribute type
     private $type;
+
     // current model instance
     private $entry;
 
+    private $lang;
+
     private $filter_categories;
+
+    private $langs_list;
+    private $available_languages;
 
     public function setup()
     {
@@ -45,11 +53,18 @@ class AttributeCrudController extends CrudController
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/attribute');
         $this->crud->setEntityNameStrings('атрибут', 'атрибуты');
         
+        // current language
+        $this->lang = \Request::input('locale', config('app.locale'));
+
+        // languages
+        $this->available_languages = config('backpack.crud.locales');
+        $this->langs_list = array_keys($this->available_languages);
+
         $this->crud->query = $this->crud->query->withoutGlobalScopes();
         
         $this->crud->model->clearGlobalScopes();
         
-        $this->types = array_unique(Attribute::pluck('type', 'type')->toArray());
+        // $this->types = array_unique(Attribute::pluck('type', 'type')->toArray());
 
         $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
       
@@ -104,7 +119,7 @@ class AttributeCrudController extends CrudController
             'name' => 'type',
             'type' => 'dropdown',
             'label'=> 'Тип значения'
-          ], $this->types
+          ], Attribute::$TYPES
           , function($value) {
                 $this->crud->addClause('where', 'type', $value);
           });
@@ -124,6 +139,13 @@ class AttributeCrudController extends CrudController
         $this->crud->addColumn([
           'name' => 'type',
           'label' => 'Тип',
+          'type' => 'select_from_array',
+          'options' => Attribute::$TYPES
+        ]);
+
+        $this->crud->addColumn([
+          'name' => 'si',
+          'label' => 'Си'
         ]);
     }
     
@@ -143,6 +165,7 @@ class AttributeCrudController extends CrudController
           'name' => 'name',
           'label' => 'Название',
           'type' => 'text',
+          'tab' => 'Основное'
         ]);
 
         $this->crud->addField([
@@ -151,18 +174,10 @@ class AttributeCrudController extends CrudController
           // 'prefix' => url('/attributes').'/',
           'hint' => 'По умолчанию будет сгенерирован из названия',
           'type' => 'text',
+          'tab' => 'Основное'
         ]);
 
         $this->setTypeFields();
-
-        $this->crud->addField([
-          'name' => 'si',
-          'label' => 'Единицы измерения',
-          'hint' => 'Единицы измерения будут добавлены после значений',
-          'type' => 'text',
-          'fake' => true,
-          'store_in' => 'extras_trans',
-        ]);
 
         $this->crud->addField([
           'name' => 'categories',
@@ -176,6 +191,7 @@ class AttributeCrudController extends CrudController
           'placeholder' => 'Выберите категорию',
           'minimum_input_length' => 2,
           'hint' => 'Категории товаров к которым применимы данные характеристики',
+          'tab' => 'Основное'
         ]);
 
         $this->crud->addField([
@@ -183,7 +199,8 @@ class AttributeCrudController extends CrudController
           'label' => 'Добавить в фильтрацию',
           'type' => 'checkbox',
           'hint' => 'Если включено, то данный атрибут будет отображаться в фильтрации в каталоге',
-          'default' => 1
+          'default' => 1,
+          'tab' => 'Основное'
         ]);
 
         $this->crud->addField([
@@ -191,7 +208,8 @@ class AttributeCrudController extends CrudController
           'label' => 'Добавить в характеристики',
           'type' => 'checkbox',
           'hint' => 'Если включено, то данный атрибут будет отображаться в характеристиках товара',
-          'default' => 1
+          'default' => 1,
+          'tab' => 'Основное'
         ]);
 
         $this->crud->addField([
@@ -199,7 +217,8 @@ class AttributeCrudController extends CrudController
           'label' => 'Активен',
           'type' => 'checkbox',
           'hint' => 'Если включено, то данный атрибут будет активен',
-          'default' => 1
+          'default' => 1,
+          'tab' => 'Основное'
         ]);
 
         if(config('backpack.store.attribute.enable_icon')) {
@@ -211,13 +230,15 @@ class AttributeCrudController extends CrudController
               'rows' => '7'
             ],
             'hint' => 'html-код иконки',
+            'tab' => 'Основное'
           ]);
         }
 
         $this->crud->addField([
           'name' => 'content',
           'label' => 'Описание',
-          'type' => 'ckeditor', 
+          'type' => 'ckeditor',
+          'tab' => 'Основное'
         ]);
     }
         
@@ -281,19 +302,90 @@ class AttributeCrudController extends CrudController
         'type' => 'select_from_array',
         'options' => Attribute::$TYPES,
         'attributes' => $js_attributes,
-        'value' => $this->type
+        'value' => $this->type,
+        'tab' => 'Значения'
+      ]);
+
+      $this->crud->addField([
+        'name' => 'si',
+        'label' => 'Единицы измерения',
+        'hint' => 'Единицы измерения будут добавлены после значений',
+        'type' => 'text',
+        'fake' => true,
+        'store_in' => 'extras_trans',
+        'tab' => 'Значения'
       ]);
 
       if($this->type === 'checkbox' || $this->type === 'radio' ) {
+        // $this->crud->addField([
+        //   'name' => 'values',
+        //   'label' => 'Допустимые значения',
+        //   'type' => 'relationship',
+        //   'ajax' => true,
+        //   'inline_create' => [
+        //     'entity' => 'value',
+        //     'force_select' => true
+        //   ],
+        //   'tab' => 'Значения'
+        // ]);
+
         $this->crud->addField([
-          'name' => 'values',
-          'label' => 'Допустимые значения',
-          'type' => 'relationship',
-          'ajax' => true,
-          'inline_create' => [
-            'entity' => 'value',
-            'force_select' => true
-          ]
+          'name' => 'delim',
+          'type' => 'custom_html',
+          'value' => '<h4>Допустимые значения</h4>
+          <ul>
+            <li>Поля <b>Тип действия</b> и <b>Значение (для действия)</b> надо заполнять только если необходимо трансформировать значение</li>
+            <li>Со значениями можно проводить такие операции: объединение (для устранения дублей), разделение</li>
+            <li>Если хотите Объединить значение с другим: в поле <b>Тип действия</b> выберите соответсвующую операцию, а в поле <b>Значение (для действия)</b> введите точное Значение поля с которым хотите объединить данное.</li>
+            <li>Если хотите Разделить значение на несколько: в поле <b>Тип действия</b> выберите соответсвующую операцию, а в поле <b>Значение (для действия)</b> введите одно или несколько значений на которые хотите разделить данное. Например <code>Значение 1|Значение 2</code></li>
+            <li>Текущее значение после операции будет удалено</li>
+            <li>При операции разделения несуществующие значения будут добавлены в список допустимых значений</li>
+            <li>Если значение было присвоено какому-либо товару, старое значение будет удалено, а товару будут присвоены новые значения (после операций объединения или разделения)</li>
+            <li>Операции со значениями будут обработаны по графику: каждые 10 минут</li>
+          </ul>',
+          'tab' => 'Значения',
+        ]);
+
+        $this->crud->addField([
+          'name' => 'values_array',
+          'label' => '',
+          'type' => 'repeatable',
+          'fields' => [
+            [
+              'name'    => 'id',
+              'type'    => 'hidden',
+            ],
+            [
+              'name'    => 'value',
+              'type'    => 'text',
+              'label'   => 'Значение',
+              'wrapper' => ['class' => 'form-group col-md-12'],
+            ],
+            [
+              'name'    => 'transform',
+              'label'   => 'Тип действия',
+              'type'    => 'select_from_array',
+              'default' => null,
+              'allows_null' => true,
+              'options' => [
+                'join' => 'Объединить с другим значением (а это удалить)',
+                'split' => 'Разделить на несколько значений (а это удалить)',
+              ],
+              'wrapper' => ['class' => 'form-group col-md-4'],
+            ],
+            [
+              'name' => 'transform_value',
+              'label' => 'Значение (для действия)',
+              'type' => 'text',
+              'init_rows' => 0,
+              // 'hint' => '',
+              'wrapper' => ['class' => 'form-group col-md-8'],
+            ]
+          ],
+          'new_item_label'  => 'Добавить значение',
+          'init_rows' => 0,
+          'value' => $this->getAttributeValuesArray(),
+          'tab' => 'Значения',
         ]);
       } else if($this->type === 'number') {
         $this->crud->addField([
@@ -306,7 +398,9 @@ class AttributeCrudController extends CrudController
           'wrapper'   => [ 
             'class' => 'form-group col-md-4'
           ],
+          'tab' => 'Значения'
         ]);
+
         $this->crud->addField([
           'name' => 'max',
           'label' => 'Максимальное значение',
@@ -317,7 +411,9 @@ class AttributeCrudController extends CrudController
           'wrapper'   => [ 
             'class' => 'form-group col-md-4'
           ],
+          'tab' => 'Значения'
         ]);
+
         $this->crud->addField([
           'name' => 'step',
           'label' => 'Шаг',
@@ -328,9 +424,12 @@ class AttributeCrudController extends CrudController
           'wrapper'   => [ 
             'class' => 'form-group col-md-4'
           ],
+          'tab' => 'Значения'
         ]);
       }
     }
+
+
     /**
      * setupUpdateOperation
      *
@@ -339,12 +438,19 @@ class AttributeCrudController extends CrudController
     protected function setupUpdateOperation()
     {
       $this->setupCreateOperation();
-      $this->crud->modifyField('type', [
-        'attributes' => [
-          'readonly' => 'readonly',
-          'disabled' => 'disabled'
-        ],
-      ]);
+
+      if(in_array($this->entry->type, ['radio', 'checkbox'])) {
+        $this->crud->modifyField('type', [
+          'options' => Attribute::$SELECT_TYPES,
+        ]);
+      }else {
+        $this->crud->modifyField('type', [
+          'attributes' => [
+            'readonly' => 'readonly',
+            'disabled' => 'disabled',
+          ],
+        ]);
+      }
     }
 
     
@@ -376,7 +482,36 @@ class AttributeCrudController extends CrudController
         $this->type = 'checkbox';
       }
     }
+    
+    /**
+     * getAttributeValues
+     *
+     * @return void
+     */
+    private function getAttributeValuesArray(){
+      $values = $this->entry->values;
+      return $values->map(function($item) {
+        
+        $value = $item->getTranslation('value', $this->lang, true);
 
+        if(empty($value)) {
+          foreach($this->langs_list as $lang) {
+            $value = $item->getTranslation('value', $lang, true);
+
+            if(!empty($value)) {
+              break;
+            }
+          }
+        }
+        
+        return [
+          'id' => $item->id,
+          'value' => $value,
+          'transform' => $item->transform,
+          'transform_value' => $item->transformValueString
+        ];
+      });
+    }
         
     /**
      * fetchValues
@@ -422,8 +557,7 @@ class AttributeCrudController extends CrudController
       $search_term = $request->input('q');
 
       // langs
-      $available_languages = config('backpack.crud.locales');
-      $langs_list = array_keys($available_languages);
+      $langs_list = $this->langs_list;
 
       if ($search_term)
       {

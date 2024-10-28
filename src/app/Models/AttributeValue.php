@@ -31,12 +31,12 @@ class AttributeValue extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     // protected $guarded = ['id'];
-    protected $fillable = ['value', 'type', 'attribute_id', 'attribute'];
+    protected $fillable = ['value', 'attribute_id', 'transform', 'extras'];
     // protected $hidden = [];
     // protected $dates = [];
-    // protected $casts = [
-    //   'value' => 'object'
-    // ];
+    protected $casts = [
+      'extras' => 'array'
+    ];
 
     protected $translatable = ['value'];
 
@@ -102,6 +102,36 @@ class AttributeValue extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    
+    /**
+     * getTransformValueAttribute
+     *
+     * @return void
+     */
+    public function getTransformValueAttribute(){
+      if(!isset($this->extras['transform_value']) || empty($this->extras['transform_value'])) {
+        return null;
+      }
+
+      return $this->extras['transform_value'];
+    }
+    
+    /**
+     * getTransformValueStringAttribute
+     *
+     * @return void
+     */
+    public function getTransformValueStringAttribute(){
+      if(!isset($this->extras['transform_value']) || empty($this->extras['transform_value'])) {
+        return '';
+      }
+
+      if(!is_array($this->extras['transform_value'])) {
+        return $this->extras['transform_value'];
+      }
+      
+      return implode('|', $this->extras['transform_value']);
+    }
 
     /*
     |--------------------------------------------------------------------------

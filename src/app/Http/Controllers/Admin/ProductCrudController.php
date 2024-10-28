@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\SupplierProduct;
@@ -46,9 +47,13 @@ class ProductCrudController extends CrudController
     
     private $categories;
     private $filter_categories;
+    private $filter_brands;
     private $suppliers_list;
     private $brands;
     private $attrs;
+
+    private $available_languages = [];
+    private $langs_list = [];
     
     private $product_class = null;
 
@@ -136,11 +141,16 @@ class ProductCrudController extends CrudController
       // $this->crud->model->clearGlobalScopes();
       
       $this->filter_categories = Category::withoutGlobalScopes()->NoEmpty()->pluck('name', 'id')->toArray();
+      $this->filter_brands = Brand::pluck('name', 'id')->toArray();
       
       $this->suppliers_list = Supplier::pluck('name', 'id')->toArray();
       // if(config('backpack.store.brands.enable')) {
       //   $this->brands = Brand::NoEmpty()->pluck('name', 'id')->toArray();
       // }
+
+      // available languages
+      $this->available_languages = config('backpack.crud.locales');
+      $this->langs_list = array_keys($this->available_languages);
 
       // $this->crud->model->clearGlobalScopes();
 
@@ -172,6 +182,22 @@ class ProductCrudController extends CrudController
         // $this->crud->addClause('base');
         $this->crud->addClause('withSum', 'sp', 'in_stock');
 
+        // Filter by Brand
+        $this->crud->addFilter([
+          'name' => 'brand',
+          'label' => 'Бренд',
+          'type' => 'select2',
+        ], function(){
+          $list = ['empty' => '🔴 Без бренда'] + $this->filter_brands;
+          return $list;
+        }, function($id){
+          if($id === 'empty') {
+            $this->crud->query->where('brand_id', '=', null);
+          }else {
+            $this->crud->query->where('brand_id', $id);
+          }
+        });
+
         // Filter by category
         $this->crud->addFilter([
           'name' => 'category',
@@ -201,6 +227,83 @@ class ProductCrudController extends CrudController
           ];
         }, function($is_active){
           $this->crud->query->where('is_active', $is_active);
+        });
+
+
+        $this->crud->addFilter([
+          'name' => 'modifications',
+          'label' => 'Модификации',
+          'type' => 'select2',
+        ], function(){
+          return [
+            0 => 'Без модификаций',
+            1 => 'С модификациями',
+          ];
+        }, function($modifications){
+          if($modifications) {
+            $this->crud->query->has('parent')->orHas('children');
+          }else {
+            $this->crud->query->has('parent', '=', 0)->has('children', '=', 0);
+          }
+        });
+
+
+        $this->crud->addFilter([
+          'name' => 'translation',
+          'label' => 'Перевод',
+          'type' => 'select2',
+        ], function(){
+          $al = array_map(function($item) {
+            return 'Нет ' . $item;
+          }, $this->available_languages);
+
+          $list = [
+            0 => 'Нет (какого-то)',
+            1 => 'Есть (все)'] + $al;
+
+          return $list;
+        }, function($translation){
+          $langs_list = $this->langs_list;
+
+          if($translation === '0') {
+            $this->crud->query->where(function($query) use($langs_list) {
+              foreach($langs_list as $index => $lang_key) {
+                $function = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function}('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) < ? ', 150);
+                $query->{$function}('JSON_EXTRACT(content, "$.' . $lang_key . '") IS NULL');
+              }
+            });
+          }else if($translation === '1') {
+            $this->crud->query->where(function($query) use($langs_list) {
+              foreach($langs_list as $lang_key) {
+                $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
+              }
+            });
+          }else {
+            $this->crud->query
+                ->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $translation . '")) < ? ', 150)
+                ->orWhereRaw('JSON_EXTRACT(content, "$.' . $translation . '") IS NULL');
+          }
+        });
+
+        $this->crud->addFilter([
+          'name' => 'filles',
+          'label' => 'Качество заполнения',
+          'type' => 'select2',
+        ], function(){
+          return [
+            0 => 'низкое',
+            1 => 'среднее',
+            2 => 'высокое',
+          ];
+        }, function($filles){
+          if($filles == 0) {
+            $this->crud->query->fillQualityLow();
+          }else if($filles == 1) {
+            $this->crud->query->fillQualityNormal();
+          }else if($filles == 2) {
+            $this->crud->query->fillQualityHight();
+          }
         });
 
         $this->crud->addFilter([
@@ -263,13 +366,12 @@ class ProductCrudController extends CrudController
             }
           });
         }
-        
+
         $this->crud->addColumn([
-          // 'name' => 'simpleCode',
           'name' => 'adminCode',
           'label' => '<span title="Артикул товара или баркод">#️⃣</span>',
           'escaped' => false,
-          'limit' => 1500,
+          'limit' => 2500,
           'searchLogic' => true,
           'priority' => 1,
           'searchLogic' => function ($query, $column, $searchTerm) {
@@ -298,20 +400,20 @@ class ProductCrudController extends CrudController
           'orderable'   => true,
         ]);
 
-        if(config('backpack.store.supplier.enable')) {
-          $this->crud->addColumn([
-            'name' => 'suppliers',
-            'label' => '<span title="Колличество поставщиков">🚚</span>',
-            'type' => 'relationship_count',
-            'suffix' => '',
-            'priority' => 5,
-            'orderable'   => true,
-            'orderLogic' => function ($query, $column, $columnDirection) {
-              return $query->withCount('suppliers')
-                    ->orderBy('suppliers_count', $columnDirection);
-              }
-          ]);
-        }
+        // if(config('backpack.store.supplier.enable')) {
+        //   $this->crud->addColumn([
+        //     'name' => 'suppliers',
+        //     'label' => '<span title="Колличество поставщиков">🚚</span>',
+        //     'type' => 'relationship_count',
+        //     'suffix' => '',
+        //     'priority' => 5,
+        //     'orderable'   => true,
+        //     'orderLogic' => function ($query, $column, $columnDirection) {
+        //       return $query->withCount('suppliers')
+        //             ->orderBy('suppliers_count', $columnDirection);
+        //       }
+        //   ]);
+        // }
         
         
         $this->crud->addColumn([
@@ -369,6 +471,17 @@ class ProductCrudController extends CrudController
           'limit' => 200,
           'priority' => 7
         ]);
+        
+
+        $this->crud->addColumn([
+          'name' => 'fillAdmin',
+          'label' => '<span title="Качество заполнения">💎</span>',
+          'escaped' => false,
+          'limit' => 1500,
+          'searchLogic' => false,
+          'priority' => 4
+        ]);
+
 
         $this->listOperation();
     }
@@ -989,12 +1102,17 @@ class ProductCrudController extends CrudController
       
       // 
       foreach($this->categories as $category) {
-        // Take all active attributes for this category 
-        $cat_attrs = $category->attributes()->active()->get();
+        
+        $category_parent_node = $category->getParentNode();
 
-        // If isset active attributes for this category merge with common list
-        if($cat_attrs && $cat_attrs->count()) {
-          $this->attrs = $this->attrs->merge($cat_attrs);
+        foreach($category_parent_node as $category) {
+          // Take all active attributes for this category 
+          $cat_attrs = $category->attributes()->active()->get();
+  
+          // If isset active attributes for this category merge with common list
+          if($cat_attrs && $cat_attrs->count()) {
+            $this->attrs = $this->attrs->merge($cat_attrs);
+          }
         }
       }
     }
@@ -1110,8 +1228,7 @@ class ProductCrudController extends CrudController
       $search_term = $request->input('q');
 
       // langs
-      $available_languages = config('backpack.crud.locales');
-      $langs_list = array_keys($available_languages);
+      $langs_list = $this->langs_list;
 
       if ($search_term)
       {

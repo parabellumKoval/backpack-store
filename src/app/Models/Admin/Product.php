@@ -99,7 +99,7 @@ class Product extends BaseProduct
         $content = $this->getTranslation('content', $lang, false);
 
         if(mb_strlen($content) > 150) {
-          
+
           switch($lang) {
             case 'ru':
               $color = 'red';
@@ -111,11 +111,11 @@ class Product extends BaseProduct
               $color = 'black';
           }
 
-          $translations[] = '<b style="color: ' . $color . '">' . mb_strtoupper($lang) . '</b>';
+          $translations[] = '<div><b style="color: ' . $color . '">' . mb_strtoupper($lang) . '</b></div>';
         }
       }
 
-      $html = implode(', ', $translations);
+      $html = implode('', $translations);
 
       return $html;
     }
@@ -126,16 +126,33 @@ class Product extends BaseProduct
      * @return void
      */
     public function getAdminCodeAttribute() {
-      $supplier = $this->currentSp->supplier;
+      $supplier = $this->currentSp->supplier ?? null;
 
       $is_static_code = !empty($this->code)? true: false;
 
+      $sp_count = $this->sp->count();
+
+      if(!$this->sp->count()) {
+        $total_sp = 0;
+      }else {
+        $total_sp = $is_static_code? $this->sp->count(): $this->sp->count() - 1;
+      }
+
       $html = "<div>" . $this->simpleCode . "</div>";
 
+
       if($is_static_code) {
-        $html .= "<b style='color: grey'>(САЙТ)</b>";
+        $html .= "<b style='color: grey;'>САЙТ</b>";
+
+        if($total_sp) {
+          $html .= "<b style='font-size: 12px;' title='Всего поставщиков: " . $sp_count . "'> (🚚 " . $total_sp . ")</b>";
+        }
       }else if($supplier) {
-        $html .= "<b style='color: " . $supplier->color . ";'>(" . $supplier->name . ")</b>";
+        $html .= "<b style='color: " . $supplier->color . ";'>" . $supplier->name . "</b>";
+
+        if($total_sp) {
+          $html .= "<b style='font-size: 12px;' title='Всего поставщиков: " . $sp_count . "'> (🚚 +" . $total_sp . ")</b>";
+        }
       }
 
       return $html;

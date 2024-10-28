@@ -52,7 +52,9 @@ class Attribute extends Model
       'in_properties',
       'si',
       'default_value',
-      'categories'
+      'categories',
+      'values_array',
+      // 'attribute_values'
     ];
     // protected $hidden = [];
     // protected $dates = [];
@@ -64,12 +66,18 @@ class Attribute extends Model
       'si', 'default_value', 'min', 'max', 'step', 'extras', 'extras_trans'
     ];
 
-    protected $translatable = ['name', 'content', 'extras_trans'];
+    protected $translatable = ['name', 'content', 'extras_trans']; // 'values_array',
 
     public static $TYPES;
+    public static $SELECT_TYPES;
     
     // pivot
     public $pivotValue;
+
+    // public $values_array;
+    public $attribute_values;
+
+    // protected $attributes = ['values_array' => []];
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -79,9 +87,12 @@ class Attribute extends Model
     public function __construct(array $attributes = array()) {
       parent::__construct($attributes);
 
-      self::$TYPES = [
+      self::$SELECT_TYPES = [
         'checkbox' => __('shop.fieldType.checkbox'),
-        'radio' => __('shop.fieldType.radio'),
+        'radio' => __('shop.fieldType.radio')
+      ];
+
+      self::$TYPES = self::$SELECT_TYPES + [
         'number' => __('shop.fieldType.number'),
         'string' => __('shop.fieldType.string')
       ];
@@ -167,7 +178,6 @@ class Attribute extends Model
     */
     public function categories()
     {
-      // return $this->belongsToMany('Backpack\Store\app\Models\Category', 'ak_attribute_category');
       return $this->belongsToMany(Category::class, 'ak_attribute_category');
     }
 
@@ -214,7 +224,12 @@ class Attribute extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
-
+    
+    /**
+     * getSlugOrNameAttribute
+     *
+     * @return void
+     */
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {
@@ -371,6 +386,20 @@ class Attribute extends Model
     public function getSiAttribute() {
       return $this->getExtrasTrans('si');
     }
+    
+    /**
+     * getValuesArrayAttribute
+     *
+     * @return void
+     */
+    public function getValuesArrayAttribute() {
+      return $this->values->map(function($item) {
+        return [
+          'id' => $item->id,
+          'value' => $item->value
+        ];
+      });
+    }
 
     /**
      * getPivotValueAttribute
@@ -430,7 +459,10 @@ class Attribute extends Model
     |--------------------------------------------------------------------------
     */
     
-    // public function setCatsAttribute($values){
-    //   dd($values);
-    // }
+    public function setValuesArrayAttribute($value) {
+      $value_decoded = json_decode($value, true);
+      $this->attribute_values = !empty($value_decoded)? $value_decoded: null;
+      // dd($this->attribute_values);
+    }
+
 }

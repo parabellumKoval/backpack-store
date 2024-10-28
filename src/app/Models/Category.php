@@ -110,6 +110,24 @@ class Category extends Model
       return $node_ids;
     }
 
+    
+    /**
+     * getAllParents
+     *
+     * @return void
+     */
+    public function getParentNode($category = null, $carry = null) {
+      $carry = $carry? $carry: collect();
+			$category = $category? $category: $this;
+
+      $carry->push($category);
+
+      if($category->parent) {
+        return $this->getParentNode($category->parent, $carry);
+      }else {
+        return $carry;
+      }
+    }
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -273,8 +291,8 @@ class Category extends Model
 			  return array_merge($carry, $ids);
 			}, $start_carry);
     }
-
     
+
     /**
      * getRootCategory
      *

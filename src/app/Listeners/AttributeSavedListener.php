@@ -1,6 +1,7 @@
 <?php
  namespace Backpack\Store\app\Listeners;
  
+use Illuminate\Http\Request;
 use Backpack\Store\app\Events\AttributeSaved;
 
 use Backpack\Store\app\Models\AttributeValue;
@@ -22,11 +23,51 @@ class AttributeSavedListener
      */
     public function handle(AttributeSaved $event)
     {
-      // Detach attributes that not presented
-      $event->attribute->values()->whereNotIn('id', $event->attribute->values_store)->delete();
-      
+      $lang = \Request::input('locale', config('app.locale'));
+
       // Attach attributes that is presented
-      $values = AttributeValue::whereIn('id', $event->attribute->values_store)
-                                ->update(['attribute_id' => $event->attribute->id]);
+      // $values = AttributeValue::whereIn('id', $event->attribute->values_store)
+      //                           ->update(['attribute_id' => $event->attribute->id]);
+
+      $values = $event->attribute->attribute_values;
+      $processed_attribute_value_ids = [];
+
+      for($i = 0; $i < count($values); $i++){
+        $item = $values[$i];
+
+        if(!empty($item['id'])) {
+          // update exists
+          $av = AttributeValue::find($item['id']);
+          $av->setTranslation('value', $lang, $item['value']);
+          $av->transform = !empty($item['transform'])? $item['transform']: null;
+
+          if(!empty($item['transform_value'])) {
+            $extras = $av->extras;
+            $extras['transform_value'] = $item['transform_value'];
+            $av->extras = $extras;
+          }
+
+          $av->save();
+        }else {
+          // create new
+          $av = new AttributeValue();
+          $av->attribute_id = $event->attribute->id;
+          $av->setTranslation('value', $lang, $item['value']);
+          $av->save();
+
+          $processed_attribute_value_ids[] = $av->id;
+        }
+
+        if(!empty($item['id'])) {
+          $processed_attribute_value_ids[] = $item['id'];
+        }
+      }
+
+      try{
+        // Detach attributes that not presented
+        $event->attribute->values()->whereNotIn('id', $processed_attribute_value_ids)->delete();
+      }catch(\Exception $e) {
+        \Alert::add('error', 'Не удалось удалить значение так как оно привязано к одному или более товаров.');
+      }
     }
 }

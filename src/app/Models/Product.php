@@ -97,6 +97,9 @@ class Product extends Model
     
     public $images_array = [];
     
+    private $available_languages = [];
+    private $langs_list = [];
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -111,7 +114,12 @@ class Product extends Model
      */
     public function __construct(array $attributes = array()) {
       parent::__construct($attributes);
+      
       self::resources_init();
+
+      // available languages
+      $this->available_languages = config('backpack.crud.locales');
+      $this->langs_list = array_keys($this->available_languages);
     }
     
     /**
@@ -300,7 +308,92 @@ class Product extends Model
     | SCOPES
     |--------------------------------------------------------------------------
     */
+    
+    /**
+     * scopeFillQuality20
+     *
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopeFillQualityLow($query) {
+      $langs_list = $this->langs_list;
+      return $query
+              // Has not images
+              // ->where(function($query) {
+              //   $query->whereRaw('JSON_LENGTH(images) = ?', 0)
+              //         ->orWhere('images', null);
+              // })
+              // Has not any content translation
+              ->where(function($query) use($langs_list) {
+                foreach($langs_list as $lang_key) {
+                  $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) < ? ', 150);
+                }
 
+                $query->orWhere('content', null);
+              });
+              // Has not categories
+              // ->has('categories', '=', 0)
+              // Has not brand
+              // ->has('brand', '=', 0)
+              // Has no attributes
+              // ->has('ap', '=', 0);
+    }
+    
+    /**
+     * scopeFillQuality40
+     *
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopeFillQualityNormal($query) {
+      $langs_list = $this->langs_list;
+      return $query
+            // Has one at least one image
+            // ->whereRaw('JSON_LENGTH(images) >= ?', 1)
+            // has at least one translation 
+            ->where(function($query) use($langs_list) {
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index? 'orWhereRaw': 'whereRaw';
+                $query->{$function_name}('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
+              }
+            });
+            // has category
+            // ->has('categories', '>=', 1)
+            // has brand
+            // ->has('brand', '>=', 1)
+            // has few attributes
+            // ->has('ap', '<=', 3);
+    }
+    
+    /**
+     * scopeFillQuality100
+     *
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopefillQualityHight($query) {
+      $langs_list = $this->langs_list;
+      return $query
+              // ->whereRaw('JSON_LENGTH(images) >= ?', 1)
+              // has category
+              // ->has('categories', '>=', 1)
+              // has brand
+              // ->has('brand', '>=', 1)
+              // Name with all translations
+              // ->where(function($query) use($langs_list) {
+              //   foreach($langs_list as $lang_key) {
+              //     $query->whereRaw('LENGTH(JSON_EXTRACT(name, "$.' . $lang_key . '")) >= ? ', 2);
+              //   }
+              // })
+              // Content with all translations
+              ->where(function($query) use($langs_list) {
+                foreach($langs_list as $lang_key) {
+                  $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
+                }
+              });
+              // has attributes
+              // ->has('ap', '>=', 1);
+    }
     
     /**
      * scopeInStock
@@ -348,6 +441,123 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
     
+    public function getFillAdminAttribute() {
+      $html = '';
+
+      if($this->fillQuality['num'] <= 40) {
+        $color = 'red';
+      }else if($this->fillQuality['num'] > 40 && $this->fillQuality['num'] <= 70) {
+        $color = 'orange';
+      }else {
+        $color = 'green';
+      }
+
+      $html .= '<b style="color: ' . $color . '">' . $this->fillQuality['num'] . '</b>';
+      return $html;
+
+      // return $this->fillQuality['string'];
+    }
+
+    /**
+     * getFillQualityAttribute
+     *
+     * @return void
+     */
+    public function getFillQualityAttribute() {
+      $score = 0;
+      $string = '';
+
+      $score_rates = [
+        'suppliers' => 5,
+        'one_image' => 10,
+        'multiple_images' => 15,
+        'category' => 10,
+        'brand' => 10,
+        'props_1' => 5,
+        'props_2' => 10,
+        'props_3' => 15,
+        // using below for multiple languages
+        'content' => 20,
+        'name' => 5,
+      ];
+
+      $total_available = $score_rates['suppliers'] + $score_rates['multiple_images'] + $score_rates['category']
+         + $score_rates['brand'] + $score_rates['props_3'];
+
+      // Has supplier
+      if($this->sp) {
+        $score += $score_rates['suppliers'];
+        $string .= ' + supplier';
+      }
+
+      foreach($this->langs_list as $lang) {
+        // each content translation + 15, each name translation + 5
+        $total_available += $score_rates['content'] + $score_rates['name'];
+
+        // Has content translations
+        $content = $this->getTranslation('content', $lang, false);
+        if(!empty($content) && strlen($content) > 150) {
+          $score += $score_rates['content'];
+          $string .= ' + content';
+        }
+
+        // Has name translations
+        $content = $this->getTranslation('name', $lang, false);
+        if(!empty($content) && strlen($content) > 2) {
+          $score += $score_rates['name'];
+          $string .= ' + name';
+        }
+      }
+
+      // Has images
+      if($this->images) {
+        if(count($this->images) === 1){
+          $score += $score_rates['one_image'];
+          $string .= ' + one_image';
+        }else if(count($this->images) > 1) {
+          $score += $score_rates['multiple_images'];
+          $string .= ' + multiple_images';
+        }
+      }
+
+      // Has categories
+      if($this->categories->count()) {
+        $score += $score_rates['category'];
+        $string .= ' + category';
+      }
+
+      // Has Brand
+      if($this->brand) {
+        $score += $score_rates['brand'];
+        $string .= ' + brand';
+      }
+
+      // Has properties
+      if($this->properties) {
+        if(count($this->properties) === 1) {
+          $score += $score_rates['props_1'];
+          $string .= ' + props_1';
+        }else if(count($this->properties) > 1 && count($this->properties) <= 3) {
+          $score += $score_rates['props_2'];
+          $string .= ' + props_2';
+        }else if(count($this->properties) > 3) {
+          $score += $score_rates['props_3'];
+          $string .= ' + props_3';
+        }
+      }else if($this->customProperties) {
+        if(count($this->customProperties) === 1) {
+          $score += $score_rates['props_1'];
+        }else if(count($this->customProperties) > 1 && count($this->customProperties) <= 3) {
+          $score += $score_rates['props_2'];
+        }else if(count($this->customProperties) > 3) {
+          $score += $score_rates['props_3'];
+        }
+      }
+
+      $total = round($score * 100 / $total_available);
+
+      return ['num' => $total, 'string' => $string];
+    }
         
     /**
      * getSimpleCodeAttribute
