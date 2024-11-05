@@ -11,8 +11,13 @@ use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\Attribute;
 
+//
+use Backpack\Tag\app\Traits\Taggable;
+
 class Product extends BaseProduct
 {
+    use Taggable;
+
     public $props = null;
     public $modificationsToSave = [];
     public $suppliers_data = null;

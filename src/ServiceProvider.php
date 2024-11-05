@@ -7,6 +7,7 @@ use Backpack\Store\app\Providers\EventServiceProvider;
 // use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Backpack\Store\app\Console\Commands\XmlSource;
 use Backpack\Store\app\Console\Commands\AttributesTransform;
+use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
@@ -65,6 +66,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
       $this->commands([
         XmlSource::class,
         AttributesTransform::class,
+        XmlCorrectInStock::class,
       ]);
     }
   }
