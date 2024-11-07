@@ -151,7 +151,10 @@ class ProductController extends \App\Http\Controllers\Controller
 
       // only in stock
       ->when($this->is_in_stock, function($query) {
-        $query->where('ak_products.in_stock', '>', 0);
+        // $query->where('ak_products.in_stock', '>', 0);
+        $query->whereHas('sp', function($query) {
+          $query->where('in_stock', '>', 0);
+        });
       })
 
       // only with rating 
