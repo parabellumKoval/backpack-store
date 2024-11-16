@@ -82,8 +82,7 @@ class AttributeCrudController extends CrudController
 
     protected function setupListOperation()
     {
-        // TODO: remove setFromDb() and manually define Columns, maybe Filters
-       //  $this->crud->setFromDb();
+        $langs_list = $this->langs_list;
 
         // Filter by category
         $this->crud->addFilter([
@@ -128,6 +127,14 @@ class AttributeCrudController extends CrudController
         $this->crud->addColumn([
           'name' => 'name',
           'label' => 'Название',
+          'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
+            $query->where(function($query) use ($searchTerm, $langs_list){
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+              }
+            });
+          },
         ]);
 
         $this->crud->addColumn([
@@ -562,13 +569,14 @@ class AttributeCrudController extends CrudController
       if ($search_term)
       {
           $results = AttributeValue::
-                      where(function($query) use ($search_term, $langs_list){
-                        foreach($langs_list as $index => $lang_key) {
-                          $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
-                          $query->{$function_name}('LOWER(JSON_EXTRACT(value, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
-                        }
-                      })
-                      ->paginate(20);
+            where(function($query) use ($search_term, $langs_list){
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function_name}('LOWER(JSON_EXTRACT(value, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+              }
+            })
+            ->where('attribute_id', '=', $attribute_id)
+            ->paginate(20);
       }
       else
       {

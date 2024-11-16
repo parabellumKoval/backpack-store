@@ -28,6 +28,9 @@ class CategoryCrudController extends CrudController
     private $category_class = null;
     private $filter_categories = [];
 
+    private $available_languages = null;
+    private $langs_list = null;
+
     public function setup()
     {
       $this->category_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Category');
@@ -40,6 +43,10 @@ class CategoryCrudController extends CrudController
             ->whereNull('parent_id')
             ->pluck('name', 'id')
             ->toArray();
+      
+      
+      $this->available_languages = config('backpack.crud.locales');
+      $this->langs_list = array_keys($this->available_languages);
     }
 
     protected function setupReorderOperation()
@@ -53,6 +60,7 @@ class CategoryCrudController extends CrudController
     
     protected function setupListOperation()
     {
+      $langs_list = $this->langs_list;
 
       // Filter by category
       $this->crud->addFilter([
@@ -139,8 +147,7 @@ class CategoryCrudController extends CrudController
         }
       });
 
-      // TODO: remove setFromDb() and manually define Columns, maybe Filters
-      // $this->crud->setFromDb(); 
+
       $this->crud->addColumn([
         'name' => 'imageSrc',
         'label' => '📷',
@@ -148,11 +155,6 @@ class CategoryCrudController extends CrudController
         'height' => '50px',
         'width'  => '50px',
       ]);
-      
-      // $this->crud->addColumn([
-      //   'name' => 'id',
-      //   'label' => 'ID',
-      // ]);
 
       // IS ACTIVE
       $this->crud->addColumn([
@@ -180,6 +182,14 @@ class CategoryCrudController extends CrudController
         'name' => 'name',
         'label' => 'Название',
         'limit' => 200,
+        'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
+          $query->where(function($query) use ($searchTerm, $langs_list){
+            foreach($langs_list as $index => $lang_key) {
+              $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+              $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+            }
+          });
+        },
       ]);
       
       $this->crud->addColumn([
@@ -298,7 +308,6 @@ class CategoryCrudController extends CrudController
     {
       $this->setupCreateOperation();
     }
-
     
     /**
      * getCategories
@@ -311,8 +320,7 @@ class CategoryCrudController extends CrudController
       $id = $request->input('keys');
 
       // langs
-      $available_languages = config('backpack.crud.locales');
-      $langs_list = array_keys($available_languages);
+      $langs_list = $this->langs_list;
 
       if($id) {
         $categories = [];

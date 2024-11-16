@@ -38,6 +38,11 @@ class AttributeSavedListener
         if(!empty($item['id'])) {
           // update exists
           $av = AttributeValue::find($item['id']);
+          
+          if(!$av) {
+            continue;
+          }
+
           $av->setTranslation('value', $lang, $item['value']);
           $av->transform = !empty($item['transform'])? $item['transform']: null;
 

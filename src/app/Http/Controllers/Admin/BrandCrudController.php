@@ -27,6 +27,10 @@ class BrandCrudController extends CrudController
     
     private $brand_class = null;
 
+    private $available_languages = null;
+
+    private $langs_list = null;
+
     public function setup()
     {
       $this->brand_class = config('backpack.store.brands.class', 'Backpack\Store\app\Models\Brand');
@@ -35,12 +39,14 @@ class BrandCrudController extends CrudController
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/brand');
         $this->crud->setEntityNameStrings('бренд', 'бренды');
         
+
+        $this->available_languages = config('backpack.crud.locales');
+        $this->langs_list = array_keys($this->available_languages);
     }
 
     protected function setupListOperation()
     {
-        // TODO: remove setFromDb() and manually define Columns, maybe Filters
-        // $this->crud->setFromDb();
+        $langs_list = $this->langs_list;
         
         $this->crud->addColumn([
           'name' => 'imageSrc',
@@ -60,7 +66,15 @@ class BrandCrudController extends CrudController
 
         $this->crud->addColumn([
           'name' => 'name',
-          'label' => 'Название'
+          'label' => 'Название',
+          'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
+            $query->where(function($query) use ($searchTerm, $langs_list){
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+              }
+            });
+          },
         ]);
 
 
@@ -206,8 +220,7 @@ class BrandCrudController extends CrudController
       $id = $request->input('keys');
 
       // langs
-      $available_languages = config('backpack.crud.locales');
-      $langs_list = array_keys($available_languages);
+      $langs_list = $this->langs_list;
 
       if($id) {
         $brands = [];

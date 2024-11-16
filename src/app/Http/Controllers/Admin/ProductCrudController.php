@@ -177,11 +177,9 @@ class ProductCrudController extends CrudController
 
     protected function setupListOperation()
     {
-      //
-      // $this->crud->disableResponsiveTable();
+        // langs
+        $langs_list = $this->langs_list;
 
-        //remove product modifications from list view
-        // $this->crud->addClause('base');
         $this->crud->addClause('withSum', 'sp', 'in_stock');
 
         // Filter by Brand
@@ -374,14 +372,14 @@ class ProductCrudController extends CrudController
           'label' => '<span title="Артикул товара или баркод">#️⃣</span>',
           'escaped' => false,
           'limit' => 2500,
-          'searchLogic' => true,
           'priority' => 1,
           'searchLogic' => function ($query, $column, $searchTerm) {
             $query
-            ->whereHas('sp', function($query) use($searchTerm) {
-              $query->where('code', 'LIKE', '%'.$searchTerm.'%')->orWhere('barcode', 'LIKE', '%'.$searchTerm.'%');
-            })
-            ->orWhere('code', 'LIKE', '%'.$searchTerm.'%');
+              ->whereHas('sp', function($query) use($searchTerm) {
+                $query->where('code', 'LIKE', '%'.$searchTerm.'%')
+                ->orWhere('barcode', 'LIKE', '%'.$searchTerm.'%');
+              })
+              ->orWhere('code', 'LIKE', '%'.$searchTerm.'%');
           },
         ]);
 
@@ -436,9 +434,13 @@ class ProductCrudController extends CrudController
           'type' => 'textarea',
           'limit' => 100,
           'priority' => 1,
-          'searchLogic' => function ($query, $column, $searchTerm) {
-            $locale = \Lang::locale();
-            $query->orWhere("name->{$locale}", 'like', '%'.$searchTerm.'%');
+          'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
+            $query->orWhere(function($query) use ($searchTerm, $langs_list){
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+              }
+            });
           },
         ]);
 
@@ -447,7 +449,6 @@ class ProductCrudController extends CrudController
           'label' => '<span title="Переводы">🌐</span>',
           'escaped' => false,
           'limit' => 1500,
-          'searchLogic' => false,
           'priority' => 7
         ]);
 
@@ -480,7 +481,6 @@ class ProductCrudController extends CrudController
           'label' => '<span title="Качество заполнения">💎</span>',
           'escaped' => false,
           'limit' => 1500,
-          'searchLogic' => false,
           'priority' => 4
         ]);
 

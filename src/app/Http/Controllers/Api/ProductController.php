@@ -104,6 +104,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     if($isQuery) {
       $products = $this->product_class::query();
+      // $products = \DB::table('ak_products');
     }else {
       $products = \DB::table('ak_products');
     }
@@ -119,6 +120,8 @@ class ProductController extends \App\Http\Controllers\Controller
       // Getting only products that "is_active" param set to true
       ->where('ak_products.is_active', 1)
       
+      ->leftJoin('ak_supplier_product as sp', 'ak_products.id', '=', 'sp.product_id')
+
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){
         $query->leftJoin('ak_category_product as cp', 'cp.product_id', '=', 'ak_products.id');
@@ -150,11 +153,15 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // only in stock
-      ->when($this->is_in_stock, function($query) {
+      ->when($this->is_in_stock, function($query) use($isQuery) {
         // $query->where('ak_products.in_stock', '>', 0);
-        $query->whereHas('sp', function($query) {
-          $query->where('in_stock', '>', 0);
-        });
+        if($isQuery) {
+          $query->whereHas('sp', function($query) {
+            $query->where('in_stock', '>', 0);
+          });
+        }else {
+          $query->where('sp.in_stock', '>', 0);
+        }
       })
 
       // only with rating 
@@ -235,7 +242,17 @@ class ProductController extends \App\Http\Controllers\Controller
     
     // and ordering to query
     if($order_by) {
-      if($order_by === 'sales')
+      if($order_by === 'in_stock') {
+        if(config('backpack.store.supplier.enable', false)) {
+          $products = $products
+            ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) ' . $order_dir, [0, 1, 0])
+            ->groupBy('ak_products.id');
+        }else {
+          $products = $products
+            ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) ' . $order_dir, [0, 1, 0]);
+        }
+      }
+      elseif($order_by === 'sales')
       {
         $products = $products
           ->leftJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
@@ -244,6 +261,7 @@ class ProductController extends \App\Http\Controllers\Controller
       }
       elseif($order_by === 'sale') 
       {
+        // ATTANTION NOW price IN SUPPLIER_PRODUCT
         // At first with bigger sale
         $products = $products->orderByRaw('ak_products.old_price - ak_products.price ' . $order_dir);
       }
@@ -255,7 +273,6 @@ class ProductController extends \App\Http\Controllers\Controller
       // at first in_stock > 0
       if(config('backpack.store.supplier.enable', false)) {
         $products = $products
-          ->leftJoin('ak_supplier_product as sp', 'ak_products.id', '=', 'sp.product_id')
           ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) DESC', [0, 1, 0])
           ->groupBy('ak_products.id');
       }else {
@@ -300,7 +317,10 @@ class ProductController extends \App\Http\Controllers\Controller
 
     // Get prices
     $prices = $products_query
-      ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
+      // VARIANT FOR WITHOUT SUPPLIERS DB
+      // ->select(DB::raw('MAX(price) as max_price'), DB::raw('MIN(price) as min_price'))
+      //
+      ->select(DB::raw('MAX(sp.price) as max_price'), DB::raw('MIN(sp.price) as min_price'))
       ->get()
       ->all();
 
