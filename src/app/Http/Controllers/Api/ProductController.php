@@ -147,9 +147,11 @@ class ProductController extends \App\Http\Controllers\Controller
         $query->whereIn('brnd.id', $request->input('brands'));
       })
 
-      // only with sales 
+      // only with sales
+
       ->when($this->is_with_sales, function($query) {
-        $query->where('ak_products.old_price', '>', 0);
+        // $query->where('ak_products.old_price', '>', 0);
+        $query->where('sp.old_price', '>', 0);
       })
 
       // only in stock
@@ -183,7 +185,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
       // Price filter
       ->when($request->input('price') && is_array($request->input('price')), function($query) use($request) {
-        $query->whereBetween('price', array_values($request->input('price')));
+        $query->whereBetween('sp.price', array_values($request->input('price')));
       })
 
       // filtering by search query if "q" is presented in request
