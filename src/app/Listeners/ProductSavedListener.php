@@ -144,7 +144,8 @@ class ProductSavedListener
         
       }
 
-      $product->suppliers()->sync($sync_pivot_data);
+      $product->syncSuppliers($sync_pivot_data);
+      // $product->suppliers()->sync($sync_pivot_data);
     }
     
     /**

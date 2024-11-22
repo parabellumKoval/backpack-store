@@ -5,6 +5,9 @@ namespace Backpack\Store\app\Models;
 use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 
+// Stock events
+use Backpack\Store\app\Events\ProductSupplierSynced;
+
 // SLUGS
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
@@ -193,6 +196,19 @@ class Product extends Model
       }else {
         return array_slice($this->images, 0, $amount);
       }
+    }
+
+    /**
+     * syncSuppliers
+     *
+     * @param  mixed $ids
+     * @param  mixed $detaching
+     * @return void
+     */
+    public function syncSuppliers($data)
+    {
+        $result = $this->suppliers()->sync($data);
+        static::$dispatcher->fire(new ProductSupplierSynced($this, $data));
     }
 
     /*
