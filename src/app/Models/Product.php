@@ -208,7 +208,7 @@ class Product extends Model
     public function syncSuppliers($data)
     {
         $result = $this->suppliers()->sync($data);
-        static::$dispatcher->fire(new ProductSupplierSynced($this, $data));
+        ProductSupplierSynced::dispatch($this, $data);
     }
 
     /*
