@@ -33,6 +33,8 @@ class SupplierProduct extends Model
 
     protected $fakeColumns = [];
     
+    protected $product_class = null;
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -51,7 +53,8 @@ class SupplierProduct extends Model
     */
     public function product()
     {
-      return $this->belongsTo(Product::class);
+      $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+      return $this->belongsTo($this->product_class);
     }
 
     public function supplier()
