@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 
+// Stock events
+use Backpack\Store\app\Events\SupplierProductSaved;
 
 // MODEL
 use Backpack\Store\app\Models\Product;
@@ -45,6 +47,18 @@ class SupplierProduct extends Model
         parent::boot();
     }
 
+    /**
+     * syncSuppliers
+     *
+     * @param  mixed $ids
+     * @param  mixed $detaching
+     * @return void
+     */
+    public function saveWithEvent()
+    {
+        $this->save();
+        SupplierProductSaved::dispatch($this);
+    }
     
     /*
     |--------------------------------------------------------------------------
