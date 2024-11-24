@@ -255,6 +255,7 @@ return [
     'supplier' => [
       'enable' => true,
       'class' => 'Backpack\Store\app\Models\Supplier',
+      'sp_class' => 'Backpack\Store\app\Models\SupplierProduct',
     ],
 
     // XML SOURCE

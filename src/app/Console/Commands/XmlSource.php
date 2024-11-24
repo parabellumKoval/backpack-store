@@ -9,9 +9,9 @@ use Illuminate\Support\Arr;
 use \Cviebrock\EloquentSluggable\Services\SlugService;
 
 use Backpack\Store\app\Models\Brand;
-use Backpack\Store\app\Models\Product;
+// use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Supplier;
-use Backpack\Store\app\Models\SupplierProduct;
+// use Backpack\Store\app\Models\SupplierProduct;
 use Backpack\Store\app\Models\Source;
 use Backpack\Store\app\Models\UploadHistory;
 use Backpack\Store\app\Jobs\uploadFromXmlSource;
@@ -46,6 +46,8 @@ class XmlSource extends Command
     protected $cs = null;
 
     protected $isSuppliersEnabled = false;
+    protected $SP_CLASS = null;
+    protected $PRODUCT_CLASS = null;
 
     protected $currentSource = null;
     protected $uploadHistory = null;
@@ -63,6 +65,9 @@ class XmlSource extends Command
     {
       parent::__construct();
       $this->isSuppliersEnabled = config('backpack.store.supplier.enable', false);
+
+      $this->SP_CLASS = config('backpack.store.supplier.sp_class', 'Backpack\Store\app\Models\SupplierProduct');
+      $this->PRODUCT_CLASS = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
     }
 
     /**
@@ -263,7 +268,7 @@ class XmlSource extends Command
     private function updateOrCreateProduct($data) {
       $update_or_create = 'update';
 
-      $product = Product::where('id', '>', 0);
+      $product = $this->PRODUCT_CLASS::where('id', '>', 0);
 
       $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
 
@@ -338,7 +343,7 @@ class XmlSource extends Command
       //       })
       //       ->first();
       
-      $sp = SupplierProduct::
+      $sp = $this->SP_CLASS::
               where('supplier_id', $this->currentSource->supplier_id);
 
 
@@ -366,7 +371,7 @@ class XmlSource extends Command
       if(!$sp) {
         $update_or_create = 'create';
 
-        $sp = new SupplierProduct;
+        $sp = new $this->SP_CLASS;
 
         // Is Not SupplierProduct means is not Product also
         $product = $this->createProduct($data);
@@ -396,7 +401,7 @@ class XmlSource extends Command
      * @return void
      */
     private function createProduct($data) {
-      $product = new Product();
+      $product = new $this->PRODUCT_CLASS;
       $this->setProductInitFields($product);
       $this->setProductName($product, $data);
 
@@ -606,7 +611,7 @@ class XmlSource extends Command
      */
     private function setProductName(&$product, $data) {
       $product->setTranslation('name', $this->lang, $data['name']);
-      $product->slug = SlugService::createSlug(Product::class, 'slug', $data['name']);
+      $product->slug = SlugService::createSlug($this->PRODUCT_CLASS::class, 'slug', $data['name']);
     }
 
 
