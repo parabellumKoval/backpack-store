@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 
 // Stock events
-use Backpack\Store\app\Events\ProductSupplierSynced;
+use Backpack\Store\app\Events\SupplierProductSynced;
 
 // SLUGS
 use Cviebrock\EloquentSluggable\Sluggable;
@@ -208,7 +208,7 @@ class Product extends Model
     public function syncSuppliers($data)
     {
         $result = $this->suppliers()->sync($data);
-        ProductSupplierSynced::dispatch($this, $data);
+        SupplierProductSynced::dispatch($this, $data);
     }
 
     /*
