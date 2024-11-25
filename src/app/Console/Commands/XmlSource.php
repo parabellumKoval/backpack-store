@@ -86,8 +86,10 @@ class XmlSource extends Command
       	$bar->advance();
 
         // skip if it's not time yet
-        if($source->last_loading && $source->every_minutes && \Carbon\Carbon::now()->diffInMinutes($source->last_loading->addMinute($source->every_minutes), false) > 0) {
-          continue;
+        if(config('app.env') === 'production') {
+          if($source->last_loading && $source->every_minutes && \Carbon\Carbon::now()->diffInMinutes($source->last_loading->addMinute($source->every_minutes), false) > 0) {
+            continue;
+          }
         }
 
         // update loading timestamp
@@ -113,8 +115,6 @@ class XmlSource extends Command
      */
     private function loadFromXml($source) {
       $this->bootSource($source);
-
-      $this->createUploadHistory();
       
       $xml = $this->getXMLCatalog($source->link);
 
@@ -611,7 +611,7 @@ class XmlSource extends Command
      */
     private function setProductName(&$product, $data) {
       $product->setTranslation('name', $this->lang, $data['name']);
-      $product->slug = SlugService::createSlug($this->PRODUCT_CLASS::class, 'slug', $data['name']);
+      $product->slug = SlugService::createSlug($this->PRODUCT_CLASS, 'slug', $data['name']);
     }
 
 
@@ -629,10 +629,14 @@ class XmlSource extends Command
      * @return void
      */
     private function bootSource($source) {
+      // Set current source in processing
+      $this->currentSource = $source;
+
+      // Create upload history
+      $this->createUploadHistory();
+
       // Get Exchange rates
       $this->exchange_rate = $this->getRate();
-
-      $this->currentSource = $source;
 
       // Fill Settings
       $this->settings = $source->settings;
