@@ -86,7 +86,7 @@ class XmlSource extends Command
       	$bar->advance();
 
         // skip if it's not time yet
-        if(config('app.env') === 'production') {
+        if(config('app.mode') === 'production') {
           if($source->last_loading && $source->every_minutes && \Carbon\Carbon::now()->diffInMinutes($source->last_loading->addMinute($source->every_minutes), false) > 0) {
             continue;
           }
