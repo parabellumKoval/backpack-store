@@ -75,37 +75,38 @@ class OrderCrudController extends CrudController
 
 
     $this->ORDER_MODEL::creating(function($entry) {
+      
+      $filtered_products = array_filter($entry->products_to_synk, function($item) {
+        return !empty($item->id);
+      });
+
+      $plucked_products = Arr::pluck($filtered_products, 'amount', 'id');
+      $product_keys = array_keys($plucked_products);
+
+      $products = $this->PRODUCT_MODEL::whereIn('id', $product_keys)->get();
+
+      if(!$products || !$products->count()){
+        \Alert::add('error', 'Товары отсутсвуют')->flash();
+        return redirect()->back();
+      }
+
+      $total_sum = $products->reduce(function($carry, $item) use($plucked_products) {
+        return $carry + $item->price * $plucked_products[$item->id];
+      }, 0);
+      
 
       // IF price empty, fill it from products data
       if($entry->price === null) {
-        $filtered_products = array_filter($entry->products_to_synk, function($item) {
-          return !empty($item->id);
-        });
-
-        $plucked_products = Arr::pluck($filtered_products, 'amount', 'id');
-        $product_keys = array_keys($plucked_products);
-
-        $products = $this->PRODUCT_MODEL::whereIn('id', $product_keys)->get();
-
-        if(!$products || !$products->count()){
-          \Alert::add('error', 'Товары отсутсвуют')->flash();
-          return redirect()->back();
-        }
-
-        $total_sum = $products->reduce(function($carry, $item) use($plucked_products) {
-          return $carry + $item->price * $plucked_products[$item->id];
-        }, 0);
-        
         $entry->price = $total_sum;
+      }
 
 
-        // Save products to info field (json)
-        foreach($products as $key => $product) {
-          $product->amount = $plucked_products[$product->id];
-          $info = $entry->info;
-          $info['products'][$key] = new ProductCartResource($product);
-          $entry->info = $info;
-        }
+      // Save products to info field (json)
+      foreach($products as $key => $product) {
+        $product->amount = $plucked_products[$product->id];
+        $info = $entry->info;
+        $info['products'][$key] = new ProductCartResource($product);
+        $entry->info = $info;
       }
 
       // Generate random code
