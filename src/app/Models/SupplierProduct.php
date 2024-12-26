@@ -29,7 +29,7 @@ class SupplierProduct extends Model
     protected $guarded = ['id'];
     // protected $fillable = [];
     // protected $hidden = [];
-    // protected $dates = [];
+    protected $dates = ['checked_at'];
 
     protected $casts = [];
 

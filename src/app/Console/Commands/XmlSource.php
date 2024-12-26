@@ -390,6 +390,8 @@ class XmlSource extends Command
     
       // Attach Supplier Product to Product
       $sp->product_id = $product->id;
+      $sp->checked_at = time();
+      
       $sp->saveWithEvent();
 
       return $update_or_create;

@@ -76,7 +76,10 @@ class XmlCorrectInStock extends Command
 
           $query->{$function_name}(function($query) use($supplier_id, $last_loading) {
             $query->where('supplier_id',  $supplier_id)
-                  ->where('updated_at', '<', $last_loading);
+                  ->where(function($query) use ($last_loading){
+                    $query->where('checked_at', '<', $last_loading)
+                          ->orWhere('checked_at', null);
+                  });
           });
         }
       })->where('in_stock', '>', 0)->update(['in_stock' => 0]);
