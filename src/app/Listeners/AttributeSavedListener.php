@@ -30,6 +30,10 @@ class AttributeSavedListener
       //                           ->update(['attribute_id' => $event->attribute->id]);
 
       $values = $event->attribute->attribute_values;
+      
+      if(empty($values) || !is_array($values))
+        return;
+
       $processed_attribute_value_ids = [];
 
       for($i = 0; $i < count($values); $i++){
