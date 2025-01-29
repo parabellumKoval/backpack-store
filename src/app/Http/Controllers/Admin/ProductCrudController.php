@@ -317,10 +317,11 @@ class ProductCrudController extends CrudController
           ];
         }, function($in_stock){
           if($in_stock == 0) {
-            $this->crud->query->has('suppliers', '=', 0);
-            $this->crud->query->orWhereHas('suppliers', function ($query) {
-              $query->where('in_stock', '>', 0);
-            }, '=', 0);
+            $this->crud->query->where(function($query) {
+              $query->whereHas('suppliers', function ($query) {
+                $query->where('in_stock', '=', 0);
+              })->orHas('suppliers', '=', 0);
+            });
           }else {
             $this->crud->query->whereHas('suppliers', function ($query) {
               $query->where('in_stock', '>', 0);
