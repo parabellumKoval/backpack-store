@@ -149,7 +149,7 @@ class CreateForeignKeys extends Migration
         if(!$this->_isForeignKeysExist('ak_category_source', 'category_id')) {
           $table->foreign('category_id')
                 ->references('id')
-                ->on('ak_categories')
+                ->on('ak_product_categories')
                 ->onDelete('cascade');
         }
       });
