@@ -264,5 +264,9 @@ return [
       'class' => 'Backpack\Store\app\Models\Source',
       'admin_class' => 'Backpack\Store\app\Models\Admin\Source',
       'upload_class' => 'Backpack\Store\app\Models\UploadHistory',
+      'test' => [
+        'enable' => false,
+        'items' => 1
+      ]
     ]
 ];

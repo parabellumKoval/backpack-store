@@ -48,6 +48,8 @@ class XmlSource extends Command
     protected $isSuppliersEnabled = false;
     protected $SP_CLASS = null;
     protected $PRODUCT_CLASS = null;
+    protected $IS_TEST_MODE = false;
+    protected $TEST_ITEMS = -1;
 
     protected $currentSource = null;
     protected $uploadHistory = null;
@@ -68,6 +70,9 @@ class XmlSource extends Command
 
       $this->SP_CLASS = config('backpack.store.supplier.sp_class', 'Backpack\Store\app\Models\SupplierProduct');
       $this->PRODUCT_CLASS = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+
+      $this->IS_TEST_MODE = config('backpack.store.source.test.enable', false);
+      $this->TEST_ITEMS = config('backpack.store.source.test.items', -1);
     }
 
     /**
@@ -122,8 +127,12 @@ class XmlSource extends Command
         return $model->{$property};
       }, $xml);
 
-      $this->totalRecords = count($item);
-      // $this->totalRecords = 1;
+      if($this->IS_TEST_MODE) {
+        // if $TEST_ITEMS === -1 it means all items
+        $this->totalRecords = $this->TEST_ITEMS === -1? count($item): $this->TEST_ITEMS;
+      }else {
+        $this->totalRecords = count($item);
+      }
       
       $this->totalUploadHistory($this->totalRecords);
 
