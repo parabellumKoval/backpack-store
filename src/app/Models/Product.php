@@ -945,4 +945,5 @@ class Product extends Model
     public function setModificationsAttribute($value) {
       $this->modificationsToSave = $value;
     }
+
 }

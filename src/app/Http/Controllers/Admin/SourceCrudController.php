@@ -283,12 +283,23 @@ class SourceCrudController extends CrudController
         ]);
 
         $this->crud->addField([
+          'name' => 'fieldImage',
+          'label' => 'Картинка',
+          'type' => 'text',
+          'fake' => true,
+          'store_in' => 'settings',
+          'wrapper'   => [ 
+            'class' => 'form-group col-md-4'
+          ],
+          'tab' => 'Настройки'
+        ]);
+
+        $this->crud->addField([
           'name' => 'delim_3',
           'type' => 'custom_html',
           'value' => '<h3>Общие настройки</h3>',
           'tab' => 'Настройки'
         ]);
-
 
         $this->crud->addField([
           'name' => 'createNewBrand',
@@ -303,7 +314,6 @@ class SourceCrudController extends CrudController
           ],
           'tab' => 'Настройки'
         ]);
-
 
         $this->crud->addField([
           'name' => 'language',
@@ -320,7 +330,6 @@ class SourceCrudController extends CrudController
           ],
           'tab' => 'Настройки'
         ]);
-
 
         $this->crud->addField([
           'name' => 'inStockRules',
@@ -366,6 +375,20 @@ class SourceCrudController extends CrudController
           'min_rows' => 0,
           'hint' => 'Добавьте правила по которым будет интерпритироваться значения поля "Наличие товара"',
           'wrapper'   => [ 
+            'class' => 'form-group col-md-12'
+          ],
+          'tab' => 'Настройки'
+        ]);
+
+
+        $this->crud->addField([
+          'name' => 'image_indexes',
+          'label' => 'Индексы картинок',
+          'type' => 'text',
+          'fake' => true,
+          'store_in' => 'settings',
+          'hint' => 'Если у товара несколько картинок, вы можете загружать их выборочно. Укажите через запятую индексы картинок, которые нужно загружать. Например если указать 1,2 то будут загружаться только первая и вторая картинка к каждому товару все остальные будут проигнорированы. Если оставить поле пусты будут загружаться все картинки.',
+          'wrapper'   => [
             'class' => 'form-group col-md-12'
           ],
           'tab' => 'Настройки'

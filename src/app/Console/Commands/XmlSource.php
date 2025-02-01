@@ -118,17 +118,22 @@ class XmlSource extends Command
       
       $xml = $this->getXMLCatalog($source->link);
 
-      $way = 'Catalog->items->item';
       $item = array_reduce(explode('->', $this->settings['item']), function($model, $property) {
         return $model->{$property};
       }, $xml);
 
       $this->totalRecords = count($item);
+      // $this->totalRecords = 1;
       
       $this->totalUploadHistory($this->totalRecords);
 
       for($i = 0; $i < $this->totalRecords; $i++){
         
+        // Get Attributes
+        // foreach($item[$i]->attributes() as $k => $v) {
+        //     \Log::info($k . ' = ' . $v);
+        // }
+
         $xml_product = [
           'category' => $item[$i]->{$this->settings['fieldCategory']}->__toString(),
           'name' => $item[$i]->{$this->settings['fieldName']}->__toString(),
@@ -137,7 +142,10 @@ class XmlSource extends Command
           'code' => $item[$i]->{$this->settings['fieldCode']}->__toString() ?? null,
           'barcode' => $item[$i]->{$this->settings['fieldBarcode']}->__toString() ?? null,
           'price' => $item[$i]->{$this->settings['fieldPrice']}->__toString(),
+          'images' => $item[$i]->{$this->settings['fieldImage']},
         ];
+
+        // \Log::info(print_r($xml_product, true));
 
         if($this->validateData($xml_product)) {
           // TRY TO FIND EXISTE PRODUCT
@@ -405,7 +413,10 @@ class XmlSource extends Command
     private function createProduct($data) {
       $product = new $this->PRODUCT_CLASS;
       $this->setProductInitFields($product);
+      
       $this->setProductName($product, $data);
+      
+      $this->setProductImage($product, $data);
 
       // Set brand to product
       $this->attachProductBrand($product, $data);
@@ -430,6 +441,8 @@ class XmlSource extends Command
 
       if(empty($this->stockRules)) {
         $in_stock = intval($data['inStock']);
+
+        return $in_stock;
       }
 
       $rule = $this->stockRules[$data['inStock']] ?? null;
@@ -537,6 +550,7 @@ class XmlSource extends Command
       $product->brand_id = $brand->id;
     }
     
+
     /**
      * setProductCategory
      *
@@ -616,7 +630,35 @@ class XmlSource extends Command
       $product->slug = SlugService::createSlug($this->PRODUCT_CLASS, 'slug', $data['name']);
     }
 
+    /**
+     * setProductImage
+     *
+     * @param  mixed $product
+     * @param  mixed $data
+     * @return void
+     */
+    private function setProductImage(&$product, $data) {
+      if(empty($data['images'])) {
+        return;
+      }
 
+      $links_array = (array)$data['images'];
+      $images = [];
+
+      foreach($links_array as $link) {
+        if(!empty($link)) {
+          $images[] = [
+            'src' => $link,
+            'alt' => null,
+            'title' => null,
+          ];
+        }
+      }
+
+      if(!empty($images)) {
+        $product->images = json_encode($images);
+      }
+    }
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -738,12 +780,18 @@ class XmlSource extends Command
 
       // IF BANNED BY PRICE
       if($rule['target'] === 'price' && (!empty($rule['min_price']) || !empty($rule['max_price']))) {
+        $points = 0;
+
         if($rule['min_price'] !== null && $product['price'] >= $rule['min_price']) {
-          return true;
+          $points += 1;
         }
 
         if($rule['max_price'] !== null && $product['price'] <= $rule['max_price']) {
-          return true;
+          $points += 1;
+        }
+
+        if($points === 2) {
+          return 2;
         }
       }
 
