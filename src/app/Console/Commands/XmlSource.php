@@ -639,14 +639,22 @@ class XmlSource extends Command
       $product->slug = SlugService::createSlug($this->PRODUCT_CLASS, 'slug', $data['name']);
     }
 
+    
     /**
-     * setProductImage
-     *
-     * @param  mixed $product
-     * @param  mixed $data
-     * @return void
+     * The function `setProductImage` processes an array of image links and stores them in a JSON
+     * format within the `images` property of a product object.
+     * 
+     * @param product  is an object representing a product. It likely has properties such as
+     * name, price, description, and images. The setProductImage function is used to set the images
+     * property of the product object based on the data provided.
+     * @param data The `setProductImage` function takes two parameters: `` and ``. The
+     * `` parameter is an array that contains information about the images of the product. The
+     * function checks if the 'images' key in the `` array is empty. If it is not empty,
+     * 
+     * @return If the `['images']` array is empty, the function will return without making any
+     * changes to the product.
      */
-    private function setProductImage(&$product, $data) {
+    private function setProductImage(&$product, array $data) {
       if(empty($data['images'])) {
         return;
       }
@@ -654,8 +662,9 @@ class XmlSource extends Command
       $links_array = (array)$data['images'];
       $images = [];
 
-      foreach($links_array as $link) {
-        if(!empty($link)) {
+
+      foreach($links_array as $index => $link) {
+        if(!empty($link) && $this->ifImageIndexAllowed($index)) {
           $images[] = [
             'src' => $link,
             'alt' => null,
@@ -665,9 +674,49 @@ class XmlSource extends Command
       }
 
       if(!empty($images)) {
-        $product->images = json_encode($images);
+        $product->images = $images;
       }
     }
+
+    /**
+     * The function `ifImageIndexAllowed` checks if a given index is allowed based on a list of allowed
+     * indexes stored in the settings.
+     * 
+     * @param index The `ifImageIndexAllowed` function checks if a given index is allowed based on the
+     * settings provided. It first checks if the `imageIndexes` setting is set in the `->settings`
+     * array. If it is set, it converts the string of indexes into an array of integers and then
+     * 
+     * @return The function `ifImageIndexAllowed` returns `true` if the provided `` is found in
+     * the array of image indexes specified in the settings, and `false` otherwise. If the
+     * `imageIndexes` setting is not set or empty, the function will return nothing.
+     */
+    private function ifImageIndexAllowed($index) {
+      // Check if imageIndexes is set
+      if(!empty($this->settings['imageIndexes'])) {
+        $indexes_string = $this->settings['imageIndexes'];
+      }else {
+        return true;
+      }
+
+      // Convert string to array
+      $indexes_array = explode(',', $indexes_string);
+      
+      // Convert string array to int array 
+      $indexes_array_num = array_map(function($item) {
+        return (int)$item;
+      }, $indexes_array);
+
+
+      $index_num = (int)$index + 1;
+
+      // Check if index is in array
+      if(in_array($index_num, $indexes_array_num)) {
+        return true;
+      }else {
+        return false;
+      }
+    }
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS

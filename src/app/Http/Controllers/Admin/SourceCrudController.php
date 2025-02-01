@@ -382,7 +382,7 @@ class SourceCrudController extends CrudController
 
 
         $this->crud->addField([
-          'name' => 'image_indexes',
+          'name' => 'imageIndexes',
           'label' => 'Индексы картинок',
           'type' => 'text',
           'fake' => true,
