@@ -151,10 +151,13 @@ class XmlSource extends Command
           'inStock' => $item[$i]->{$this->settings['fieldInStock']}->__toString(),
           'code' => $item[$i]->{$this->settings['fieldCode']}->__toString() ?? null,
           'barcode' => $item[$i]->{$this->settings['fieldBarcode']}->__toString() ?? null,
-          'price' => $item[$i]->{$this->settings['fieldPrice']}->__toString(),
-          'images' => $item[$i]->{$this->settings['fieldImage']} ?? null,
+          'price' => $item[$i]->{$this->settings['fieldPrice']}->__toString()
         ];
 
+        if(isset($this->settings['fieldImage']) && !empty($this->settings['fieldImage'])) {
+          $xml_product['images'] = $item[$i]->{$this->settings['fieldImage']};
+        }
+        
         // \Log::info(print_r($xml_product, true));
 
         if($this->validateData($xml_product)) {
