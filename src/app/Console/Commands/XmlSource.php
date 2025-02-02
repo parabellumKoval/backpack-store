@@ -104,6 +104,7 @@ class XmlSource extends Command
         try {
           $this->loadFromXml($source);
         }catch (\Exception $e) {
+          \Log::channel('xml')->error($e->getMessage());
           $this->setStatusUploadHistory('error');
         }
       }
