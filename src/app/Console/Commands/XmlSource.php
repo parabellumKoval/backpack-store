@@ -151,7 +151,7 @@ class XmlSource extends Command
           'code' => $item[$i]->{$this->settings['fieldCode']}->__toString() ?? null,
           'barcode' => $item[$i]->{$this->settings['fieldBarcode']}->__toString() ?? null,
           'price' => $item[$i]->{$this->settings['fieldPrice']}->__toString(),
-          'images' => $item[$i]->{$this->settings['fieldImage']},
+          'images' => $item[$i]->{$this->settings['fieldImage']} ?? null,
         ];
 
         // \Log::info(print_r($xml_product, true));
