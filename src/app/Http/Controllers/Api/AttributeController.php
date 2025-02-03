@@ -23,11 +23,29 @@ class AttributeController extends \App\Http\Controllers\Controller
     self::resources_init();
   }
 
+  /**
+   * The index function retrieves and filters attributes based on certain criteria and returns a JSON
+   * response if specified.
+   * 
+   * @param Request request The `index` function you provided seems to be a controller method in a
+   * Laravel application. It retrieves attributes based on certain conditions and returns a JSON
+   * response if the `` parameter is set to `true`.
+   * @param bool json_response The `json_response` parameter in the `index` function is a boolean
+   * parameter that determines whether the response should be returned as JSON or not. If
+   * `json_response` is set to `true`, the function will return a JSON response. If it is set to
+   * `false`, the function will return
+   * 
+   * @return The `index` function returns a JSON response containing a collection of attributes. The
+   * attributes are fetched based on certain conditions such as active status, filter status, category
+   * filtering, and brand filtering. The response includes attributes that meet the specified criteria.
+   * If the `` parameter is set to `true`, the response is returned as a JSON object.
+   * Otherwise, the response is returned as a collection of
+   */
   public function index(Request $request, bool $json_response = true) {
 
-    $node_ids = Category::getCategoryNodeIdList($request->input('category_slug'), $request->input('category_id'));
+    // $node_ids = Category::getCategoryNodeIdList($request->input('category_slug'), $request->input('category_id'));
+    $node_ids = Category::getParentNodeIds($request->input('category_slug'), $request->input('category_id'));
 
-    // dd(request('brand_slug'));
     // $start = microtime(true);
     
     $attributes = Attribute::query()

@@ -128,6 +128,28 @@ class Category extends Model
         return $carry;
       }
     }
+
+    /**
+     * getAllParents
+     *
+     * @return void
+     */
+    public static function getParentNodeIds(string $slug = null, int $id = null) {
+      if($slug !== null) {
+        $category = Category::where('slug', $slug)->first();
+      }elseif($id !== null) {
+        $category = Category::find($id);
+      }else {
+        $category = null;
+      }
+
+      $node_list = $category? $category->getParentNode(): null;
+
+      $node_ids = $node_list? $node_list->pluck('id')->toArray(): null;
+
+      return $node_ids;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
