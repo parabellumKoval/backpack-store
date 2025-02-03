@@ -458,6 +458,7 @@ class XmlSource extends Command
 
       if(empty($this->stockRules)) {
         $in_stock = intval($data['inStock']);
+        \Log::info('Empty inStockRules' . $in_stock);  
         return $in_stock;
       }
 
@@ -470,6 +471,7 @@ class XmlSource extends Command
         $in_stock = intval($rule['value']);  
       }
 
+      \Log::info('Not Empty inStockRules' . $in_stock);
       return $in_stock;
     }
     
