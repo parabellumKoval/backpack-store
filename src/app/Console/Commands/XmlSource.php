@@ -157,8 +157,8 @@ class XmlSource extends Command
         if(isset($this->settings['fieldImage']) && !empty($this->settings['fieldImage'])) {
           $xml_product['images'] = $item[$i]->{$this->settings['fieldImage']};
         }
-        
-        // \Log::info(print_r($xml_product, true));
+
+        \Log::info(print_r($xml_product, true));
 
         if($this->validateData($xml_product)) {
           // TRY TO FIND EXISTE PRODUCT
@@ -452,9 +452,12 @@ class XmlSource extends Command
     private function getInStock($data) {
       $in_stock = 0;
 
+      \Log::info('getInStock');
+      \Log::info(print_r($data, true)); 
+      \Log::info(print_r($this->stockRules, true));    
+
       if(empty($this->stockRules)) {
         $in_stock = intval($data['inStock']);
-
         return $in_stock;
       }
 
