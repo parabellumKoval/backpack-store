@@ -158,7 +158,7 @@ class XmlSource extends Command
           $xml_product['images'] = $item[$i]->{$this->settings['fieldImage']};
         }
 
-        \Log::info(print_r($xml_product, true));
+        // \Log::info(print_r($xml_product, true));
 
         if($this->validateData($xml_product)) {
           // TRY TO FIND EXISTE PRODUCT
@@ -452,13 +452,13 @@ class XmlSource extends Command
     private function getInStock($data) {
       $in_stock = 0;
 
-      \Log::info('getInStock');
-      \Log::info(print_r($data, true)); 
-      \Log::info(print_r($this->stockRules, true));    
+      // \Log::info('getInStock');
+      // \Log::info(print_r($data, true)); 
+      // \Log::info(print_r($this->stockRules, true));    
 
       if(empty($this->stockRules)) {
         $in_stock = intval($data['inStock']);
-        \Log::info('Empty inStockRules' . $in_stock);  
+        // \Log::info('Empty inStockRules' . $in_stock);  
         return $in_stock;
       }
 
@@ -471,7 +471,7 @@ class XmlSource extends Command
         $in_stock = intval($rule['value']);  
       }
 
-      \Log::info('Not Empty inStockRules' . $in_stock);
+      // \Log::info('Not Empty inStockRules' . $in_stock);
       return $in_stock;
     }
     
@@ -782,6 +782,8 @@ class XmlSource extends Command
       $this->rules = $rules;
 
       // Fill inStock rules
+      $this->stockRules = [];
+
       if(isset($this->settings['inStockRules']) && !empty($this->settings['inStockRules'])) {
         $stock_rules_array = json_decode($this->settings['inStockRules'], true);
   
