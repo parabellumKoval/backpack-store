@@ -76,55 +76,58 @@ class ProductCrudController extends CrudController
 
     protected function setupListOperation()
     {
-        //remove product modifications from list view
-        $this->crud->addClause('base');
+      //remove product modifications from list view
+      $this->crud->addClause('base');
 
-        // Filter by category
-        $this->crud->addFilter([
-          'name' => 'category',
-          'label' => 'Категория',
-          'type' => 'select2',
-        ], function(){
-          return $this->filter_categories;
-        }, function($cat_id){
-          $this->crud->query = $this->crud->query->whereHas('categories', function ($query) use ($cat_id) {
-              $query->where('category_id', $cat_id);
-          });
+      // Filter by category
+      $this->crud->addFilter([
+        'name' => 'category',
+        'label' => 'Категория',
+        'type' => 'select2',
+      ], function(){
+        return $this->filter_categories;
+      }, function($cat_id){
+        $this->crud->query = $this->crud->query->whereHas('categories', function ($query) use ($cat_id) {
+            $query->where('category_id', $cat_id);
         });
-        
-        $this->crud->addColumn([
-          'name' => 'imageSrc',
-          'label' => '📷',
-          'type' => 'image',
-          'height' => '60px',
-          'width'  => '40px',
-        ]);
-        
-        $this->crud->addColumn([
-          'name' => 'is_active',
-          'label' => '✅',
-          'type' => 'check'
-        ]);
-        
-        $this->crud->addColumn([
-          'name' => 'in_stock',
-          'label' => '📦',
-          'type' => 'number'
-        ]);
+      });
+      
+      $this->crud->addColumn([
+        'name' => 'imageSrc',
+        'label' => '📷',
+        'type' => 'image',
+        'height' => '60px',
+        'width'  => '40px',
+      ]);
+      
+      $this->crud->addColumn([
+        'name' => 'is_active',
+        'label' => '✅',
+        'type' => 'check'
+      ]);
+      
+      $this->crud->addColumn([
+        'name' => 'in_stock',
+        'label' => '📦',
+        'type' => 'number'
+      ]);
 
-        $this->crud->addColumn([
-          'name' => 'name',
-          'label' => 'Название'
-        ]);
+      $this->crud->addColumn([
+        'name' => 'name',
+        'label' => 'Название'
+      ]);
 
-        $this->crud->addColumn([
-          'name' => 'categories',
-          'label' => 'Категории',
-          'type'  => 'model_function',
-          'function_name' => 'getCategoriesString'
-          // 'type' => 'relationship',
-          // 'attribute' => 'id',
-        ]);
+      $this->crud->addColumn([
+        'name' => 'categories',
+        'label' => 'Категории',
+        'type'  => 'model_function',
+        'function_name' => 'getCategoriesString'
+        // 'type' => 'relationship',
+        // 'attribute' => 'id',
+      ]);
+
+
+      $this->listOperation();
     }
 
     protected function setupCreateOperation()
