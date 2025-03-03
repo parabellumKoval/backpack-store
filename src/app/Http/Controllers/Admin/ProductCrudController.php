@@ -35,7 +35,7 @@ class ProductCrudController extends CrudController
     
     public function setup()
     {
-        $this->crud->setModel('Backpack\Store\app\Models\Admin\Product');
+        $this->crud->setModel(config('backpack.store.product.admin_class', 'Backpack\Store\app\Models\Admin\Product'));
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
         $this->crud->setEntityNameStrings('товар', 'товары');
 
