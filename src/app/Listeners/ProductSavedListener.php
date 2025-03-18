@@ -6,6 +6,9 @@ use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\SupplierProduct;
+
+use Backpack\Store\app\Job\UpdateProductModifications;
+use Backpack\Store\app\Job\RemoveAllProductModifications;
  
 class ProductSavedListener
 {
@@ -38,26 +41,14 @@ class ProductSavedListener
 
       if(config('backpack.store.product.modifications.enable', true)) {
 
-        // Reset old relations
-        Product::where('parent_id', $event->product->parent_id)
-          ->orWhere('parent_id', $event->product->id)
-          ->update([
-            'parent_id' => null
-          ]);
-
         // Save modifications
-        $mods = $event->product->modificationsToSave;
-        $this_id = $event->product->id;
+        $modifications = $event->product->modificationsToSave;
+        $old_modifications = $event->product->modifications;
 
-        if(!empty($mods) && is_array($mods)) {
-          $mods = array_filter($mods, function($id) use($this_id) {
-            return $id != $this_id;
-          });
-
-          // Set new Relations
-          Product::whereIn('id', $mods)->update([
-            'parent_id' => $event->product->id
-          ]);
+        if(!empty($modifications) && is_array($modifications)) {
+          UpdateProductModifications::dispatch($modifications, $event->product);
+        }elseif(!empty($old_modifications) && empty($modifications)){
+          RemoveAllProductModifications::dispatch($event->product);
         }
       }
 
