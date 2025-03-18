@@ -156,18 +156,6 @@ class ProductCrudController extends CrudController
 
       // $this->crud->model->clearGlobalScopes();
 
-      // Set event listiner to Model
-      $this->product_class::saved(function($entry) {
-        // Attach attributes here
-        ProductSaved::dispatch($entry);
-      });
-
-
-      // Set event listiner to Model
-      $this->product_class::creating(function($entry) {
-        // Attach attributes here
-        ProductCreating::dispatch($entry);
-      });
     }
 
     protected function fetchOrder()
@@ -492,6 +480,19 @@ class ProductCrudController extends CrudController
     protected function setupCreateOperation()
     {
         $this->crud->setValidation(ProductRequest::class);
+
+        // Set event listiner to Model
+        $this->product_class::saved(function($entry) {
+          // Attach attributes here
+          ProductSaved::dispatch($entry);
+        });
+
+
+        // Set event listiner to Model
+        $this->product_class::creating(function($entry) {
+          // Attach attributes here
+          ProductCreating::dispatch($entry);
+        });
 
         // IS ACTIVE
         $this->crud->addField([
