@@ -59,59 +59,27 @@ class ProductCrudController extends CrudController
     
     private $product_class = null;
 
-    public function showDetailsRow($id) {
-      $sps = SupplierProduct::
-                where('product_id', $id)
-              ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
-              ->orderBy('price')
-              ->get();
+    public function __construct() {
+      $this->product_class = config('backpack.store.product.class_admin', 'Backpack\Store\app\Models\Admin\Product');
 
-      if($sps->count()){
-        $html = '<b>Поставщики</b>';
-  
-        $html .= '<table>';
-        $html .= "<tr>
-          <th>Название</th>
-          <th>Артикул</th>
-          <th>Код/баркод</th>
-          <th>В наличии</th>
-          <th>Цена</th>
-          <th>Старая цена</th>
-          <th>Последнее обновление</th>
-        </tr>";
+      // Set event listiner to Model
+      $this->product_class::saved(function($entry) {
+        // Attach attributes here
+        ProductSaved::dispatch($entry);
+      });
 
-        $currency = config('backpack.store.currency.symbol');
 
-        foreach($sps as $sp) {
-          $supplierName = $sp->supplier->name ?? '-';
-          $supplierColor = $sp->supplier->color;
-          $price = $sp->price !== null? $sp->price . $currency: '';
-          $old_price = $sp->old_price !== null? $sp->old_price . $currency: '';
+      // Set event listiner to Model
+      $this->product_class::creating(function($entry) {
+        // Attach attributes here
+        ProductCreating::dispatch($entry);
+      });
 
-          $html .= '<tr>';
-          $html .= "<td><b style='color: " . $supplierColor . "'>{$supplierName}</b></td>";
-          $html .= "<td>{$sp->code}</td>";
-          $html .= "<td>{$sp->barcode}</td>";
-          $html .= "<td>{$sp->in_stock}</td>";
-          $html .= "<td>{$price}</td>";
-          $html .= "<td>{$old_price}</td>";
-          $html .= "<td>{$sp->updated_at}</td>";
-
-          $html .= '</tr>';
-        }
-
-        $html .= '</table>';
-      }else {
-        $html = 'Информация по поставщикам отсутсвует';
-      }
-
-      return $html;
+      parent::__construct();
     }
 
     public function setup()
     {
-      $this->product_class = config('backpack.store.product.class_admin', 'Backpack\Store\app\Models\Admin\Product');
-
       $this->crud->setModel($this->product_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
       $this->crud->setEntityNameStrings('товар', 'товары');
@@ -163,14 +131,17 @@ class ProductCrudController extends CrudController
         return $this->fetch(\Backpack\Store\app\Models\Order::class);
     }
 
-    protected function setupListOperation()
-    {
+
+    protected function setupFilters() {
+
         // langs
         $langs_list = $this->langs_list;
 
-        $this->crud->addClause('withSum', 'sp', 'in_stock');
-
-        // Filter by Brand
+        /* The above PHP code is adding a filter for the "brand" field in a CRUD (Create, Read, Update,
+        Delete) interface. The filter allows users to select a brand from a dropdown list. If the
+        user selects the option "🔴 Без бренда" (translation: "🔴 No brand"), the code filters the
+        query to show only records where the "brand_id" is null. If a specific brand is selected,
+        the code filters the query to show only records with that specific "brand_id". */
         $this->crud->addFilter([
           'name' => 'brand',
           'label' => 'Бренд',
@@ -186,7 +157,9 @@ class ProductCrudController extends CrudController
           }
         });
 
-        // Filter by category
+        /* The above PHP code snippet is adding a filter for a category in a CRUD (Create, Read,
+        Update, Delete) interface. The filter allows users to select a category from a dropdown
+        list. */
         $this->crud->addFilter([
           'name' => 'category',
           'label' => 'Категория',
@@ -204,6 +177,12 @@ class ProductCrudController extends CrudController
           }
         });
 
+
+        /* The above PHP code snippet is adding a filter to a CRUD (Create, Read, Update, Delete)
+        interface. The filter is for the 'is_active' field and is displayed as a select dropdown
+        with two options: '🔴 Не активный' (Not active) and '🟢 Активный' (Active). When a user
+        selects an option, the query will filter the results based on the selected 'is_active'
+        value. */
         $this->crud->addFilter([
           'name' => 'is_active',
           'label' => 'Активный',
@@ -218,6 +197,9 @@ class ProductCrudController extends CrudController
         });
 
 
+        /* The above PHP code is adding a filter named 'modifications' to a CRUD (Create, Read, Update,
+        Delete) interface. This filter is a select2 type filter with options 'Без модификаций'
+        (Without modifications) and 'С модификациями' (With modifications). */
         $this->crud->addFilter([
           'name' => 'modifications',
           'label' => 'Модификации',
@@ -236,6 +218,9 @@ class ProductCrudController extends CrudController
         });
 
 
+        /* The above PHP code is defining a filter named 'translation' for a CRUD (Create, Read,
+        Update, Delete) operation. The filter allows users to select a translation option from a
+        dropdown list. */
         $this->crud->addFilter([
           'name' => 'translation',
           'label' => 'Перевод',
@@ -263,16 +248,21 @@ class ProductCrudController extends CrudController
             });
           }else if($translation === '1') {
             $this->crud->query->where(function($query) use($langs_list) {
-              foreach($langs_list as $lang_key) {
+              foreach($langs_list as $index => $lang_key) {
                 $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
               }
             });
           }else {
-            $this->crud->query
-                ->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $translation . '")) < ? ', 150)
-                ->orWhereRaw('JSON_EXTRACT(content, "$.' . $translation . '") IS NULL');
+            $this->crud->query->where(function($query) use($translation) {
+              $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $translation . '")) < ? ', 150)
+                  ->orWhereRaw('JSON_EXTRACT(content, "$.' . $translation . '") IS NULL');
+            });
           }
         });
+
+        /* The above PHP code snippet is adding a filter named 'filles' to a CRUD (Create, Read,
+        Update, Delete) interface. This filter allows users to select the quality of data entry from
+        a dropdown list with options for 'низкое' (low), 'среднее' (medium), and 'высокое' (high). */
 
         $this->crud->addFilter([
           'name' => 'filles',
@@ -294,6 +284,9 @@ class ProductCrudController extends CrudController
           }
         });
 
+
+        /* The above PHP code is adding a filter for a CRUD (Create, Read, Update, Delete) operation. The
+        filter is for checking the availability of a product in stock. */
         $this->crud->addFilter([
           'name' => 'in_stock',
           'label' => 'Наличие',
@@ -316,8 +309,11 @@ class ProductCrudController extends CrudController
             });
           }
         });
+        
 
-
+        /* The above PHP code snippet is adding a filter for a price range in a CRUD (Create, Read,
+        Update, Delete) system. When this filter is applied, it will filter the data based on the
+        price range specified by the user. */
         $this->crud->addFilter([
           'name' => 'price',
           'label' => 'Цена',
@@ -337,6 +333,13 @@ class ProductCrudController extends CrudController
           }
         });
 
+        /* The above PHP code is adding a filter to a CRUD (Create, Read, Update, Delete) interface
+        based on a condition from the configuration file. If the configuration setting
+        'backpack.store.supplier.enable' is true, then a filter for selecting suppliers is added.
+        The filter allows users to filter data based on the supplier associated with it. The filter
+        includes an option for selecting records without a supplier ('🔴 Без поставщика') and a list
+        of suppliers to choose from. Depending on the selected supplier, the query is modified to
+        filter records accordingly. If 'empty' is */
         if(config('backpack.store.supplier.enable')) {
           $this->crud->addFilter([
             'name' => 'supplier',
@@ -355,6 +358,16 @@ class ProductCrudController extends CrudController
             }
           });
         }
+    }
+
+    protected function setupListOperation()
+    {
+        // langs
+        $langs_list = $this->langs_list;
+
+        $this->crud->addClause('withSum', 'sp', 'in_stock');
+
+        $this->setupFilters();
 
         $this->crud->addColumn([
           'name' => 'adminCode',
@@ -480,19 +493,6 @@ class ProductCrudController extends CrudController
     protected function setupCreateOperation()
     {
         $this->crud->setValidation(ProductRequest::class);
-
-        // Set event listiner to Model
-        $this->product_class::saved(function($entry) {
-          // Attach attributes here
-          ProductSaved::dispatch($entry);
-        });
-
-
-        // Set event listiner to Model
-        $this->product_class::creating(function($entry) {
-          // Attach attributes here
-          ProductCreating::dispatch($entry);
-        });
 
         // IS ACTIVE
         $this->crud->addField([
@@ -899,6 +899,56 @@ class ProductCrudController extends CrudController
       $this->setupCreateOperation();
     }
     
+
+    public function showDetailsRow($id) {
+      $sps = SupplierProduct::
+                where('product_id', $id)
+              ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
+              ->orderBy('price')
+              ->get();
+
+      if($sps->count()){
+        $html = '<b>Поставщики</b>';
+  
+        $html .= '<table>';
+        $html .= "<tr>
+          <th>Название</th>
+          <th>Артикул</th>
+          <th>Код/баркод</th>
+          <th>В наличии</th>
+          <th>Цена</th>
+          <th>Старая цена</th>
+          <th>Последнее обновление</th>
+        </tr>";
+
+        $currency = config('backpack.store.currency.symbol');
+
+        foreach($sps as $sp) {
+          $supplierName = $sp->supplier->name ?? '-';
+          $supplierColor = $sp->supplier->color;
+          $price = $sp->price !== null? $sp->price . $currency: '';
+          $old_price = $sp->old_price !== null? $sp->old_price . $currency: '';
+
+          $html .= '<tr>';
+          $html .= "<td><b style='color: " . $supplierColor . "'>{$supplierName}</b></td>";
+          $html .= "<td>{$sp->code}</td>";
+          $html .= "<td>{$sp->barcode}</td>";
+          $html .= "<td>{$sp->in_stock}</td>";
+          $html .= "<td>{$price}</td>";
+          $html .= "<td>{$old_price}</td>";
+          $html .= "<td>{$sp->updated_at}</td>";
+
+          $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+      }else {
+        $html = 'Информация по поставщикам отсутсвует';
+      }
+
+      return $html;
+    }
+
     /**
      * setAttributesFields
      * 
@@ -915,7 +965,7 @@ class ProductCrudController extends CrudController
         // Adding hidden field
         $this->crud->addField([
           'name' => 'props',
-          'type' => 'hidden',
+          'type' => 'hidden_fake_array',
           'value' => null,
         ]);
 
