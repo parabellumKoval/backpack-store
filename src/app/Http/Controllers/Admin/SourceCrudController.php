@@ -69,6 +69,60 @@ class SourceCrudController extends CrudController
       $this->listOperation();
     }
 
+    protected function typeField() {
+
+
+      $js_attributes = [
+        'data-value' => '',
+        'onfocus' => "this.setAttribute('data-value', this.value);",
+        'onchange' => "
+          const value = event.target.value
+
+          const linksFields = document.querySelectorAll('[data-field-purpose = link]');
+          const fileField = document.querySelectorAll('[data-field-purpose = file]');
+          
+          if(value === 'xml_link'){
+            linkFields();
+          }else if(value === 'file'){
+            fileFields();
+          }
+
+          function linkFields() {
+            linksFields.forEach((field) => {
+              field.style.display = 'block';
+            })
+
+            fileField.forEach((field) => {
+              field.style.display = 'none';
+            })
+          }
+
+          function fileFields() {
+            linksFields.forEach((field) => {
+              field.style.display = 'none';
+            })
+
+            fileField.forEach((field) => {
+              field.style.display = 'block';
+            })
+          }
+        "
+      ];
+
+      $this->crud->addField([
+        'name' => 'type',
+        'label' => 'Тип',
+        'type' => 'select_from_array',
+        // 'attributes' => $js_attributes,
+        'options' => [
+          'xml_link' => 'XML-ссылка',
+          // 'file' => 'Файл'
+        ],
+        'tab' => 'Основное'
+      ]);
+      
+    }
+
     protected function setupCreateOperation()
     {
         $this->crud->setValidation(SourceRequest::class);
@@ -115,15 +169,7 @@ class SourceCrudController extends CrudController
         ]);
         
         // TYPE
-        $this->crud->addField([
-          'name' => 'type',
-          'label' => 'Тип',
-          'type' => 'select_from_array',
-          'options' => [
-            'xml_link' => 'XML-ссылка'
-          ],
-          'tab' => 'Основное'
-        ]);
+        $this->typeField();
 
         // DESCRIPTION
         $this->crud->addField([
@@ -149,16 +195,36 @@ class SourceCrudController extends CrudController
           'name' => 'link',
           'label' => 'Ссылка',
           'type' => 'text',
+          'wrapper' => [
+            'data-field-purpose' => 'link'
+          ],
           'hint' => 'Ссылка на xml-каталог для выгрузки данных',
           'tab' => 'Настройки'
         ]);
 
-        // LINK
+
+        // $this->crud->addField([
+        //   'name' => 'file',
+        //   'label' => 'Файл',
+        //   'type' => 'upload',
+        //   'wrapper' => [
+        //     'data-field-purpose' => 'file'
+        //   ],
+        //   'upload'    => true,
+        //   'disk'      => 'uploads',
+        //   'hint' => 'Загрузите файл с данными в формате xml.',
+        //   'tab' => 'Настройки'
+        // ]);
+
+        // 
         $this->crud->addField([
           'name' => 'every_minutes',
           'label' => 'Обновлять данные каждые',
           'type' => 'number',
           'suffix' => 'мин.',
+          'wrapper' => [
+            'data-field-purpose' => 'link'
+          ],
           'attributes' => [
               'min' => 60,
           ],
@@ -178,6 +244,9 @@ class SourceCrudController extends CrudController
           'name' => 'item',
           'label' => 'Путь к товару',
           'type' => 'text',
+          'wrapper' => [
+            'data-field-purpose' => 'link'
+          ],
           'fake' => true,
           'store_in' => 'settings',
           'hint' => 'Путь к товару в источнике данных.',
