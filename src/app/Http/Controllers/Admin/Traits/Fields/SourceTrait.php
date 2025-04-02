@@ -45,11 +45,11 @@ trait SourceTrait {
     ]);
   
 
-    $html_instruction = file_get_contents(public_path('backpack-store/instruction/levels-sheets.html'));
+    $html_instruction = file_get_contents(public_path('packages/backpack/store/instruction/levels-sheets.html'));
 
     $text = $html_instruction;
     $images = [
-      '/backpack-store/instruction/instruction-4.png'
+      '/packages/backpack/store/instruction/instruction-4.png'
     ];
 
     $this->crud->addField([
@@ -83,12 +83,12 @@ trait SourceTrait {
 
   protected function htmlRulesField($key, $tab) {
 
-    $html_instruction = file_get_contents(public_path('backpack-store/instruction/hex-color-sheets.html'));
+    $html_instruction = file_get_contents(public_path('packages/backpack/store/instruction/hex-color-sheets.html'));
 
     $text = $html_instruction;
     $images = [
-      '/backpack-store/instruction/instruction-2.png',
-      '/backpack-store/instruction/instruction-3.png'
+      '/packages/backpack/store/instruction/instruction-2.png',
+      '/packages/backpack/store/instruction/instruction-3.png'
     ];
 
     $this->crud->addField([

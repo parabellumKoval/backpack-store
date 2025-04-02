@@ -303,7 +303,10 @@ class SourceCrudController extends CrudController
         $this->crud->addField([
           'name'  => "rules_first_row",
           'type'  => 'custom_html',
-          'value' => $this->getMoreBtn('Вступительную информацию о компании, а также шапку с заголовками колонок желательно пропустить и указать номер строки с которой начинаются переменные данные.', ['/backpack-store/instruction-1.png']),
+          'value' => $this->getMoreBtn('Вступительную информацию о компании, а также шапку с заголовками колонок желательно пропустить и указать номер строки с которой начинаются переменные данные.', 
+            [
+              '/packages/backpack/store/instruction/instruction-1.png'
+            ]),
           'wrapper' => [
             'data-field-purpose' => 'file',
           ] + $this->getStylesArray('file'),

@@ -51,24 +51,37 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/routes' => base_path('routes')
     ], 'routes');
 
+    // Assets 
+    $packagePublicPath = __DIR__.'/public';
+    $appPublicPath = base_path('public/packages/backpack/store');
+
+    if (!file_exists($appPublicPath)) {
+      symlink($packagePublicPath, $appPublicPath);
+    }
+
+
+    $this->publishes([
+      __DIR__.'/public' => base_path('public/packages/backpack/store')
+    ], 'public');
+
 
     // $this->publishes([
     //     __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits')
     // ], 'models');
 
     $this->publishes([
-        __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
-       __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
-    ], 'traits');
+      __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
+     __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
+  ], 'traits');
 
-
-    if ($this->app->runningInConsole()) {
-      $this->commands([
-        XmlSource::class,
-        AttributesTransform::class,
-        XmlCorrectInStock::class,
-      ]);
-    }
+  // Comands
+  if ($this->app->runningInConsole()) {
+    $this->commands([
+      XmlSource::class,
+      AttributesTransform::class,
+      XmlCorrectInStock::class,
+    ]);
+  }
   }
 
   public function register()

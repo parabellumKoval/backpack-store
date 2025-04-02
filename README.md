@@ -48,6 +48,11 @@ Routes File
 php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="routes"
 ```
 
+Public Files
+```bash
+php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="public"
+```
+
 Traits File
 ```bash
 php artisan vendor:publish --provider="Backpack\Store\ServiceProvider" --tag="traits"

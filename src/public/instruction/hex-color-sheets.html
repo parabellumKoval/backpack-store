@@ -1,0 +1,95 @@
+<h5>Доступные свойства</h5>
+<ul>
+  <li><b>bold</b> - жирный текст</li>
+  <li><b>italic</b> - курсивный текст</li>
+  <li><b>underline</b> - подчеркнутый текст</li>
+  <li><b>size:{размер_шрифта_числом}</b> - шрифт определенного размера</li>
+  <li><b>color:{цвет_в_формате_HEX}</b> - текст определенного цвета</li>
+  <li><b>fill:{цвет_в_формате_HEX}</b> - фон определенного цвета</li>
+</ul>
+
+<h5>Примечание</h5>
+<ul>
+  <li>Указывайте несколько свойств, чтобы избежать неверной интерпретации данных, чем точнее тем лучше. Например: <code>bold,size:18</code>. То есть - шрифт жирный и его размер: 18</li>
+  <li>HEX-код цвета фона/текста просто так через интерфейс получить нельзя. Однако можно использовать такие варианты:
+    <ul>
+      <li>Цветовая пипетка (color picker) через инструменты разработчика в браузере.</li>
+      <li>Цветовая пипетка (color picker) как отдельное приложение для Windows/Mac</li>
+      <li>Загрузить файл в Google Sheets и добавить функцию определения свойств ячейки по интсрукции ниже.</li>
+    </ul>
+  </li>
+  <li style="color: red">Если Категории и Бренды размечены визуально одинаково (полное совпадение) такие данные будут прочитаны неверно.</li>
+</ul>
+
+<h5>Как получить свойства ячейки в Google Sheets</h5>
+<p>В Google Sheets нет встроенной функции, которая напрямую возвращает свойства ячейки. Однако это можно сделать с помощью Google Apps Script в Google Sheets. Эту функция вернет не только цвет фона и шрифта, но и все остальные свойства ячейки. Достаточно будет просто скопировать строки и вставить ее в админку. Вот пошаговая инструкция:</p>
+
+<ol>
+  <li>
+    <strong>Загрузите файл на Google Disk</strong>:<br>
+    Загрузите файл (каталог поставщика) в формате xls, xlsx на Google Disk. Откройте файл в Google Sheets (приложение для просмотра excel-таблиц на гугл диске). 
+  </li>
+  <li>
+    <strong>Откройте редактор скриптов</strong>:<br>
+    В Google Sheets нажмите на меню <strong>"Расширения"</strong> → <strong>"Apps Script"</strong>.
+  </li>
+  <li>
+    <strong>Вставьте код</strong>:<br>
+    В открывшемся редакторе удалите стандартный код (если он есть) и вставьте следующий скрипт:
+    <pre>
+function getCellProperties(cell) {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var range = sheet.getRange(cell);
+  
+  // Собираем свойства
+  var properties = [];
+  
+  // Жирный текст
+  if (range.getFontWeight() === "bold") {
+    properties.push("bold");
+  }
+  
+  // Курсив
+  if (range.getFontStyle() === "italic") {
+    properties.push("italic");
+  }
+  
+  // Подчёркивание
+  if (range.getFontLine() === "underline") {
+    properties.push("underline");
+  }
+  
+  // Размер шрифта
+  var fontSize = range.getFontSize();
+  if (fontSize) {
+    properties.push("size:" + fontSize);
+  }
+  
+  // Цвет текста (без #)
+  var fontColor = range.getFontColor().substring(1);
+  properties.push("color:" + fontColor);
+  
+  // Цвет заливки (без #)
+  var background = range.getBackground().substring(1);
+  properties.push("fill:" + background);
+  
+  // Объединяем всё в одну строку через запятую
+  return properties.join(",");
+}
+    </pre>
+  </li>
+  <li>
+    <strong>Сохраните скрипт</strong>:<br>
+    Нажмите на значок дискеты или выберите <strong>"Файл"</strong> → <strong>"Сохранить"</strong>, дайте проекту имя, например, "GetCellProperties".
+  </li>
+  <li>
+    <strong>Используйте функцию в таблице</strong>:<br>
+    Вернитесь в Google Sheets и в любой ячейке введите формулу, например:
+    <pre>=getCellProperties("A1")</pre>
+    Здесь "A1" — это адрес ячейки, свойства ячейки которой вы хотите получить.
+  </li>
+  <li>
+    <strong>Разрешите доступ</strong>:<br>
+    При первом запуске Google может запросить разрешение на выполнение скрипта. Нажмите <strong>"Разрешить"</strong>, чтобы скрипт мог работать с вашей таблицей.
+  </li>
+</ol>
