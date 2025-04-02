@@ -22,6 +22,9 @@ use Backpack\Store\app\Listeners\ProductCreatingListener;
 use Backpack\Store\app\Events\PromocodeApplied;
 use Backpack\Store\app\Listeners\PromocodeAppliedListener;
 
+use Backpack\Store\app\Events\SourceSaved;
+use Backpack\Store\app\Listeners\SourceSavedListener;
+
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
@@ -42,6 +45,9 @@ class EventServiceProvider extends ServiceProvider
       ],
       PromocodeApplied::class => [
         PromocodeAppliedListener::class,
+      ],
+      SourceSaved::class => [
+        SourceSavedListener::class,
       ]
     ];
 

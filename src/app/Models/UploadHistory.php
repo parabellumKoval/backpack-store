@@ -93,6 +93,10 @@ class UploadHistory extends Model
     |--------------------------------------------------------------------------
     */
     
+    public function getSourceTypeAttribute() {
+      return $this->source->type;
+    }
+
     /**
      * getStatusAdminAttribute
      *

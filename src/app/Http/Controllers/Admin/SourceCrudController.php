@@ -6,6 +6,10 @@ use Backpack\Store\app\Http\Requests\SourceRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
+
+//EVENTS
+use Backpack\Store\app\Events\SourceSaved;
+
 /**
  * Class SupplierCrudController
  * @package App\Http\Controllers\Admin
@@ -19,24 +23,39 @@ class SourceCrudController extends CrudController
     // use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     // use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-
+    // TRAITS
     use \App\Http\Controllers\Admin\Traits\SourceCrud;
+    use \Backpack\Store\app\Http\Controllers\Admin\Traits\Fields\SourceTrait;
     
     private $available_languages = [];
-    private $brand_class = null;
+    private $source_class = null;
     private $entry = null;
+    private $type = null;
+
+    const DEFAULT_TYPE = 'xml_link';
+
+    public function __construct() {
+      $this->source_class = config('backpack.store.source.admin_class', 'Backpack\Store\app\Models\Admin\Source');
+
+      $this->source_class::saving(function($entry) {
+        // Attach attributes here
+        SourceSaved::dispatch($entry);
+      });
+
+      parent::__construct();
+    }
 
     public function setup()
     {
-      $this->brand_class = config('backpack.store.source.admin_class', 'Backpack\Store\app\Models\Admin\Source');
 
-      $this->crud->setModel($this->brand_class);
+      $this->crud->setModel($this->source_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/source');
       $this->crud->setEntityNameStrings('выгрузка', 'выгрузки');
 
 
       // CURRENT MODEL
       $this->setEntry();
+      $this->setType();
       $this->setLanguages();
     }
 
@@ -51,6 +70,16 @@ class SourceCrudController extends CrudController
       $this->crud->addColumn([
         'name' => 'name',
         'label' => 'Название'
+      ]);
+
+      $this->crud->addColumn([
+        'name' => 'type',
+        'label' => 'Тип',
+        'type' => 'select_from_array',
+        'options' => [
+          'xml_link' => 'XML-ссылка',
+          'file' => 'Файл'
+        ]
       ]);
 
       $this->crud->addColumn([
@@ -69,43 +98,30 @@ class SourceCrudController extends CrudController
       $this->listOperation();
     }
 
+
+    
+
     protected function typeField() {
-
-
       $js_attributes = [
         'data-value' => '',
         'onfocus' => "this.setAttribute('data-value', this.value);",
         'onchange' => "
-          const value = event.target.value
+          const value = event.target.value;
 
-          const linksFields = document.querySelectorAll('[data-field-purpose = link]');
-          const fileField = document.querySelectorAll('[data-field-purpose = file]');
-          
-          if(value === 'xml_link'){
-            linkFields();
-          }else if(value === 'file'){
-            fileFields();
-          }
+          const fields = {
+            xml_link: document.querySelectorAll('[data-field-purpose = link]'),
+            file: document.querySelectorAll('[data-field-purpose = file]')
+          };
 
-          function linkFields() {
-            linksFields.forEach((field) => {
-              field.style.display = 'block';
-            })
-
-            fileField.forEach((field) => {
-              field.style.display = 'none';
-            })
-          }
-
-          function fileFields() {
-            linksFields.forEach((field) => {
-              field.style.display = 'none';
-            })
-
-            fileField.forEach((field) => {
-              field.style.display = 'block';
-            })
-          }
+          Object.keys(fields).forEach((key) => {
+            const isVisible = value === key;
+            fields[key].forEach((field) => {
+              field.style.display = isVisible ? 'block' : 'none';
+              field.querySelectorAll('input').forEach((input) => {
+                input.disabled = !isVisible;
+              });
+            });
+          });
         "
       ];
 
@@ -113,15 +129,39 @@ class SourceCrudController extends CrudController
         'name' => 'type',
         'label' => 'Тип',
         'type' => 'select_from_array',
-        // 'attributes' => $js_attributes,
+        'attributes' => $js_attributes,
         'options' => [
           'xml_link' => 'XML-ссылка',
-          // 'file' => 'Файл'
+          'file' => 'Файл'
         ],
         'tab' => 'Основное'
       ]);
       
     }
+
+    protected function getStylesArray($type) {
+      return $this->type === $type?[]:['style' => 'display: none;'];
+    }
+
+
+    protected function getAttributesArray($type) {
+      return $this->type === $type?[]:['disabled' => 'disabled'];
+    }
+
+    protected function getMoreBtn($text = null, $images = []) {
+      $btn_styles = 'background:#eee;border:none;font-weight: bold';
+      $span_text = !empty($text) ? '</br><span style="color: #000000">' . $text . '</span></br></br>' : '';
+      $html_images = '<ol>';
+
+      if(!empty($images)) {
+        foreach($images as $image) {
+          $html_images .= '<li style="border: 5px solid #dddddd; margin: 0 0 10px 0;"><img src="'.$image.'" style="max-width: 100%;" /></li>';
+        }
+      }
+      $html_images .= '</ol>';
+       
+      return '<button class="btn-sm btn btn-block btn-light " type="button" onclick="const div = this.nextElementSibling;const isHidden = div.style.display === \'none\';div.style.display = isHidden ? \'block\' : \'none\';this.textContent = isHidden ? \'Свернуть\' : \'Инструкция\';">Инструкция</button><span style="display: none;">' . $span_text . $html_images . '</span>';
+  }
 
     protected function setupCreateOperation()
     {
@@ -197,24 +237,29 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'wrapper' => [
             'data-field-purpose' => 'link'
-          ],
+          ] + $this->getStylesArray('link'),
+          'attributes' => [
+          ] + $this->getAttributesArray('link'),
           'hint' => 'Ссылка на xml-каталог для выгрузки данных',
           'tab' => 'Настройки'
         ]);
 
 
-        // $this->crud->addField([
-        //   'name' => 'file',
-        //   'label' => 'Файл',
-        //   'type' => 'upload',
-        //   'wrapper' => [
-        //     'data-field-purpose' => 'file'
-        //   ],
-        //   'upload'    => true,
-        //   'disk'      => 'uploads',
-        //   'hint' => 'Загрузите файл с данными в формате xml.',
-        //   'tab' => 'Настройки'
-        // ]);
+        $this->crud->addField([
+          'name' => 'file',
+          'label' => 'Файл',
+          'type' => 'upload',
+          'wrapper' => [
+            'data-field-purpose' => 'file'
+          ] + $this->getStylesArray('file'),
+          'attributes' => [
+          ] + $this->getAttributesArray('file'),
+          'upload' => true,
+          'hint' => 'Загрузите файл с данными в формате xls или xlsx.',
+          'tab' => 'Настройки'
+        ]);
+
+              
 
         // 
         $this->crud->addField([
@@ -223,11 +268,11 @@ class SourceCrudController extends CrudController
           'type' => 'number',
           'suffix' => 'мин.',
           'wrapper' => [
-            'data-field-purpose' => 'link'
-          ],
+            'data-field-purpose' => 'link',
+          ] + $this->getStylesArray('link'),
           'attributes' => [
               'min' => 60,
-          ],
+          ] + $this->getAttributesArray('link'),
           'hint' => 'Укажите в минутах как часто необходимо обновлять данные из источника.',
           'tab' => 'Настройки'
         ]);
@@ -241,12 +286,57 @@ class SourceCrudController extends CrudController
         ]);
 
         $this->crud->addField([
+          'name' => 'first_row',
+          'label' => 'Номер строки с началом данных',
+          'type' => 'number',
+          'wrapper' => [
+            'data-field-purpose' => 'file'
+          ] + $this->getStylesArray('file'),
+          'attributes' => [
+          ] + $this->getAttributesArray('file'),
+          'fake' => true,
+          'store_in' => 'settings',
+          'hint' => 'Укажите порядковый номер строки в файле с которой начинаются данные непосрественно относящиеся к товарам, категориям и брендам.',
+          'tab' => 'Настройки'
+        ]);
+        
+        $this->crud->addField([
+          'name'  => "rules_first_row",
+          'type'  => 'custom_html',
+          'value' => $this->getMoreBtn('Вступительную информацию о компании, а также шапку с заголовками колонок желательно пропустить и указать номер строки с которой начинаются переменные данные.', ['/backpack-store/instruction-1.png']),
+          'wrapper' => [
+            'data-field-purpose' => 'file',
+          ] + $this->getStylesArray('file'),
+          'tab' => 'Настройки'
+        ]);
+
+
+        $this->crud->addField([
+          'name' => 'last_row',
+          'label' => 'Номер строки с окончанием данных',
+          'type' => 'number',
+          'wrapper' => [
+            'data-field-purpose' => 'file'
+          ] + $this->getStylesArray('file'),
+          'attributes' => [
+          ] + $this->getAttributesArray('file'),
+          'fake' => true,
+          'store_in' => 'settings',
+          'hint' => 'Иногда в файле присутствуют фантомные строки. Так интерпритатор может посчитать что в файле 60 тыс строк, хотя на самом деле, заполненных строк реальными данными может быть всего 500. Это может привести к утечке памяти. Поэтому желательно указывать порядковый номер последней строоки с данными (можно укзаать с запасом, погрешность допустима).',
+          'tab' => 'Настройки'
+        ]);
+
+        
+
+        $this->crud->addField([
           'name' => 'item',
           'label' => 'Путь к товару',
           'type' => 'text',
           'wrapper' => [
             'data-field-purpose' => 'link'
-          ],
+          ] + $this->getStylesArray('link'),
+          'attributes' => [
+          ] + $this->getAttributesArray('link'),
           'fake' => true,
           'store_in' => 'settings',
           'hint' => 'Путь к товару в источнике данных.',
@@ -258,9 +348,19 @@ class SourceCrudController extends CrudController
           'name' => 'delim_2',
           'type' => 'custom_html',
           'value' => '<h3>Настройка полей</h3>
-            <p class="help-block">Введите точные названия полей из xml-каталога, которые соответвуют указанным данным. 
-            Необходимо для того, чтобы установить соответствия между полями с данными из xml-кателога с аналогичными полями на сайте.
-            </p>
+            <ul>
+            <li>Для типа данных "xml-ссылка"
+              <ul>
+                <li>Введите точные названия полей из xml-каталога, которые соответвуют указанным данным.</li>
+                <li>Необходимо для того, чтобы установить соответствия между полями с данными из xml-каталога с аналогичными полями на сайте.</li>
+              </ul>
+            </li>
+            <li>Для типа данных "Файл"
+              <ul>
+                <li>Укажите букву столбика из excel-файла в котором расположенные данные соответсвующие указанным.</li>
+              </ul>
+            </li>
+            </ul>
           ',
           'tab' => 'Настройки'
         ]);
@@ -321,9 +421,11 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'fake' => true,
           'store_in' => 'settings',
-          'wrapper'   => [ 
-            'class' => 'form-group col-md-4'
-          ],
+          'wrapper' => [
+            'class' => 'form-group col-md-4',
+            'data-field-purpose' => 'link'
+          ] + $this->getStylesArray('link'),
+          'attributes' => [] + $this->getAttributesArray('link'),
           'tab' => 'Настройки'
         ]);
 
@@ -333,9 +435,12 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'fake' => true,
           'store_in' => 'settings',
-          'wrapper'   => [ 
-            'class' => 'form-group col-md-4'
-          ],
+          'wrapper' => [
+            'class' => 'form-group col-md-4',
+            'data-field-purpose' => 'link'
+          ] + $this->getStylesArray('link'),
+          'attributes' => [
+          ] + $this->getAttributesArray('link'),
           'tab' => 'Настройки'
         ]);
 
@@ -442,7 +547,7 @@ class SourceCrudController extends CrudController
           'new_item_label'  => 'Добавить правило',
           'init_rows' => 0,
           'min_rows' => 0,
-          'hint' => 'Добавьте правила по которым будет интерпритироваться значения поля "Наличие товара"',
+          'hint' => 'Добавьте правила по которым будет интерпритироваться значения поля "Наличие товара". Если в каталоге нет информации о наличии товара "Значение в xml-каталоге" устанавливайте "null".',
           'wrapper'   => [ 
             'class' => 'form-group col-md-12'
           ],
@@ -495,6 +600,8 @@ class SourceCrudController extends CrudController
         ]);
 
         // CATEGORIES
+        $this->fileCategoriesField($this->entry);
+
         $this->crud->addField([
           'name' => 'delim_cats',
           'type' => 'custom_html',
@@ -542,13 +649,15 @@ class SourceCrudController extends CrudController
         ]);
 
         // BRANDS
+        $this->fileBrandsField($this->entry);
+
         $this->crud->addField([
           'name' => 'delim_brands',
           'type' => 'custom_html',
           'value' => '<h3>Настройки соответствия брендов</h3>
             <p class="help-block">Бывают случае, когда название бренда в xml-каталоге и название бренда 
             на сайте отличаются или не распознаются как идентичные. Тогда на сайте будет создан 
-            (при включенной соответствующей настройнке) дубль бренда с другим названими.
+            (при включенной соответствующей настройке) дубль бренда с другим названими.
             Чтобы избежать таких случаев необходимо установить соответвие между названием 
             бренда в xml-каталоге и названием бренда на сайте. (Используется для редких случаев, все бренды заполнять не нужно.)</p>',
           'tab' => 'Настройки брендов'
@@ -883,4 +992,11 @@ class SourceCrudController extends CrudController
         $this->entry = null;
     }
     
+    private function setType() {
+      if($this->crud->getCurrentOperation() === 'update')
+        $this->type = $this->entry->type;
+      else
+        $this->type = self::DEFAULT_TYPE;
+
+    }
 }

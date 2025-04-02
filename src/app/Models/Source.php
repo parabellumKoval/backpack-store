@@ -29,7 +29,7 @@ class Source extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['name', 'key', 'supplier_id', 'link', 'content', 'is_active', 'type', 'overprice', 'last_loading', 'every_minutes', 'categoriesData', 'brandsData', 'settings', 'rules'];
+    protected $fillable = ['name', 'key', 'supplier_id', 'link', 'file', 'content', 'is_active', 'type', 'overprice', 'last_loading', 'every_minutes', 'categoriesData', 'brandsData', 'settings', 'rules'];
     // protected $hidden = [];
     protected $dates = ['last_loading'];
 

@@ -30,13 +30,27 @@ class SourceRequest extends FormRequest
           'key' => 'required|min:1|max:255',
           'supplier' => 'required',
           'every_minutes' => 'nullable|required_if:type,xml_link|integer|min:60',
-          'link' => 'nullable|required_if:type,xml_link|url',
+          'link' => 'nullable|required_if:type,xml_link',
           'item' => 'required_if:type,xml_link',
-          'fieldName' => 'required',
-          'fieldPrice' => 'required',
-          'fieldInStock' => 'required',
-          'fieldCode' => 'required_without:fieldBarcode',
-          'fieldBarcode' => 'required_without:fieldCode',
+          'fieldName' => 'nullable|required_if:type,xml_link',
+          'fieldPrice' => 'nullable|required_if:type,xml_link',
+          'fieldInStock' => 'nullable|required_if:type,xml_link',
+          'fieldCode' => [
+            'nullable',
+            function ($attribute, $value, $fail) {
+                if ($this->input('type') === 'xml_link' && empty($value) && empty($this->input('fieldBarcode'))) {
+                    $fail('Поле fieldCode обязательно, если fieldBarcode не заполнено.');
+                }
+            },
+          ],
+          'fieldBarcode' => [
+            'nullable',
+            function ($attribute, $value, $fail) {
+                if ($this->input('type') === 'xml_link' && empty($value) && empty($this->input('fieldCode'))) {
+                    $fail('Поле fieldBarcode обязательно, если fieldCode не заполнено.');
+                }
+            },
+          ],
           // 'brandsData.*.brand_id' => 'required',
           // 'brandsData.*.brand' => 'required'
         ];

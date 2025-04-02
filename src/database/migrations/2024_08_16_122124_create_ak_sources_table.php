@@ -19,15 +19,16 @@ class CreateAkSourcesTable extends Migration
           $table->string('key')->unique();
           $table->foreignId('supplier_id')->nullable();
           $table->text('link')->nullable();
+          $table->text('file')->nullable();
           $table->text('content')->nullable();
           $table->boolean('is_active')->default(1);
-          $table->enum('type', ['xml_link'])->default('xml_link');
+          $table->enum('type', ['xml_link', 'file'])->default('xml_link');
           // Common overprice
           $table->double('overprice', 8, 2)->default(1);
           $table->json('settings')->nullable();
           $table->json('rules')->nullable();
           $table->timestamp('last_loading')->nullable();
-          $table->integer('every_minutes')->default(60);
+          $table->integer('every_minutes')->default(60)->nullable();
           $table->timestamps();
         });
     }

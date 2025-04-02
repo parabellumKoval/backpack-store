@@ -43,6 +43,16 @@ class UploadCrudController extends CrudController
       ]);
 
       $this->crud->addColumn([
+        'name' => 'sourceType',
+        'label' => 'Источник',
+        'type' => 'select_from_array',
+        'options' => [
+          'file' => 'Файл',
+          'xml_link' => 'Ссылка'
+        ]
+      ]);
+
+      $this->crud->addColumn([
         'name' => 'statusAdmin',
         'label' => 'Статус',
         'type' => 'model_function',
