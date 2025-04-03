@@ -1078,6 +1078,11 @@ class XmlSource extends Command
         return;
       }
       
+      
+      if($this->settings['createNewBrand'] !== "1") {
+        return;
+      }
+
       // Else create new brand
       $brand = new Brand;
       $brand->setTranslation('name', $this->lang, $data['brand']);
