@@ -55,13 +55,19 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $packagePublicPath = __DIR__.'/public';
     $appPublicPath = base_path('public/packages/backpack/store');
 
-    if (!file_exists($appPublicPath)) {
-      symlink($packagePublicPath, $appPublicPath);
+    // Проверяем, существует ли родительская директория
+    $parentDir = dirname($appPublicPath);
+    if (!is_dir($parentDir)) {
+        mkdir($parentDir, 0777, true); // Создаем рекурсивно (true)
     }
 
+    // Проверяем, существует ли уже ссылка или директория
+    if (!file_exists($appPublicPath) && !is_link($appPublicPath)) {
+        symlink($packagePublicPath, $appPublicPath);
+    }
 
     $this->publishes([
-      __DIR__.'/public' => base_path('public/packages/backpack/store')
+        $packagePublicPath => $appPublicPath,
     ], 'public');
 
 
