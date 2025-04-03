@@ -9,6 +9,8 @@ use Backpack\Store\app\Console\Commands\XmlSource;
 use Backpack\Store\app\Console\Commands\AttributesTransform;
 use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
 
+use Illuminate\Support\Facades\File;
+
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
 
