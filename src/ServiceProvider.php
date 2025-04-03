@@ -58,19 +58,19 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     // $appPublicPath = base_path('public/packages/backpack/store');
     $appPublicPath = public_path('packages/backpack/store');
 
-    // Удаляем старый симлинк, файл или папку, если они существуют
-    if (is_link($appPublicPath)) {
-        unlink($appPublicPath); // Если это символическая ссылка
-    } elseif (file_exists($appPublicPath)) {
-        if (is_dir($appPublicPath)) {
-            File::deleteDirectory($appPublicPath); // Если это папка
-        } else {
-            File::delete($appPublicPath); // Если это файл
-        }
-    }
+    // // Удаляем старый симлинк, файл или папку, если они существуют
+    // if (is_link($appPublicPath)) {
+    //     unlink($appPublicPath); // Если это символическая ссылка
+    // } elseif (file_exists($appPublicPath)) {
+    //     if (is_dir($appPublicPath)) {
+    //         File::deleteDirectory($appPublicPath); // Если это папка
+    //     } else {
+    //         File::delete($appPublicPath); // Если это файл
+    //     }
+    // }
 
-    // Создаём новый симлинк
-    symlink(realpath($packagePublicPath), $appPublicPath);
+    // // Создаём новый симлинк
+    // symlink(realpath($packagePublicPath), $appPublicPath);
 
     $this->publishes([
         $packagePublicPath => $appPublicPath,
