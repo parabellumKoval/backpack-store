@@ -50,7 +50,7 @@ class SourceCrudController extends CrudController
 
       $this->crud->setModel($this->source_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/source');
-      $this->crud->setEntityNameStrings('выгрузка', 'выгрузки');
+      $this->crud->setEntityNameStrings('источник данных', 'источники данных');
 
 
       // CURRENT MODEL

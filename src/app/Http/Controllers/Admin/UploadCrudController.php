@@ -30,7 +30,7 @@ class UploadCrudController extends CrudController
 
         $this->crud->setModel($this->brand_class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/upload');
-        $this->crud->setEntityNameStrings('история выгрузки', 'истории выгрузки');
+        $this->crud->setEntityNameStrings('история загрузки', 'история загрузок');
         
     }
 

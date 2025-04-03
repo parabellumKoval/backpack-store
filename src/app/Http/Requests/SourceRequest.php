@@ -31,6 +31,7 @@ class SourceRequest extends FormRequest
           'supplier' => 'required',
           'every_minutes' => 'nullable|required_if:type,xml_link|integer|min:60',
           'link' => 'nullable|required_if:type,xml_link',
+          'file' => 'nullable|required_if:type,file',
           'item' => 'required_if:type,xml_link',
           'fieldName' => 'nullable|required_if:type,xml_link',
           'fieldPrice' => 'nullable|required_if:type,xml_link',
