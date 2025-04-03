@@ -2,19 +2,44 @@
 
 namespace Backpack\Store\app\Http\Controllers\Admin\Traits\Fields;
 
-trait SourceTrait {
+trait SourceTrait {  
+  /**
+   * Method getStructureStylesArray
+   *
+   * @param $key $key [explicite description]
+   * @param $type $type [explicite description]
+   *
+   * @return void
+   */
   protected function getStructureStylesArray($key, $type) {
     $key_name = "{$key}_structure";
     $settings_type = $this->entry->settings[$key_name] ?? null;
     return $settings_type === $type?[]:['style' => 'display: none;'];
   }
-
+  
+  /**
+   * Method getStructureAttributesArray
+   *
+   * @param $key $key [explicite description]
+   * @param $type $type [explicite description]
+   *
+   * @return void
+   */
   protected function getStructureAttributesArray($key, $type) {
     $key_name = "{$key}_structure";
     $settings_type = $this->entry->settings[$key_name] ?? null;
     return $settings_type === $type?[]:['disabled' => 'disabled'];
   }
-
+  
+  /**
+   * Method delimiterField
+   *
+   * @param $key $key [explicite description]
+   * @param $label $label [explicite description]
+   * @param $tab $tab [explicite description]
+   *
+   * @return void
+   */
   protected function delimiterField($key, $label, $tab) {
     $this->crud->addField([
       'name' => "delim_{$key}_structure",
@@ -26,7 +51,16 @@ trait SourceTrait {
       'tab' => $tab
     ]);
   }
-
+  
+  /**
+   * Method levelIndexField
+   *
+   * @param $key $key [explicite description]
+   * @param $label $label [explicite description]
+   * @param $tab $tab [explicite description]
+   *
+   * @return void
+   */
   protected function levelIndexField($key, $label, $tab) {
 
     $this->crud->addField([
@@ -64,7 +98,16 @@ trait SourceTrait {
     ]);
 
   }
-
+  
+  /**
+   * Method visualIdField
+   *
+   * @param $key $key [explicite description]
+   * @param $label $label [explicite description]
+   * @param $tab $tab [explicite description]
+   *
+   * @return void
+   */
   protected function visualIdField($key, $label, $tab) {
     $this->crud->addField([
       'name' => "{$key}_visual_id",
@@ -80,7 +123,15 @@ trait SourceTrait {
     ]);
   }
 
-
+  
+  /**
+   * Method htmlRulesField
+   *
+   * @param $key $key [explicite description]
+   * @param $tab $tab [explicite description]
+   *
+   * @return void
+   */
   protected function htmlRulesField($key, $tab) {
 
     $html_instruction = file_get_contents(public_path('packages/backpack/store/instruction/hex-color-sheets.html'));
@@ -103,7 +154,16 @@ trait SourceTrait {
     ]);
   }
 
-
+  
+  /**
+   * Method columnLetterField
+   *
+   * @param $key $key [explicite description]
+   * @param $label $label [explicite description]
+   * @param $tab $tab [explicite description]
+   *
+   * @return void
+   */
   protected function columnLetterField($key, $label, $tab) {
     $this->crud->addField([
       'name' => "{$key}_column_letter",
@@ -120,7 +180,17 @@ trait SourceTrait {
       'tab' => $tab
     ]);
   }
-
+  
+  /**
+   * Method structureTypeField
+   *
+   * @param $key $key [explicite description]
+   * @param $label $label [explicite description]
+   * @param $label2 $label2 [explicite description]
+   * @param $tab $tab [explicite description]
+   *
+   * @return void
+   */
   protected function structureTypeField($key, $label, $label2, $tab){
 
     $js_attributes = [
@@ -179,7 +249,12 @@ trait SourceTrait {
     ]);
 
   }
-
+  
+  /**
+   * Method fileCategoriesField
+   *
+   * @return void
+   */
   protected function fileCategoriesField() {
     $tab = 'Настройки категорий';
     // header
@@ -193,7 +268,12 @@ trait SourceTrait {
     $this->visualIdField('categories', 'Категорий', $tab);
     $this->htmlRulesField("categories", $tab);
   }
-
+  
+  /**
+   * Method fileBrandsField
+   *
+   * @return void
+   */
   protected function fileBrandsField() {
     $tab = 'Настройки брендов';
 

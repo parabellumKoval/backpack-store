@@ -138,16 +138,38 @@ class SourceCrudController extends CrudController
       ]);
       
     }
-
+    
+    /**
+     * Method getStylesArray
+     *
+     * @param $type $type [explicite description]
+     *
+     * @return void
+     */
     protected function getStylesArray($type) {
       return $this->type === $type?[]:['style' => 'display: none;'];
     }
 
-
+    
+    /**
+     * Method getAttributesArray
+     *
+     * @param $type $type [explicite description]
+     *
+     * @return void
+     */
     protected function getAttributesArray($type) {
       return $this->type === $type?[]:['disabled' => 'disabled'];
     }
-
+    
+    /**
+     * Method getMoreBtn
+     *
+     * @param $text $text [explicite description]
+     * @param $images $images [explicite description]
+     *
+     * @return void
+     */
     protected function getMoreBtn($text = null, $images = []) {
       $btn_styles = 'background:#eee;border:none;font-weight: bold';
       $span_text = !empty($text) ? '</br><span style="color: #000000">' . $text . '</span></br></br>' : '';
@@ -237,9 +259,9 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'wrapper' => [
             'data-field-purpose' => 'link'
-          ] + $this->getStylesArray('link'),
+          ] + $this->getStylesArray('xml_link'),
           'attributes' => [
-          ] + $this->getAttributesArray('link'),
+          ] + $this->getAttributesArray('xml_link'),
           'hint' => 'Ссылка на xml-каталог для выгрузки данных',
           'tab' => 'Настройки'
         ]);
@@ -269,10 +291,10 @@ class SourceCrudController extends CrudController
           'suffix' => 'мин.',
           'wrapper' => [
             'data-field-purpose' => 'link',
-          ] + $this->getStylesArray('link'),
+          ] + $this->getStylesArray('xml_link'),
           'attributes' => [
               'min' => 60,
-          ] + $this->getAttributesArray('link'),
+          ] + $this->getAttributesArray('xml_link'),
           'hint' => 'Укажите в минутах как часто необходимо обновлять данные из источника.',
           'tab' => 'Настройки'
         ]);
@@ -337,9 +359,9 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'wrapper' => [
             'data-field-purpose' => 'link'
-          ] + $this->getStylesArray('link'),
+          ] + $this->getStylesArray('xml_link'),
           'attributes' => [
-          ] + $this->getAttributesArray('link'),
+          ] + $this->getAttributesArray('xml_link'),
           'fake' => true,
           'store_in' => 'settings',
           'hint' => 'Путь к товару в источнике данных.',
@@ -427,8 +449,8 @@ class SourceCrudController extends CrudController
           'wrapper' => [
             'class' => 'form-group col-md-4',
             'data-field-purpose' => 'link'
-          ] + $this->getStylesArray('link'),
-          'attributes' => [] + $this->getAttributesArray('link'),
+          ] + $this->getStylesArray('xml_link'),
+          'attributes' => [] + $this->getAttributesArray('xml_link'),
           'tab' => 'Настройки'
         ]);
 
@@ -441,9 +463,9 @@ class SourceCrudController extends CrudController
           'wrapper' => [
             'class' => 'form-group col-md-4',
             'data-field-purpose' => 'link'
-          ] + $this->getStylesArray('link'),
+          ] + $this->getStylesArray('xml_link'),
           'attributes' => [
-          ] + $this->getAttributesArray('link'),
+          ] + $this->getAttributesArray('xml_link'),
           'tab' => 'Настройки'
         ]);
 
