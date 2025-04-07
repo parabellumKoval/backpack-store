@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Models;
 
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 // FACTORY
