@@ -19,6 +19,7 @@ use Backpack\Store\app\Models\Product;
 class AttributeProduct extends Pivot
 {
   use HasFactory;
+  use CrudTrait;
   use HasTranslations;
 
   /*
