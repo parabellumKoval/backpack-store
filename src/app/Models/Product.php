@@ -799,7 +799,7 @@ class Product extends Model
         }
       }
 
-      return $attrs;
+      return $attrs->unique('id');
     }
     
     /**
