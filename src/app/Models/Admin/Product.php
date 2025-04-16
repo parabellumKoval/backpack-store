@@ -188,7 +188,6 @@ class Product extends BaseProduct
      */
     public function getInStockTotalSuppliersAttribute() {
       return $this->sp_sum_in_stock ?? 0;
-      // return 0;
     }
     
     /**

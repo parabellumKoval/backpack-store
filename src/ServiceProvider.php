@@ -8,6 +8,7 @@ use Backpack\Store\app\Providers\EventServiceProvider;
 use Backpack\Store\app\Console\Commands\XmlSource;
 use Backpack\Store\app\Console\Commands\AttributesTransform;
 use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
+use Illuminate\Support\Facades\View;
 
 use Illuminate\Support\Facades\File;
 
@@ -18,6 +19,12 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
   public function boot()
   {
+    // Добавляем кастомный путь для представлений Backpack
+    View::addNamespace('store-crud', [
+        resource_path('views/vendor/backpack/crud'),
+        __DIR__.'/resources/views/crud',
+    ]);
+
     // Migrations
     $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
 

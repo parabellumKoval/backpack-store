@@ -769,6 +769,53 @@ class Product extends Model
       return !empty($this->extras_trans)? json_decode($this->extras_trans): null;
     }
     
+
+    /**
+     * Method getAvailableProperties
+     *
+     * @return void
+     */
+    public function getAvailableProperties() {
+      // create empty collection
+      $attrs = collect();
+
+      // if categories have not been set go out
+      if(!$this->categories || !$this->categories->count())
+        return;
+      
+      // 
+      foreach($this->categories as $category) {
+        
+        $category_parent_node = $category->getParentNode();
+
+        foreach($category_parent_node as $category) {
+          // Take all active attributes for this category 
+          $cat_attrs = $category->attributes()->active()->get();
+
+          // If isset active attributes for this category merge with common list
+          if($cat_attrs && $cat_attrs->count()) {
+            $attrs = $attrs->merge($cat_attrs);
+          }
+        }
+      }
+
+      return $attrs;
+    }
+    
+    /**
+     * Method getCountAvailablePropertiesAttribute
+     *
+     * @return void
+     */
+    public function getCountAvailablePropertiesAttribute() {
+      $props = $this->getAvailableProperties();
+
+      if(!$props) {
+        return 0;
+      }
+
+      return $props->count();
+    }
       
     /**
      * getAttributesAttribute

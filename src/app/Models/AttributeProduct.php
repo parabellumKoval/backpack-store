@@ -38,7 +38,6 @@ class AttributeProduct extends Pivot
   protected $translatable = ['value_trans'];
 
   // protected $guarded = ['id'];
-
   /*
   |--------------------------------------------------------------------------
   | FUNCTIONS

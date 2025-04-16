@@ -37,4 +37,46 @@ Route::group([
       Route::crud('upload', 'UploadCrudController');
     }
     
+    Route::post('product/{id}/toggle', [
+      'as' => 'product.toggle',
+      'uses' => 'ProductCrudController@toggle',
+      'operation' => 'list',
+    ]);
+
+    // Add route for select2_multiple updates
+    // Route::post('{crud}/{id}/select2-multiple', [
+    //     'as' => 'crud.select2-multiple',
+    //     'uses' => 'Base\CrudController@handleSelect2Multiple'
+    // ]);
+    Route::post('product/{id}/select2-multiple', [
+      'as' => 'crud.select2-multiple',
+      'uses' => 'ProductCrudController@handleSelect2Multiple'
+    ]);
+
+
+    Route::post('product/bulk-action/{action}', [
+        'as' => 'product.bulk-action',
+        'uses' => 'ProductCrudController@handleBulkAction',
+        'operation' => 'list',
+    ]); 
+
+    // Маршруты для bulk действий
+    Route::post('product/bulk-set-active', [
+      'as' => 'product.bulk-set-active',
+      'uses' => 'ProductCrudController@bulkSetActive',
+      'operation' => 'list',
+    ]);
+
+    Route::post('product/bulk-set-inactive', [
+      'as' => 'product.bulk-set-inactive',
+      'uses' => 'ProductCrudController@bulkSetInactive',
+      'operation' => 'list',
+    ]);
+
+    Route::post('product/bulk-set-category', [
+      'as' => 'product.bulk-set-category',
+      'uses' => 'ProductCrudController@bulkSetCategory',
+      'operation' => 'list',
+    ]);
 }); // this should be the absolute last line of this file
+

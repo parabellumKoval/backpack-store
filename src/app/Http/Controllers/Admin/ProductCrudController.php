@@ -5,7 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Admin;
 use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\ProductRequest;
 
-use Backpack\CRUD\app\Http\Controllers\CrudController;
+use Backpack\Store\app\Http\Controllers\Admin\Base\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -360,6 +360,66 @@ class ProductCrudController extends CrudController
         }
     }
 
+    public function handleBulkAction($action)
+    {
+        $this->crud->hasAccessOrFail('update');
+
+        $ids = request()->input('ids', []);
+        if (empty($ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select at least one item.',
+            ]);
+        }
+
+        switch ($action) {
+            case 'set_active':
+                $this->crud->model->whereIn('id', $ids)->update(['is_active' => 1]);
+                return response()->json([
+                    'success' => true,
+                    'message' => count($ids) . ' items have been activated.',
+                ]);
+
+            case 'set_inactive':
+                $this->crud->model->whereIn('id', $ids)->update(['is_active' => 0]);
+                return response()->json([
+                    'success' => true,
+                    'message' => count($ids) . ' items have been deactivated.',
+                ]);
+
+            case 'set_category':
+                $categoryId = request()->input('category_id');
+                
+                // Получаем все продукты которые нужно обновить
+                $products = $this->crud->model->whereIn('id', $ids)->get();
+                
+                foreach ($products as $product) {
+                    if ($categoryId === '') {
+                        // Если категория пустая - отвязываем все категории
+                        $product->categories()->detach();
+                    } else {
+                        // Иначе синхронизируем с выбранной категорией
+                        $product->categories()->sync([$categoryId]);
+                    }
+                }
+
+                $message = empty($categoryId) 
+                    ? count($ids) . ' items have had their categories removed.'
+                    : count($ids) . ' items have been moved to the selected category.';
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                ]);
+
+            default:
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid action.',
+                ]);
+        }
+    }
+
     protected function setupListOperation()
     {
         // langs
@@ -368,6 +428,19 @@ class ProductCrudController extends CrudController
         $this->crud->addClause('withSum', 'sp', 'in_stock');
 
         $this->setupFilters();
+
+        // Добавляем кастомную кнопку для bulk операций
+        $this->crud->addButton('bottom', 'bulk_actions', 'view', 'store-crud::buttons.product_bulk_actions', 'end');
+
+
+        $this->crud->addColumn([
+          'name' => 'imageSrc',
+          'label' => '📷',
+          'type' => 'image',
+          'height' => '60px',
+          'width'  => '40px',
+          'priority' => 2,
+        ]);
 
         $this->crud->addColumn([
           'name' => 'adminCode',
@@ -384,20 +457,40 @@ class ProductCrudController extends CrudController
               ->orWhere('code', 'LIKE', '%'.$searchTerm.'%');
           },
         ]);
+        
+        
+        $this->crud->addColumn([
+          'name' => 'inStockTotalSuppliers',
+          'label' => '<span title="Сумарно товаров в наличие">📦</span>',
+          'type' => 'number',
+          'suffix' => ' шт.',
+          'priority' => 4,
+          'orderable'   => true,
+          'orderLogic' => function ($query, $column, $columnDirection) {
+            return $query->withSum('sp', 'in_stock')
+                  ->orderBy('sp_sum_in_stock', $columnDirection);
+          },
+        ]);
 
         $this->crud->addColumn([
-          'name' => 'imageSrc',
-          'label' => '📷',
-          'type' => 'image',
-          'height' => '60px',
-          'width'  => '40px',
-          'priority' => 2,
+          'name' => 'simplePrice',
+          'label' => 'Цена',
+          'type' => 'number',
+          'orderable'   => true,
+          'orderLogic' => function ($query, $column, $columnDirection) {
+            return $query
+            ->leftJoin('ak_supplier_product', 'ak_supplier_product.product_id', '=', 'ak_products.id')
+            ->orderBy('ak_supplier_product.price', $columnDirection)
+            ->select('ak_products.*');
+          },
+          'priority' => 6,
         ]);
         
         $this->crud->addColumn([
           'name' => 'is_active',
           'label' => '<span title="Активный ли товар?">✅</span>',
-          'type' => 'check',
+          'type' => 'toggle',
+          'view_namespace' => 'store-crud::columns',
           'priority' => 5,
           'orderable'   => true,
         ]);
@@ -416,19 +509,6 @@ class ProductCrudController extends CrudController
         //       }
         //   ]);
         // }
-        
-        
-        $this->crud->addColumn([
-          'name' => 'inStockTotalSuppliers',
-          'label' => '<span title="Сумарно товаров в наличие">📦</span>',
-          'type' => 'number',
-          'priority' => 4,
-          'orderable'   => true,
-          'orderLogic' => function ($query, $column, $columnDirection) {
-            return $query->withSum('sp', 'in_stock')
-                  ->orderBy('sp_sum_in_stock', $columnDirection);
-          },
-        ]);
 
         $this->crud->addColumn([
           'name' => 'name',
@@ -454,26 +534,24 @@ class ProductCrudController extends CrudController
           'priority' => 7
         ]);
 
-        $this->crud->addColumn([
-          'name' => 'simplePrice',
-          'label' => 'Цена',
-          'type' => 'number',
-          'orderable'   => true,
-          'orderLogic' => function ($query, $column, $columnDirection) {
-            return $query
-            ->leftJoin('ak_supplier_product', 'ak_supplier_product.product_id', '=', 'ak_products.id')
-            ->orderBy('ak_supplier_product.price', $columnDirection)
-            ->select('ak_products.*');
-          },
-          'priority' => 6,
-        ]);
+        // $this->crud->addColumn([
+        //   'name' => 'categories',
+        //   'label' => 'Категории',
+        //   'type'  => 'model_function',
+        //   'function_name' => 'getCategoriesString',
+        //   'limit' => 200,
+        //   'priority' => 7
+        // ]);
 
         $this->crud->addColumn([
           'name' => 'categories',
           'label' => 'Категории',
-          'type'  => 'model_function',
-          'function_name' => 'getCategoriesString',
-          'limit' => 200,
+          'type'  => 'select2_multiple',
+          'model' => Category::class,
+          'attribute' => 'name',
+          'data_source' => url('admin/api/category'),
+          'max_width' => '400px',
+          // 'limit' => 200,
           'priority' => 7
         ]);
         
@@ -646,73 +724,6 @@ class ProductCrudController extends CrudController
           'tab' => 'Основное'
         ]);
         
-
-        // MODIFICATIONS
-        $this->crud->addField([
-          'name' => 'delim_mod',
-          'type' => 'custom_html',
-          'value' => '<h3>Модификации</h3>',
-          'tab' => 'Основное'
-        ]);
-
-        if(config('backpack.store.product.modifications.enable', true)) {
-          $this->crud->addField([
-            'name' => 'parent_id',
-            'type' => 'hidden',
-            'value' => \Request::query('parent_id') ?? null
-          ]);
-        }
-        
-        if(config('backpack.store.product.modifications.enable', true)) {
-          // $this->crud->addField([
-          //   'name' => 'modifications',
-          //   'label' => 'Модификации',
-          //   'type' => 'modification_switcher',
-          //   'tab' => 'Основное'
-          // ]);
-
-          // $this->crud->addField([
-          //   'name' => 'parent_id',
-          //   'value' => null,
-          //   'type' => 'hidden'
-          // ]);
-
-          $this->crud->addField([
-            'name' => 'modifications',
-            'label' => 'Связанные товары',
-            'type'    => 'relationship',
-            'model'     => 'Backpack\Store\app\Models\Product',
-            'attribute' => 'name',
-            'ajax' => true,
-            'multiple' => true,
-            // 'entity' => Backpack\Store\app\Models\Product::class,
-            'entity' => 'children',
-            'data_source' => url("/admin/api/product"),
-            'placeholder' => "Поиск по названию товара",
-            'minimum_input_length' => 0,
-            // 'inline_create' => true,
-            'inline_create' => [
-              'entity' => 'product',
-              'force_select' => true,
-            ],
-            'hint' => 'Связанные товары - это другие разновидности этого же товара. Найдите и прикрепите модификации к товару, чтобы связать их в одну группу.',
-            'tab' => 'Основное'
-          ]);
-
-        }
-
-        // SHORT NAME FOR MODIFICATIONS
-        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
-        if(config('backpack.store.product.modifications.enable', true)) {
-          $this->crud->addField([
-            'name' => 'short_name',
-            'label' => 'Краткое название этой модификации',
-            'type' => 'text',
-            'hint' => 'Краткое название этой модификации товара, будет исспользовано в списке модификаций на сайте. Это может быть вкус/цвет и т.п.',
-            'tab' => 'Основное'
-          ]);
-        }
-        // }
         
         // IMAGES
         if(config('backpack.store.product.images.enable', true)) {
@@ -890,6 +901,60 @@ class ProductCrudController extends CrudController
             'tab' => 'Склад',
           ]);
         }
+
+
+        // MODIFICATIONS
+        $this->crud->addField([
+          'name' => 'delim_mod',
+          'type' => 'custom_html',
+          'value' => '<h3>Модификации</h3>',
+          'tab' => 'Управление'
+        ]);
+
+        if(config('backpack.store.product.modifications.enable', true)) {
+          $this->crud->addField([
+            'name' => 'parent_id',
+            'type' => 'hidden',
+            'value' => \Request::query('parent_id') ?? null
+          ]);
+        }
+        
+        if(config('backpack.store.product.modifications.enable', true)) {
+
+          $this->crud->addField([
+            'name' => 'modifications',
+            'label' => 'Связанные товары',
+            'type'    => 'relationship',
+            'model'     => 'Backpack\Store\app\Models\Product',
+            'attribute' => 'name',
+            'ajax' => true,
+            'multiple' => true,
+            'entity' => 'children',
+            'data_source' => url("/admin/api/product"),
+            'placeholder' => "Поиск по названию товара",
+            'minimum_input_length' => 0,
+            'inline_create' => [
+              'entity' => 'product',
+              'force_select' => true,
+            ],
+            'hint' => 'Связанные товары - это другие разновидности этого же товара. Найдите и прикрепите модификации к товару, чтобы связать их в одну группу.',
+            'tab' => 'Управление'
+          ]);
+
+        }
+
+        // SHORT NAME FOR MODIFICATIONS
+        // if($this->entry && !$this->entry->isBase || \Request::get('parent_id')) {
+        if(config('backpack.store.product.modifications.enable', true)) {
+          $this->crud->addField([
+            'name' => 'short_name',
+            'label' => 'Краткое название этой модификации',
+            'type' => 'text',
+            'hint' => 'Краткое название этой модификации товара, будет исспользовано в списке модификаций на сайте. Это может быть вкус/цвет и т.п.',
+            'tab' => 'Управление'
+          ]);
+        }
+        // }
 
       $this->createOperation();
     }
@@ -1310,5 +1375,16 @@ class ProductCrudController extends CrudController
       }
 
       return $results;
+    }
+
+    public function toggle($id)
+    {
+        $this->crud->hasAccessOrFail('update'); // Проверяем доступ
+
+        $entry = $this->crud->model->findOrFail($id);
+        $entry->is_active = request()->input('is_active', 0);
+        $entry->save();
+
+        return response()->json(['success' => true]);
     }
 }

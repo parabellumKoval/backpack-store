@@ -2,6 +2,7 @@
 	// if not otherwise specified, the hidden input should take up no space in the form
   $field['wrapper'] = $field['wrapper'] ?? $field['wrapperAttributes'] ?? [];
   $field['wrapper']['class'] = $field['wrapper']['class'] ?? "hidden";
+  $value = is_array($field['value']) ? json_encode($field['value']) : $field['value'];
 @endphp
 
 <!-- hidden input -->
@@ -9,7 +10,7 @@
   <input
   	type="hidden"
     name="{{ $field['name'] }}"
-    value="{{ $field['value'] }}"
+    value="{{ $value }}"
     @include('crud::fields.inc.attributes')
   	>
 @include('crud::fields.inc.wrapper_end')
