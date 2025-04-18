@@ -33,280 +33,264 @@ class CategoryCrudController extends CrudController
 
     public function setup()
     {
-      $this->category_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Category');
+        $this->category_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Category');
 
-      $this->crud->setModel($this->category_class);
-      $this->crud->setRoute(config('backpack.base.route_prefix') . '/category');
-      $this->crud->setEntityNameStrings('категорию', 'категории');
+        $this->crud->setModel($this->category_class);
+        $this->crud->setRoute(config('backpack.base.route_prefix') . '/category');
+        $this->crud->setEntityNameStrings(
+            trans('backpack-store::category.entity_singular'),
+            trans('backpack-store::category.entity_plural')
+        );
 
-      $this->filter_categories = $this->category_class::withoutGlobalScopes()
+        $this->filter_categories = $this->category_class::withoutGlobalScopes()
             ->whereNull('parent_id')
             ->pluck('name', 'id')
             ->toArray();
       
-      
-      $this->available_languages = config('backpack.crud.locales');
-      $this->langs_list = array_keys($this->available_languages);
+        $this->available_languages = config('backpack.crud.locales');
+        $this->langs_list = array_keys($this->available_languages);
     }
 
     protected function setupReorderOperation()
     {
-      // define which model attribute will be shown on draggable elements 
-      $this->crud->set('reorder.label', 'name');
-      // define how deep the admin is allowed to nest the items
-      // for infinite levels, set it to 0
-      $this->crud->set('reorder.max_level', 2);
+        // define which model attribute will be shown on draggable elements 
+        $this->crud->set('reorder.label', 'name');
+        // define how deep the admin is allowed to nest the items
+        // for infinite levels, set it to 0
+        $this->crud->set('reorder.max_level', 2);
     }
     
     protected function setupListOperation()
     {
-      $langs_list = $this->langs_list;
+        $langs_list = $this->langs_list;
 
-      // Filter by category
-      $this->crud->addFilter([
-        'name' => 'category',
-        'label' => 'Родительская категория',
-        'type' => 'select2',
-      ], function(){
-        return $this->filter_categories;
-      }, function($id){
-        $this->crud->query->where('parent_id', $id);
-      });
+        // Filter by category
+        $this->crud->addFilter([
+            'name' => 'category',
+            'label' => trans('backpack-store::category.filters.parent_category'),
+            'type' => 'select2',
+        ], function() {
+            return $this->filter_categories;
+        }, function($id) {
+            $this->crud->query->where('parent_id', $id);
+        });
 
-      $this->crud->addFilter([
-        'name' => 'is_active',
-        'label' => 'Активная',
-        'type' => 'select2',
-      ], function(){
-        return [
-          0 => 'Не активная',
-          1 => 'Активная',
-        ];
-      }, function($is_active){
-        $this->crud->query = $this->crud->query->where('is_active', $is_active);
-      });
+        $this->crud->addFilter([
+            'name' => 'is_active',
+            'label' => trans('backpack-store::category.filters.active.label'),
+            'type' => 'select2',
+        ], function() {
+            return [
+                0 => trans('backpack-store::category.filters.active.options.0'),
+                1 => trans('backpack-store::category.filters.active.options.1'),
+            ];
+        }, function($is_active) {
+            $this->crud->query = $this->crud->query->where('is_active', $is_active);
+        });
 
-      $this->crud->addFilter([
-        'name' => 'is_products',
-        'label' => 'С товарами',
-        'type' => 'select2',
-      ], function(){
-        return [
-          0 => 'Без товаров',
-          1 => 'С товарами',
-        ];
-      }, function($is_products){
-        if($is_products) {
-          $this->crud->query->has('products', '>=', 1);
-        }else {
-          $this->crud->query->has('products', '=', 0);
-        }
-      });
-
-      $this->crud->addFilter([
-        'name' => 'is_seo',
-        'label' => 'Заполнено SEO',
-        'type' => 'select2',
-      ], function(){
-        return [
-          0 => 'Не заполнено SEO',
-          // 1 => 'Частично заполнено',
-          2 => 'Заполнено SEO',
-        ];
-      }, function($is_seo){
-        $locale = \Lang::locale();
-
-        if($is_seo == 0) {
-          $this->crud->query
-            ->where('seo', null)
-            ->orWhere(function ($query) use ($locale) {
-              $query
-                ->where("seo->{$locale}->meta_title", '=', null)
-                ->where("seo->{$locale}->meta_description", '!=', null)
-                ->where("seo->{$locale}->h1", '=', null);
-            });
-        }elseif($is_seo == 1){
-          // $this->crud->query->where("seo->{$locale}->meta_title", '!=', null);
-              // ->where(function ($query) use ($locale) {
-              //   $query->where("seo->{$locale}->meta_title", '!=', null, 'xor');
-              //   $query->where("seo->{$locale}->meta_description", '!=', null, 'xor');
-              //   $query->where("seo->{$locale}->h1", '!=', null, 'xor');
-              // });
-
-            // $this->crud->query
-            //     ->whereJsonContains("seo->{$locale}->meta_title", null)
-            //     ->whereJsonContains("seo->{$locale}->meta_description", null)
-            //     ->whereJsonContains("seo->{$locale}->h1", null);
-                // ->where("seo->{$locale}->meta_title", '=', null, 'xor')
-                // ->where("seo->{$locale}->meta_description", '=', null, 'xor')
-                // ->where("seo->{$locale}->h1", '=', null, 'xor');
-        }elseif($is_seo == 2){
-          $this->crud->query->where("seo->{$locale}->meta_title", '!=', null);
-          $this->crud->query->orWhere("seo->{$locale}->meta_description", '!=', null);
-          $this->crud->query->orWhere("seo->{$locale}->h1", '!=', null);
-        }
-      });
-
-
-      $this->crud->addColumn([
-        'name' => 'imageSrc',
-        'label' => '📷',
-        'type' => 'image',
-        'height' => '50px',
-        'width'  => '50px',
-      ]);
-
-      // IS ACTIVE
-      $this->crud->addColumn([
-        'name' => 'is_active',
-        'label' => '✅',
-        'type' => 'check'
-      ]);
-
-      $this->crud->addColumn([
-        'name' => 'products',
-        'label' => '📦',
-        'type' => 'relationship_count',
-        'suffix' => ' тов.'
-      ]);
-
-      $this->crud->addColumn([
-        'name' => 'is_seo',
-        'label' => 'SEO',
-        'type' => 'model_function',
-        'function_name' => 'getAdminColumnSeo',
-        'limit' => 1000,
-      ]);
-
-      $this->crud->addColumn([
-        'name' => 'name',
-        'label' => 'Название',
-        'limit' => 200,
-        'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
-          $query->where(function($query) use ($searchTerm, $langs_list){
-            foreach($langs_list as $index => $lang_key) {
-              $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
-              $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+        $this->crud->addFilter([
+            'name' => 'is_products',
+            'label' => 'С товарами',
+            'type' => 'select2',
+        ], function(){
+            return [
+                0 => 'Без товаров',
+                1 => 'С товарами',
+            ];
+        }, function($is_products){
+            if($is_products) {
+                $this->crud->query->has('products', '>=', 1);
+            }else {
+                $this->crud->query->has('products', '=', 0);
             }
-          });
-        },
-      ]);
-      
-      $this->crud->addColumn([
-        'name' => 'parent',
-        'label' => 'Род. категория',
-      ]);
-      
-      $this->crud->addColumn([
-        'name' => 'depth',
-        'label' => 'Уровень',
-      ]);
+        });
 
+        $this->crud->addFilter([
+            'name' => 'is_seo',
+            'label' => 'Заполнено SEO',
+            'type' => 'select2',
+        ], function(){
+            return [
+                0 => 'Не заполнено SEO',
+                2 => 'Заполнено SEO',
+            ];
+        }, function($is_seo){
+            $locale = \Lang::locale();
 
-      $this->listOperation();
+            if($is_seo == 0) {
+                $this->crud->query
+                    ->where('seo', null)
+                    ->orWhere(function ($query) use ($locale) {
+                        $query
+                            ->where("seo->{$locale}->meta_title", '=', null)
+                            ->where("seo->{$locale}->meta_description", '!=', null)
+                            ->where("seo->{$locale}->h1", '=', null);
+                    });
+            }elseif($is_seo == 2){
+                $this->crud->query->where("seo->{$locale}->meta_title", '!=', null);
+                $this->crud->query->orWhere("seo->{$locale}->meta_description", '!=', null);
+                $this->crud->query->orWhere("seo->{$locale}->h1", '!=', null);
+            }
+        });
+
+        $this->crud->addColumn([
+            'name' => 'imageSrc',
+            'label' => '📷',
+            'type' => 'image',
+            'height' => '50px',
+            'width'  => '50px',
+        ]);
+
+        // IS ACTIVE
+        $this->crud->addColumn([
+            'name' => 'is_active',
+            'label' => '✅',
+            'type' => 'check'
+        ]);
+
+        $this->crud->addColumn([
+            'name' => 'products',
+            'label' => '📦',
+            'type' => 'relationship_count',
+            'suffix' => ' тов.'
+        ]);
+
+        $this->crud->addColumn([
+            'name' => 'is_seo',
+            'label' => 'SEO',
+            'type' => 'model_function',
+            'function_name' => 'getAdminColumnSeo',
+            'limit' => 1000,
+        ]);
+
+        $this->crud->addColumn([
+            'name' => 'name',
+            'label' => 'Название',
+            'limit' => 200,
+            'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
+                $query->where(function($query) use ($searchTerm, $langs_list){
+                    foreach($langs_list as $index => $lang_key) {
+                        $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                        $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+                    }
+                });
+            },
+        ]);
+      
+        $this->crud->addColumn([
+            'name' => 'parent',
+            'label' => 'Род. категория',
+        ]);
+      
+        $this->crud->addColumn([
+            'name' => 'depth',
+            'label' => 'Уровень',
+        ]);
+
+        $this->listOperation();
     }
 
     protected function setupCreateOperation()
     {
-      $this->crud->setValidation(CategoryRequest::class);
+        $this->crud->setValidation(CategoryRequest::class);
       
-      $this->crud->addFields([
-        [
-          'name' => 'is_active',
-          'label' => 'Активна',
-          'type' => 'boolean',
-          'default' => '1',
-          'tab' => 'Основное'
-        ],
-        [
-          'name' => 'name',
-          'label' => 'Название',
-          'type' => 'text',
-          'tab' => 'Основное'
-        ],
-        [
-          'name' => 'slug',
-          'label' => 'URL',
-          'hint' => 'По умолчанию будет сгенерирован из названия.',
-          'tab' => 'Основное'
-        ],
-        [
-          'name' => 'parent',
-          'label' => 'Родительская категория',
-          'type' => 'relationship',
-          'tab' => 'Основное'
-        ],
-        [
-          'name' => 'content',
-          'label' => 'Описание',
-          'type' => 'ckeditor',
-          'tab' => 'Основное'
-        ],
-        [
-          'name'  => 'images',
-          'label' => 'Изображения',
-          'type'  => 'repeatable',
-          'fields' => [
+        $this->crud->addFields([
             [
-              'name' => 'src',
-              'label' => 'Изображение',
-              'type' => 'browse'
+                'name' => 'is_active',
+                'label' => trans('backpack-store::category.fields.is_active'),
+                'type' => 'boolean',
+                'default' => '1',
+                'tab' => trans('backpack-store::category.tabs.main')
             ],
             [
-              'name' => 'alt',
-              'label' => 'alt'
+                'name' => 'name',
+                'label' => trans('backpack-store::category.fields.name'),
+                'type' => 'text',
+                'tab' => trans('backpack-store::category.tabs.main')
             ],
             [
-              'name' => 'title',
-              'label' => 'title'
-            ]
-          ],
-          'new_item_label'  => 'Добавить изобрежение',
-          'init_rows' => 1,
-          'tab' => 'Изображения'
-        ],
-        [
-          'name' => 'h1',
-          'label' => 'H1 заголовок',
-          'fake' => true,
-          'store_in' => 'seo',
-          'tab' => 'SEO'
-        ],
-        [
-          'name' => 'meta_title',
-          'label' => 'Meta title',
-          'fake' => true,
-          'store_in' => 'seo',
-          'tab' => 'SEO'
-        ],
-        [
-          'name' => 'meta_description',
-          'label' => 'Meta description',
-          'type' => 'textarea',
-          'fake' => true,
-          'store_in' => 'seo',
-          'tab' => 'SEO'
-        ],
-        [
-          'name' => 'params',
-          'label' => 'Параметры',
-          'type' => 'table',
-          'columns'  => [
-            'key'  => 'Ключ',
-            'value'  => 'Значение',
-          ],
-          'fake' => true,
-          'store_in' => 'extras',
-          'tab' => 'Дополнительно'
-        ],
-      ]);
+                'name' => 'slug',
+                'label' => trans('backpack-store::category.fields.slug'),
+                'hint' => trans('backpack-store::category.fields.slug_hint'),
+                'tab' => trans('backpack-store::category.tabs.main')
+            ],
+            [
+                'name' => 'parent',
+                'label' => 'Родительская категория',
+                'type' => 'relationship',
+                'tab' => 'Основное'
+            ],
+            [
+                'name' => 'content',
+                'label' => 'Описание',
+                'type' => 'ckeditor',
+                'tab' => 'Основное'
+            ],
+            [
+                'name'  => 'images',
+                'label' => 'Изображения',
+                'type'  => 'repeatable',
+                'fields' => [
+                    [
+                        'name' => 'src',
+                        'label' => 'Изображение',
+                        'type' => 'browse'
+                    ],
+                    [
+                        'name' => 'alt',
+                        'label' => 'alt'
+                    ],
+                    [
+                        'name' => 'title',
+                        'label' => 'title'
+                    ]
+                ],
+                'new_item_label'  => 'Добавить изобрежение',
+                'init_rows' => 1,
+                'tab' => 'Изображения'
+            ],
+            [
+                'name' => 'h1',
+                'label' => 'H1 заголовок',
+                'fake' => true,
+                'store_in' => 'seo',
+                'tab' => 'SEO'
+            ],
+            [
+                'name' => 'meta_title',
+                'label' => 'Meta title',
+                'fake' => true,
+                'store_in' => 'seo',
+                'tab' => 'SEO'
+            ],
+            [
+                'name' => 'meta_description',
+                'label' => 'Meta description',
+                'type' => 'textarea',
+                'fake' => true,
+                'store_in' => 'seo',
+                'tab' => 'SEO'
+            ],
+            [
+                'name' => 'params',
+                'label' => 'Параметры',
+                'type' => 'table',
+                'columns'  => [
+                    'key'  => 'Ключ',
+                    'value'  => 'Значение',
+                ],
+                'fake' => true,
+                'store_in' => 'extras',
+                'tab' => 'Дополнительно'
+            ],
+        ]);
 
-      $this->createOperation();
+        $this->createOperation();
     }
 
     protected function setupUpdateOperation()
     {
-      $this->setupCreateOperation();
+        $this->setupCreateOperation();
     }
     
     /**
@@ -316,40 +300,39 @@ class CategoryCrudController extends CrudController
      * @return void
      */
     public function getCategories(Request $request) {
-      $search_term = $request->input('q');
-      $id = $request->input('keys');
+        $search_term = $request->input('q');
+        $id = $request->input('keys');
 
-      // langs
-      $langs_list = $this->langs_list;
+        // langs
+        $langs_list = $this->langs_list;
 
-      if($id) {
-        $categories = [];
-        $category = $this->category_class::find($id);
+        if($id) {
+            $categories = [];
+            $category = $this->category_class::find($id);
 
-        if($category) {
-          $categories[] = $category;
+            if($category) {
+                $categories[] = $category;
+            }
+            return $categories;
         }
-        return $categories;
-      }
 
-      if ($search_term)
-      {
+        if ($search_term)
+        {
+            $results = $this->category_class::
+                                where(function($query) use ($search_term, $langs_list){
+                                    foreach($langs_list as $index => $lang_key) {
+                                        $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                                        $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+                                    }
+                                })
+                                ->paginate(20);
+        }
+        else
+        {
+            $results = $this->category_class::paginate(20);
+        }
 
-        $results = $this->category_class::
-                            where(function($query) use ($search_term, $langs_list){
-                              foreach($langs_list as $index => $lang_key) {
-                                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
-                                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
-                              }
-                            })
-                            ->paginate(20);
-      }
-      else
-      {
-        $results = $this->category_class::paginate(20);
-      }
-
-      return $results;
+        return $results;
     }
 
 }

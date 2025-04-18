@@ -25,6 +25,9 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/resources/views/crud',
     ]);
 
+    // Load translations
+    $this->loadTranslationsFrom(__DIR__.'/resources/lang', 'backpack-store');
+
     // Migrations
     $this->loadMigrationsFrom(__DIR__ . '/database/migrations');
 

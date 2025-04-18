@@ -3,7 +3,7 @@
 
 Route::any('/admin/api/brand', 'Backpack\Store\app\Http\Controllers\Admin\BrandCrudController@getBrands');
 Route::any('/admin/api/category', 'Backpack\Store\app\Http\Controllers\Admin\CategoryCrudController@getCategories');
-Route::any('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getProducts');
+Route::any('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getProductsRouter');
 Route::any('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\AttributeCrudController@getAttributeValues');
 
 Route::group([
@@ -39,7 +39,7 @@ Route::group([
     
     Route::post('product/{id}/toggle', [
       'as' => 'product.toggle',
-      'uses' => 'ProductCrudController@toggle',
+      'uses' => 'ProductCrudController@toggleIsActiveRouter',
       'operation' => 'list',
     ]);
 
@@ -50,33 +50,15 @@ Route::group([
     // ]);
     Route::post('product/{id}/select2-multiple', [
       'as' => 'crud.select2-multiple',
-      'uses' => 'ProductCrudController@handleSelect2Multiple'
+      'uses' => 'ProductCrudController@handleSelect2MultipleRouter'
     ]);
 
 
     Route::post('product/bulk-action/{action}', [
         'as' => 'product.bulk-action',
-        'uses' => 'ProductCrudController@handleBulkAction',
+        'uses' => 'ProductCrudController@handleBulkActionRouter',
         'operation' => 'list',
     ]); 
 
-    // Маршруты для bulk действий
-    Route::post('product/bulk-set-active', [
-      'as' => 'product.bulk-set-active',
-      'uses' => 'ProductCrudController@bulkSetActive',
-      'operation' => 'list',
-    ]);
-
-    Route::post('product/bulk-set-inactive', [
-      'as' => 'product.bulk-set-inactive',
-      'uses' => 'ProductCrudController@bulkSetInactive',
-      'operation' => 'list',
-    ]);
-
-    Route::post('product/bulk-set-category', [
-      'as' => 'product.bulk-set-category',
-      'uses' => 'ProductCrudController@bulkSetCategory',
-      'operation' => 'list',
-    ]);
 }); // this should be the absolute last line of this file
 

@@ -18,19 +18,19 @@ class CrudController extends BackpackCrudController
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function handleSelect2Multiple($id)
+    public function handleSelect2MultipleRouter($id)
     {
         $field = request('field');
         $values = request('values');
         
         if (!$field) {
-            return response()->json(['error' => 'Field name not provided'], 400);
+            return response()->json(['error' => trans('backpack-store::admin.errors.field_not_provided')], 400);
         }
 
         $entry = $this->crud->getEntry($id);
         
         if (!$entry) {
-            return response()->json(['error' => 'Entry not found'], 404);
+            return response()->json(['error' => trans('backpack-store::admin.errors.entry_not_found')], 404);
         }
 
         try {

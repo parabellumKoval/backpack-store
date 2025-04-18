@@ -296,7 +296,7 @@ class Product extends Model
     }
         
     /**
-     * attrs
+     * AttributeProduct
      *
      * @return void
      */

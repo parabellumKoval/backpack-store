@@ -1,0 +1,15 @@
+<?php
+
+return [
+    'suppliers' => 'Suppliers',
+    'no_suppliers' => 'No supplier information available',
+    'columns' => [
+        'name' => 'Name',
+        'article' => 'Article',
+        'code_barcode' => 'Code/Barcode',
+        'in_stock' => 'In Stock',
+        'price' => 'Price',
+        'old_price' => 'Old Price',
+        'last_update' => 'Last Update'
+    ]
+];

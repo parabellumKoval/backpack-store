@@ -49,7 +49,7 @@ class OrderCrudController extends CrudController
   {
     $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order'));
     $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
-    $this->crud->setEntityNameStrings('заказ', 'Заказы');
+    $this->crud->setEntityNameStrings(trans('backpack-store::order.single'), trans('backpack-store::order.title'));
     
     $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order');
     $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
@@ -135,11 +135,9 @@ class OrderCrudController extends CrudController
   
   protected function setupListOperation()
   {
-      // TODO: remove setFromDb() and manually define Columns, maybe Filters
-      // $this->crud->setFromDb();
       $this->crud->addFilter([
         'name' => 'status',
-        'label' => 'Cтатус',
+        'label' => trans('backpack-store::order.fields.status'),
         'type' => 'select2',
       ], function(){
         return $this->status['order'];
@@ -149,7 +147,7 @@ class OrderCrudController extends CrudController
 
       $this->crud->addFilter([
         'name' => 'pay_status',
-        'label' => 'Cтатус оплаты',
+        'label' => trans('backpack-store::order.fields.pay_status'),
         'type' => 'select2',
       ], function(){
         return $this->status['pay'];
@@ -159,7 +157,7 @@ class OrderCrudController extends CrudController
 
       $this->crud->addFilter([
         'name' => 'delivery_status',
-        'label' => 'Cтатус доставки',
+        'label' => trans('backpack-store::order.fields.delivery.status'),
         'type' => 'select2',
       ], function(){
         return $this->status['delivery'];
@@ -213,15 +211,11 @@ class OrderCrudController extends CrudController
   {
     $this->crud->setValidation(OrderRequest::class);
 
-    // TODO: remove setFromDb() and manually define Fields
-    //$this->crud->setFromDb();
-
-
     $this->crud->addField([
       'name' => 'created_at',
-      'label' => 'Дата и время заказа',
+      'label' => trans('backpack-store::order.fields.created_at'),
       'type' => 'datetime_picker',
-      'hint' => 'Если оставить поле пустым будет установлена текущая дата и время',
+      'hint' => trans('backpack-store::order.fields.hints.price'),
       'wrapper' => [ 
         'class' => 'form-group col-md-8'
       ]
@@ -229,7 +223,7 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
       'name' => 'status',
-      'label' => 'Статус заказа',
+      'label' => trans('backpack-store::order.fields.status'),
       'type' => 'select2_from_array',
       'options' => $this->status['order'],
       'wrapper' => [ 
@@ -246,24 +240,14 @@ class OrderCrudController extends CrudController
     $this->crud->addField([
       'name'  => 'caption_01',
       'type'  => 'custom_html',
-      'value' => '<h5>Чек</h5>'
+      'value' => '<h5>' . trans('backpack-store::order.fields.products.title') . '</h5>'
     ]);
 
     $this->crud->addField([
       'name' => 'productsRelated',
-      'label' => 'Товары в заказе',
+      'label' => trans('backpack-store::order.fields.products.title'),
       'type'  => 'repeatable',
       'fields' => [
-        // [
-        //   'name' => 'id',
-        //   'label' => 'Товар',
-        //   'type' => 'relationship',
-        //   'attribute' => 'name',
-        //   'entity' => 'products',
-        //   'model' => '\Backpack\Store\app\Models\Product',
-        //   'ajax' => true,
-        //   'data_source' => url("/admin/order/fetch/product")
-        // ],
         [
             'name'    => 'id',
             'type'      => 'select2_from_ajax',
@@ -293,9 +277,9 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
       'name' => 'price',
-      'label' => 'Сумма заказа',
+      'label' => trans('backpack-store::order.fields.price'),
       'prefix' => config('backpack.store.currency.symbol'),
-      'hint' => 'Если оставить пустым сумма будет рассчитана автоматически',
+      'hint' => trans('backpack-store::order.fields.hints.price'),
       'wrapper' => [ 
         'class' => 'form-group col-md-4'
       ]
@@ -303,7 +287,7 @@ class OrderCrudController extends CrudController
     
     $this->crud->addField([
       'name' => 'pay_status',
-      'label' => 'Статус оплаты',
+      'label' => trans('backpack-store::order.fields.pay_status'),
       'type' => 'select2_from_array',
       'options' => $this->status['pay'],
       'wrapper' => [ 
@@ -313,14 +297,14 @@ class OrderCrudController extends CrudController
     
     $this->crud->addField([
       'name' => 'payment-method',
-      'label' => 'Способ оплаты',
+      'label' => trans('backpack-store::order.fields.payment_method'),
       'fake'     => true,
       'store_in' => 'extras',
       'type' => 'select2_from_array',
       'default' => 'cash',
       'options' => [
-        'cash' => 'Оплата наличныи',
-        'liqpay' => 'Онлайн оплата'
+        'cash' => trans('backpack-store::order.fields.payment_methods.cash'),
+        'liqpay' => trans('backpack-store::order.fields.payment_methods.liqpay')
       ],
       'wrapper' => [ 
         'class' => 'form-group col-md-4'
@@ -337,12 +321,12 @@ class OrderCrudController extends CrudController
     $this->crud->addField([
       'name'  => 'caption_0',
       'type'  => 'custom_html',
-      'value' => '<h5>Покупатель</h5>'
+      'value' => '<h5>' . trans('backpack-store::order.fields.customer.title') . '</h5>'
     ]);
 
     $this->crud->addField([
         'name' => 'user-firstname',
-        'label' => 'Имя',
+        'label' => trans('backpack-store::order.fields.customer.firstname'),
         'type'  => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -352,7 +336,7 @@ class OrderCrudController extends CrudController
     ]);
     $this->crud->addField([
         'name' => 'user-lastname',
-        'label' => 'Фамилия',
+        'label' => trans('backpack-store::order.fields.customer.lastname'),
         'type' => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -362,7 +346,7 @@ class OrderCrudController extends CrudController
     ]);
     $this->crud->addField([
         'name' => 'user-email',
-        'label' => 'Email',
+        'label' => trans('backpack-store::order.fields.customer.email'),
         'type'  => 'email',
         'fake'     => true,
         'store_in' => 'extras',
@@ -372,7 +356,7 @@ class OrderCrudController extends CrudController
     ]);
     $this->crud->addField([
         'name' => 'user-phone',
-        'label' => 'Телефон',
+        'label' => trans('backpack-store::order.fields.customer.phone'),
         'type'  => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -391,13 +375,13 @@ class OrderCrudController extends CrudController
     $this->crud->addField([
       'name'  => 'caption_1',
       'type'  => 'custom_html',
-      'value' => '<h5>Доставка</h5>'
+      'value' => '<h5>' . trans('backpack-store::order.fields.delivery.title') . '</h5>'
     ]);
 
     
     $this->crud->addField([
       'name' => 'delivery_status',
-      'label' => 'Статус доставки',
+      'label' => trans('backpack-store::order.fields.delivery.status'),
       'type' => 'select2_from_array',
       'options' => $this->status['delivery'],
       'wrapper' => [ 
@@ -407,15 +391,15 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
         'name' => 'delivery-method',
-        'label' => 'Метод',
+        'label' => trans('backpack-store::order.fields.delivery.method'),
         'fake'     => true,
         'store_in' => 'extras',
         'type' => 'select2_from_array',
         'default' => 'warehouse',
         'options' => [
-          'warehouse' => 'Отделение почты',
-          'address' => 'Доставка Курьером',
-          'pickup' => 'Самовывоз'
+          'warehouse' => trans('backpack-store::order.fields.delivery.methods.warehouse'),
+          'address' => trans('backpack-store::order.fields.delivery.methods.address'),
+          'pickup' => trans('backpack-store::order.fields.delivery.methods.pickup')
         ],
         'wrapper' => [ 
           'class' => 'form-group col-md-3'
@@ -424,7 +408,7 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
         'name' => 'delivery-warehouse',
-        'label' => 'Отделение почты',
+        'label' => trans('backpack-store::order.fields.delivery.warehouse'),
         'type'  => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -435,7 +419,7 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
         'name' => 'delivery-city',
-        'label' => 'Город',
+        'label' => trans('backpack-store::order.fields.delivery.city'),
         'type'  => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -446,7 +430,7 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
         'name' => 'delivery-address',
-        'label' => 'Адрес',
+        'label' => trans('backpack-store::order.fields.delivery.address'),
         'type'  => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -457,7 +441,7 @@ class OrderCrudController extends CrudController
     
     $this->crud->addField([
         'name' => 'delivery-zip',
-        'label' => 'Индекс',
+        'label' => trans('backpack-store::order.fields.delivery.zip'),
         'type'  => 'text',
         'fake'     => true,
         'store_in' => 'extras',
@@ -468,7 +452,7 @@ class OrderCrudController extends CrudController
 
     $this->crud->addField([
         'name' => 'delivery-comment',
-        'label' => 'Комментарий покупателя',
+        'label' => trans('backpack-store::order.fields.delivery.comment'),
         'type'  => 'textarea',
         'fake'     => true,
         'store_in' => 'extras',
@@ -533,38 +517,33 @@ class OrderCrudController extends CrudController
   
   protected function setupShowOperation()
   {
-      //$this->crud->setValidation(OrderRequest::class);
-
-      // TODO: remove setFromDb() and manually define Fields
-      // $this->crud->setFromDb();
-      
       $this->crud->addColumn([
         'name' => 'code',
-        'label' => 'Номер заказа'
+        'label' => trans('backpack-store::order.fields.code')
       ]);
 
       $this->crud->addColumn([
         'name' => 'created_at',
-        'label' => 'Дата заказа'
+        'label' => trans('backpack-store::order.fields.created_at')
       ]);
       
       $this->crud->addColumn([
         'name' => 'status',
-        'label' => 'Статус заказа',
+        'label' => trans('backpack-store::order.fields.status'),
         'type' => 'select_from_array',
         'options' => $this->status['order']
       ]);
       
       $this->crud->addColumn([
         'name' => 'pay_status',
-        'label' => 'Статус оплаты',
+        'label' => trans('backpack-store::order.fields.pay_status'),
         'type' => 'select_from_array',
         'options' => $this->status['pay']
       ]);
       
       $this->crud->addColumn([
         'name' => 'delivery_status',
-        'label' => 'Статус доставки',
+        'label' => trans('backpack-store::order.fields.delivery.status'),
         'type' => 'select_from_array',
         'options' => $this->status['delivery']
       ]);

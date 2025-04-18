@@ -7,10 +7,10 @@ $categories = \Backpack\Store\app\Models\Category::all();
             Массовые действия <span class="caret"></span>
         </button>
         <ul class="dropdown-menu">
-            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_active">Activate Selected</a></li>
-            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_inactive">Deactivate Selected</a></li>
+            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_active">Активировать</a></li>
+            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_inactive">Деактивировать</a></li>
             <div class="dropdown-divider"></div>
-            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_category">Set Category</a></li>
+            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_category">Установить категорию</a></li>
         </ul>
     </div>
 
@@ -19,22 +19,22 @@ $categories = \Backpack\Store\app\Models\Category::all();
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Select Category</h5>
+                    <h5 class="modal-title">Выберите категории</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
-                    <select name="category_id" id="category_id" class="form-control select2">
-                        <option value="">-- Без категории --</option>
+                    <select name="category_id[]" id="category_id" class="form-control select2" multiple>
+                        <!-- <option value="null">-- Без категории --</option> -->
                         @foreach ($categories as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirmCategory">Apply</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" id="confirmCategory">Принять</button>
                 </div>
             </div>
         </div>
@@ -50,9 +50,21 @@ $categories = \Backpack\Store\app\Models\Category::all();
         }
         #categoryModal .select2-container {
             z-index: 1051 !important;
+            width: 100% !important;
+            max-width: 100% !important;
         }
         .select2-dropdown {
             z-index: 1051 !important;
+        }
+        /* Ensure Select2 takes full width of its parent */
+        .select2 {
+            width: 100% !important;
+        }
+        .select2-selection {
+            width: 100% !important;
+        }
+        .select2-search__field {
+            width: 100% !important;
         }
     </style>
 
@@ -65,7 +77,29 @@ $categories = \Backpack\Store\app\Models\Category::all();
                 
                 // Initialize Select2
                 $('#category_id').select2({
-                    dropdownParent: $('#categoryModal')
+                    dropdownParent: $('#categoryModal'),
+                    multiple: true,
+                    placeholder: "Выберите категории",
+                }).on('select2:select select2:unselect', function (e) {
+                    var $select = $(this);
+                    var noCategory = ''; // Value for "Без категории" option
+                    
+                    // If "Без категории" was selected
+                    if (e.params.data.id === noCategory) {
+                        // If this was a selection (not unselection)
+                        if (e.type === 'select2:select') {
+                            // Deselect all other options
+                            var selected = $select.val() || [];
+                            $select.val([noCategory]).trigger('change');
+                        }
+                    } else {
+                        // If any other option was selected, remove "Без категории" from selection
+                        var selected = $select.val() || [];
+                        if (selected.includes(noCategory)) {
+                            selected = selected.filter(value => value !== noCategory);
+                            $select.val(selected).trigger('change');
+                        }
+                    }
                 });
 
                 // Handle bulk action clicks
@@ -82,12 +116,14 @@ $categories = \Backpack\Store\app\Models\Category::all();
                     }
 
                     if (action === 'set_category') {
+                        // Clear previous selections
+                        $('#category_id').val(null).trigger('change');
                         // Открываем модальное окно для выбора категории
                         $('#categoryModal').modal('show');
 
                         $('#confirmCategory').off('click').on('click', function() {
-                            var categoryId = $('#category_id').val();
-                            performBulkAction(action, crud.checkedItems, categoryId);
+                            var categoryIds = $('#category_id').val();
+                            performBulkAction(action, crud.checkedItems, categoryIds);
                             $('#categoryModal').modal('hide');
                         });
                     } else {
@@ -97,13 +133,13 @@ $categories = \Backpack\Store\app\Models\Category::all();
                 });
 
                 // Функция отправки AJAX-запроса
-                function performBulkAction(action, ids, categoryId = null) {
+                function performBulkAction(action, ids, categoryIds = null) {
                     var data = {
                         ids: ids,
                         _token: '{{ csrf_token() }}'
                     };
-                    if (categoryId !== undefined) {
-                        data.category_id = categoryId;
+                    if (categoryIds !== null) {
+                        data.category_ids = categoryIds;
                     }
 
                     $.ajax({
