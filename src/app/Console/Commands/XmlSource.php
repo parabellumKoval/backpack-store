@@ -681,8 +681,9 @@ class XmlSource extends Command
             $this->updateUploadHistory($response);
           }catch(\Exception $e) {
             $this->errorUploadHistory();
-				    \Log::channel('xml')->error($e->getMessage());
+				    \Log::channel('xml')->error('updateOrCreateItem error: ' . $e->getMessage());
             // throw new \Exception $e;
+            continue;
           }
         }else {
           $this->processedUploadHistory();
@@ -943,10 +944,18 @@ class XmlSource extends Command
       
       $this->setProductName($product, $data);
       
-      $this->setProductImage($product, $data);
+      try {
+        $this->setProductImage($product, $data);
+      }catch(\Exception $e) {
+        throw new \Exception('Set Image Error: ' . $e->getMessage());
+      }
 
-      // Set brand to product
-      $this->attachProductBrand($product, $data);
+      try {
+        // Set brand to product
+        $this->attachProductBrand($product, $data);
+      }catch(\Exception $e) {
+        throw new \Exception('Set Brand Error: ' . $e->getMessage());
+      }
 
       return $product;
     }
