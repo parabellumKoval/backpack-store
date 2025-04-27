@@ -1377,7 +1377,7 @@ class XmlSource extends Command
       $this->settings = $source->settings;
 
       // Clear force update
-      $source->clearForceUpdate();
+      $source->clearForceUpdateAndSave();
 
       // Fill Letters
       if($source->type === 'file') {
