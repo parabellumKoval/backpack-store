@@ -71,6 +71,11 @@ class Source extends Model
       parent::boot();
     }
 
+    public function clearForceUpdate() {
+      $settings = $this->settings ?? [];
+      $settings['forceUpdate'] = null;
+      $this->settings = $settings;
+    }
     
     /*
     |--------------------------------------------------------------------------

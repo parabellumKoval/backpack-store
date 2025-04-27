@@ -543,21 +543,6 @@ class SourceCrudController extends CrudController
                 'class' => 'form-group col-md-6'
               ]
             ],
-            // [
-            //   'name' => 'operator',
-            //   'label' => 'Оператор',
-            //   'type' => 'select_from_array',
-            //   'options' => [
-            //     'equal' => '=',
-            //     'more' => '>',
-            //     'less' => '<',
-            //   ],
-            //   'allows_null' => false,
-            //   'default' => 'equal',
-            //   'wrapper'   => [ 
-            //     'class' => 'form-group col-md-4'
-            //   ]
-            // ],
             [
               'name' => 'value',
               'label' => 'Будет соответсвовать такому значению',
@@ -587,6 +572,29 @@ class SourceCrudController extends CrudController
           'fake' => true,
           'store_in' => 'settings',
           'hint' => 'Если у товара несколько картинок, вы можете загружать их выборочно. Укажите через запятую индексы картинок, которые нужно загружать. Например если указать 1,2 то будут загружаться только первая и вторая картинка к каждому товару все остальные будут проигнорированы. Если оставить поле пусты будут загружаться все картинки.',
+          'wrapper'   => [
+            'class' => 'form-group col-md-12'
+          ],
+          'tab' => 'Настройки'
+        ]);
+
+
+        $this->crud->addField([
+          'name' => 'forceUpdate',
+          'label' => 'Обновить поля',
+          'type' => 'select2_from_array',
+          'options' => [
+            'name' => 'Название',
+            'category' => 'Категория',
+            'brand' => 'Бренд',
+            'image' => 'Картинка'
+          ],
+          'allows_null' => true,
+          'default'     => null,
+          'allows_multiple' => true,
+          'fake' => true,
+          'store_in' => 'settings',
+          'hint' => 'Обратите внимание: эти поля заполняются лишь один раз при создании нового товара. Если вы отметите их, то при следующей выгрузке они будут обновлены (перезаписаны) единожды и для уже существующих товаров.',
           'wrapper'   => [
             'class' => 'form-group col-md-12'
           ],
