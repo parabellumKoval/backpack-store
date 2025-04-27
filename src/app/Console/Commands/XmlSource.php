@@ -6,6 +6,8 @@ namespace Backpack\Store\app\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 
+use Illuminate\Support\Facades\Http;
+
 use \Cviebrock\EloquentSluggable\Services\SlugService;
 
 use Backpack\Store\app\Models\Brand;
