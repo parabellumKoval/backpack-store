@@ -894,7 +894,7 @@ class XmlSource extends Command
         $this->attachProductCategory($product, $data);
       }else {
         $product = $sp->product;
-        $this->forceUpdateFields($product);
+        $this->forceUpdateFields($product, $data);
       }
 
 
