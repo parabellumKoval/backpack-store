@@ -979,7 +979,8 @@ class XmlSource extends Command
     private function clearBrokenImages(&$product){
       if(!is_array($product->images)) {
           $product->images = null;
-          $this->error('images is not array: ' . $product->id);
+          $this->line('images is not array, set to null: ' . $product->id);
+          \Log::channel('xml')->info('images is not array, set to null: ' . $product->id);
           return true;
       }
 
@@ -993,6 +994,7 @@ class XmlSource extends Command
 
       if(!count($good_images)) {
           $this->line('NO VALID IMAGES for product: ' . $product->id);
+          \Log::channel('xml')->error('NO VALID IMAGES for product: ' . $product->id);
           $product->images = null;
           return true;
       }else {
@@ -1019,6 +1021,7 @@ class XmlSource extends Command
         return true;
       }else {
         $this->error('file is broken: ' . $image_url);
+        \Log::channel('xml')->error('file is broken: ' . $image_url);
         return false;
       }
     }
