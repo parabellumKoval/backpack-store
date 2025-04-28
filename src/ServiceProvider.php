@@ -3,13 +3,12 @@
 namespace Backpack\Store;
 
 use Backpack\Store\app\Providers\EventServiceProvider;
-// use Spatie\LaravelPackageTools\Package;
-// use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Backpack\Store\app\Console\Commands\XmlSource;
 use Backpack\Store\app\Console\Commands\AttributesTransform;
 use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
-use Illuminate\Support\Facades\View;
+use Backpack\Store\app\Console\Commands\ImportGoogleTaxonomy;
 
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\File;
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
@@ -102,6 +101,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
       XmlSource::class,
       AttributesTransform::class,
       XmlCorrectInStock::class,
+      ImportGoogleTaxonomy::class,
     ]);
   }
   }

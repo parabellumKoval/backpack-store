@@ -175,6 +175,15 @@ class Category extends Model
         return $this->belongsToMany('Backpack\Store\app\Models\Attribute', 'ak_attribute_category');
     }
 
+    /**
+     * Google merchants category
+     *
+     * @return void
+     */
+    public function merchant()
+    {
+      return $this->belongsTo(MerchantCategory::class, 'merchant_id');
+    }
     /*
     |--------------------------------------------------------------------------
     | SCOPES

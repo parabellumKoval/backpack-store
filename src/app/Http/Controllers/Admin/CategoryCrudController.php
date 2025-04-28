@@ -285,6 +285,20 @@ class CategoryCrudController extends CrudController
             ],
         ]);
 
+
+
+         // MERCHNTS CATEGORY
+        $this->crud->addField([
+            'name' => 'merchant_id',
+            'label' => 'Категория Google Merchants',
+            'type' => 'select2',
+            'entity' => 'merchant',
+            'attribute' => 'keyName',
+            'model' => 'Backpack\Store\app\Models\MerchantCategory',
+            'tab' => 'Google Merchants',
+            'hint' => 'Выберите из списка категорию Google Merchants, которой соответствует данная.',
+        ]);
+
         $this->createOperation();
     }
 
