@@ -21,6 +21,7 @@ class CreateAkProductsTable extends Migration
           $table->string('short_name', 255)->nullable();
           $table->string('slug', 255);
           $table->json('content')->nullable();
+          $table->json('merchant_content')->nullable();
           $table->json('excerpt')->nullable();
           $table->json('images')->nullable();
 

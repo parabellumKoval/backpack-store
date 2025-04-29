@@ -290,6 +290,17 @@ trait ProductFieldsTrait
         if(config('backpack.store.product.seo.enable', true)){
             $this->setSeoFields();
         }
+
+        // Google Merchant
+        $this->crud->addField([
+            'name' => 'merchant_content',
+            'label' => trans('backpack-store::product-field.fields.content'),
+            'type' => 'ckeditor',
+            'attributes' => [
+                'rows' => 7
+            ],
+            'tab' => 'Google Merchants'
+        ]);
     }
     
     /**

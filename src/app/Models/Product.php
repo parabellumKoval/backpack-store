@@ -61,6 +61,7 @@ class Product extends Model
       'short_name',
       'slug',
       'content',
+      'merchant_content',
       'excerpt',
       'images',
       'parent_id',
@@ -96,7 +97,7 @@ class Product extends Model
       'custom_attrs',
     ];
     
-    protected $translatable = ['name', 'short_name', 'content', 'extras_trans', 'seo'];
+    protected $translatable = ['name', 'short_name', 'content', 'merchant_content', 'extras_trans', 'seo'];
     
     public $images_array = [];
     
