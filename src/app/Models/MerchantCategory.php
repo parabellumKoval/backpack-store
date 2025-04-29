@@ -36,6 +36,20 @@ class MerchantCategory extends Model
   {
       parent::boot();
   }
+
+    /**
+     * toArray
+     *
+     * @return void
+     */
+    public function toArray(){
+      return [
+        'id' => $this->id,
+        'key' => $this->key,
+        'name' => $this->name,
+      ];    
+    }
+
   /*
   |--------------------------------------------------------------------------
   | RELATIONS

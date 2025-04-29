@@ -265,8 +265,8 @@ return [
       'admin_class' => 'Backpack\Store\app\Models\Admin\Source',
       'upload_class' => 'Backpack\Store\app\Models\UploadHistory',
       'test' => [
-        'enable' => false,
-        'items' => 1
+        'enable' => env('STORE_SOURCE_TEST', false),
+        'items' => env('STORE_SOURCE_TEST_ITEMS', 1)
       ]
     ]
 ];

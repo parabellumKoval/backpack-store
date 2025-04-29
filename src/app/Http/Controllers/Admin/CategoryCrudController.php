@@ -218,13 +218,13 @@ class CategoryCrudController extends CrudController
                 'name' => 'parent',
                 'label' => 'Родительская категория',
                 'type' => 'relationship',
-                'tab' => 'Основное'
+                'tab' => trans('backpack-store::category.tabs.main')
             ],
             [
                 'name' => 'content',
                 'label' => 'Описание',
                 'type' => 'ckeditor',
-                'tab' => 'Основное'
+                'tab' => trans('backpack-store::category.tabs.main')
             ],
             [
                 'name'  => 'images',
