@@ -94,7 +94,7 @@ class Product extends Model
       'extras_trans',
       'extras',
       'images',
-      'custom_attrs',
+      // 'custom_attrs',
     ];
     
     protected $translatable = ['name', 'short_name', 'content', 'merchant_content', 'extras_trans', 'seo'];
@@ -212,6 +212,37 @@ class Product extends Model
         SupplierProductSynced::dispatch($this, $data);
     }
 
+    
+    /**
+     * Method saveOriginalName
+     *
+     * @param $rewrite $rewrite [explicite description]
+     *
+     * @return void
+     */
+    public function saveOriginalName($rewrite = false){
+      $names = $this->getTranslations('name');
+      $ets = $this->getTranslations('extras_trans');
+
+      $data = [];
+
+      foreach($names as $lang => $name) {
+        $extras_trans = $ets[$lang] ?? [];
+        $extras_trans_array = !empty($extras_trans)? json_decode($extras_trans, true): [];
+
+        if($rewrite === false && isset($extras_trans_array['original_name']) && !empty($extras_trans_array['original_name'])) {
+          return;
+        }else {
+          $extras_trans_array['original_name'] = $name;
+          $data[$lang] = $extras_trans_array;
+        }
+      }
+
+      $multilangs_extras_trans = array_merge($ets, $data);
+      
+      $this->setTranslations('extras_trans', $multilangs_extras_trans);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -316,10 +347,6 @@ class Product extends Model
       return $this->hasManyThrough(AttributeValue::class, AttributeProduct::class);
     }
 
-    // public function attributes() 
-    // {
-    //   return $this->hasManyThrough(Attribute::class, AttributeProduct::class, 'product_id', 'id');
-    // }
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -994,4 +1021,42 @@ class Product extends Model
       $this->modificationsToSave = $value;
     }
 
+
+    // public function getCustomAttrsAttribute($value) {
+    //   // $this->extras_trans = null;
+    //   if(!empty($this->extras_trans)) {
+    //     return json_decode($this->extras_trans, true);
+    //   }else {
+    //     return [];
+    //   }
+    // }
+
+    public function setCustomAttrsAttribute($value) {
+      // dd($value);
+
+      // $this->extras_trans = ['custom_attrs' => $value];
+      $this->attributes['custom_attrs'] = $value;
+      
+      // dd($this->extras_trans);
+      // $extras_trans = !empty($this->extras_trans)? json_decode($this->extras_trans, true): [];
+      // $extras_trans['custom_attrs'] = $value;
+      // dd(json_encode($extras_trans), $extras_trans);
+      // $this->extras_trans = json_encode($extras_trans);
+
+
+      // $new_extras_trans = array_merge($extras_trans, $value_array);
+
+      // $this->extras_trans = json_encode($new_extras_trans);
+      // dd($this->extras_trans, json_encode($new_extras_trans));
+      // $this->extras_trans
+    }
+
+    public function setExtrasTransAttribute($value) {
+      $extras_trans = !empty($this->extras_trans)? json_decode($this->extras_trans, true): [];
+      $new_extras_trans = array_merge($extras_trans, $value);
+      // dd($new_extras_trans, $extras_trans, $value);
+      $this->attributes['extras_trans'] = json_encode($new_extras_trans);
+    }
+
+    
 }
