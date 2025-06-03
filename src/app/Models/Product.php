@@ -1031,32 +1031,17 @@ class Product extends Model
     //   }
     // }
 
-    public function setCustomAttrsAttribute($value) {
-      // dd($value);
+    // public function setCustomAttrsAttribute($value) {
+    //   $this->attributes['custom_attrs'] = $value;
+    // }
 
-      // $this->extras_trans = ['custom_attrs' => $value];
-      $this->attributes['custom_attrs'] = $value;
-      
-      // dd($this->extras_trans);
-      // $extras_trans = !empty($this->extras_trans)? json_decode($this->extras_trans, true): [];
-      // $extras_trans['custom_attrs'] = $value;
-      // dd(json_encode($extras_trans), $extras_trans);
-      // $this->extras_trans = json_encode($extras_trans);
-
-
-      // $new_extras_trans = array_merge($extras_trans, $value_array);
-
-      // $this->extras_trans = json_encode($new_extras_trans);
-      // dd($this->extras_trans, json_encode($new_extras_trans));
-      // $this->extras_trans
-    }
-
-    public function setExtrasTransAttribute($value) {
-      $extras_trans = !empty($this->extras_trans)? json_decode($this->extras_trans, true): [];
-      $new_extras_trans = array_merge($extras_trans, $value);
-      // dd($new_extras_trans, $extras_trans, $value);
-      $this->attributes['extras_trans'] = json_encode($new_extras_trans);
-    }
+    // public function setExtrasTransAttribute($value) {
+    //   $extras_trans = !empty($this->extras_trans)? json_decode($this->extras_trans, true): [];
+    //   $new_extras_trans = array_merge($extras_trans, $value);
+    //   // dd($new_extras_trans, $extras_trans, $value);
+    //   // $this->attributes['extras_trans'] = json_encode($new_extras_trans);
+    //   $this->attributes['extras_trans'] = $new_extras_trans;
+    // }
 
     
 }

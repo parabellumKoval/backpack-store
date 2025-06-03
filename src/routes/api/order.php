@@ -31,6 +31,9 @@ Route::prefix('api/order')->controller(OrderController::class)->group(function (
   // GET orders list with pagination by params
   Route::get('/all', 'all');
 
+  // Validate order without creation
+  Route::get('/rules', 'getRules')->middleware('api');
+
   // Get One order by code
   Route::get('/{code}', 'show');
 

@@ -91,19 +91,19 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     // ], 'models');
 
     $this->publishes([
-      __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
-     __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
-  ], 'traits');
+        __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
+      __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
+    ], 'traits');
 
-  // Comands
-  if ($this->app->runningInConsole()) {
-    $this->commands([
-      XmlSource::class,
-      AttributesTransform::class,
-      XmlCorrectInStock::class,
-      ImportGoogleTaxonomy::class,
-    ]);
-  }
+    // Comands
+    if ($this->app->runningInConsole()) {
+      $this->commands([
+        XmlSource::class,
+        AttributesTransform::class,
+        XmlCorrectInStock::class,
+        ImportGoogleTaxonomy::class,
+      ]);
+    }
   }
 
   public function register()

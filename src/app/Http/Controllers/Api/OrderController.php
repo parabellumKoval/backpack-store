@@ -165,6 +165,21 @@ class OrderController extends \App\Http\Controllers\Controller
     }
   }
 
+
+  /**
+   * getRules
+   *
+   * @param  mixed $request
+   * @return void
+   */
+  public function getRules(Request $request) {
+    $parsed = $this->parseFieldsConfig($this->rd_fields);
+
+    // 3) Отдаём клиенту
+    return response()->json($parsed);
+  }
+
+
   /**
    * create
    * 
@@ -385,5 +400,154 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     return $order;
+  }
+
+  /**
+   * Рекурсивно «разворачивает» вложенную конфигурацию в единый массив,
+   * где для каждого поля будут чётко разобранные ключи:
+   * - required (bool)
+   * - nullable (bool)
+   * - in (array)
+   * - min (int)
+   * - max (int)
+   * - type (string|null) — например "string", "uuid", "array", "email" и т.д.
+   * - requiredIf: [ 'field' => 'другой.путь', 'values' => [ ... ] ] (если есть required_if)
+   * - storeIn: (string|null)
+   * - hidden: (bool)
+   * - children: (если внутри есть вложенные поля) — аналогичный формат для каждого дочернего поля
+   *
+   * @param  array  $fieldsConfig
+   * @return array
+   */
+  private function parseFieldsConfig(array $fieldsConfig): array
+  {
+      $result = [];
+
+      foreach ($fieldsConfig as $fieldName => $config) {
+          $meta = [
+              'required'   => false,
+              'nullable'   => false,
+              'in'         => null,
+              'min'        => null,
+              'max'        => null,
+              'type'       => null,
+              'requiredIf' => null,
+              'storeIn'    => null,
+              'hidden'     => false,
+          ];
+
+          // 1) Если есть ключ 'store_in'
+          if (isset($config['store_in'])) {
+              $meta['storeIn'] = $config['store_in'];
+          }
+
+          // 2) Если помечено hidden
+          if (! empty($config['hidden'])) {
+              $meta['hidden'] = true;
+          }
+
+          // 3) Если есть строка 'rules', то её надо распарсить
+          if (isset($config['rules']) && is_string($config['rules'])) {
+              // Разбиваем по '|'
+              $rulesList = explode('|', $config['rules']);
+
+              foreach ($rulesList as $rule) {
+                  // Если внутри есть двоеточие, значит, это правило с параметрами
+                  if (strpos($rule, ':') !== false) {
+                      [$ruleName, $ruleParams] = explode(':', $rule, 2);
+
+                      switch ($ruleName) {
+                          case 'required':
+                              // "required" как правило без аргументов (но в Laravel бывает в составе "required_if" и пр.)
+                              $meta['required'] = true;
+                              break;
+
+                          case 'nullable':
+                              $meta['nullable'] = true;
+                              break;
+
+                          case 'in':
+                              // in:auth,data,outer → ['auth','data','outer']
+                              $meta['in'] = explode(',', $ruleParams);
+                              break;
+
+                          case 'max':
+                              $meta['max'] = (int) $ruleParams;
+                              break;
+
+                          case 'min':
+                              $meta['min'] = (int) $ruleParams;
+                              break;
+
+                          case 'required_if':
+                              // Формат Laravel: required_if:другойПоле,значение1,значение2,...
+                              $parts = explode(',', $ruleParams);
+                              $otherField = array_shift($parts);
+                              $meta['requiredIf'] = [
+                                  'field'  => $otherField,
+                                  'values' => $parts, // может быть сразу массив из нескольких значений
+                              ];
+                              break;
+
+                          case 'array':
+                              // array:settlement,settlementRef,...
+                              $meta['type'] = 'array';
+                              // Прямо в JSON отдадим, какие ключи внутри этого массива могут придти
+                              $meta['keys'] = explode(',', $ruleParams);
+                              break;
+
+                          default:
+                              // Тут могут быть и другие «типовые» правила, например:
+                              // string, uuid, email, numeric и т.д. без «:»
+                              // Но если это не самый первый фрагмент, а правило с параметром, 
+                              // может быть что это «regex» или нестандартные.
+                              // Для простоты зафиксируем некоторые распространённые случаи.
+                              if (in_array($ruleName, ['string', 'uuid', 'email', 'numeric'])) {
+                                  $meta['type'] = $ruleName;
+                              }
+                              // Если что-то нераспознано, можно игнорировать или сохранять «как есть».
+                              break;
+                      }
+                  } else {
+                      // Простые правила без «:», например: required, string, uuid, email, numeric
+                      switch ($rule) {
+                          case 'required':
+                              $meta['required'] = true;
+                              break;
+                          case 'nullable':
+                              $meta['nullable'] = true;
+                              break;
+                          case 'string':
+                          case 'uuid':
+                          case 'email':
+                          case 'numeric':
+                              // если типа «string|nullable|min:2|max:100», то тип «string» переопределяется здесь
+                              $meta['type'] = $rule;
+                              break;
+                          // Можно добавить другие простые правила, если нужно
+                          default:
+                              break;
+                      }
+                  }
+              }
+          }
+
+          // 4) Проверяем, есть ли в $config вложенные «дочерние» поля (children).
+          //    Мы считаем «дочерними» любые ключи, кроме: «rules», «store_in», «hidden».
+          $childrenKeys = array_diff(array_keys($config), ['rules', 'store_in', 'hidden']);
+          if (! empty($childrenKeys)) {
+              $childConfig = [];
+              foreach ($childrenKeys as $ck) {
+                  $childConfig[$ck] = $config[$ck];
+              }
+              // Рекурсивно парсим всё, что в «детях»
+              $meta['children'] = $this->parseFieldsConfig($childConfig);
+          }
+
+          // Готово: кладём результат в итоговый массив
+          $result[$fieldName] = $meta;
+      }
+
+      return $result;
   }
 }
