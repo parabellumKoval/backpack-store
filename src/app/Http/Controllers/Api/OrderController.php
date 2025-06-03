@@ -167,12 +167,12 @@ class OrderController extends \App\Http\Controllers\Controller
 
 
   /**
-   * getRules
+   * getRequestRules
    *
    * @param  mixed $request
    * @return void
    */
-  public function getRules(Request $request) {
+  public function getRequestRules(Request $request) {
     $parsed = $this->parseFieldsConfig($this->rd_fields);
 
     // 3) Отдаём клиенту
