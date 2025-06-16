@@ -48,7 +48,6 @@ class ProductController extends \App\Http\Controllers\Controller
       $this->is_with_rating = in_array('with_rating', $request->input('selections'));
       $this->is_in_stock = in_array('in_stock', $request->input('selections'));
     }
-
   }
     
   /**
@@ -121,15 +120,7 @@ class ProductController extends \App\Http\Controllers\Controller
       // Getting only products that "is_active" param set to true
       ->where('ak_products.is_active', 1)
       
-      // joint with supplier  with in_stock > 0 and lowest price
-      ->leftJoin(DB::raw('(
-            SELECT 
-                product_id,
-                old_price,
-                FIRST_VALUE(price) OVER (PARTITION BY product_id ORDER BY in_stock DESC, price ASC) as price,
-                FIRST_VALUE(in_stock) OVER (PARTITION BY product_id ORDER BY in_stock DESC, price ASC) as in_stock
-            FROM ak_supplier_product
-        ) as sp'), 'ak_products.id', '=', 'sp.product_id')
+      ->leftJoin('ak_supplier_product as sp', 'ak_products.id', '=', 'sp.product_id')
 
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){
@@ -177,14 +168,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
       // only with rating 
       ->when($this->is_with_rating, function($query) {
-        // $query->where('ak_products.rating', '!=', null);
-        $query->whereExists(function($subquery) {
-            $subquery->select(DB::raw(1))
-                ->from('ak_reviews')
-                ->whereColumn('ak_reviews.reviewable_id', 'ak_products.id')
-                ->where('ak_reviews.reviewable_type', 'Backpack\Store\app\Models\Product')
-                ->where('ak_reviews.is_moderated', 1);
-        });
+        $query->where('ak_products.rating', '!=', null);
       })
 
       // only top sales 
@@ -195,8 +179,8 @@ class ProductController extends \App\Http\Controllers\Controller
 
       // only top price 
       ->when($this->is_top_price, function($query) {
-        $query->whereRaw("(sp.old_price - sp.price) > sp.price / ?", [$this->top_price_sale_percent]);
-        // $query->whereRaw("ak_products.old_price - ak_products.price > ak_products.price / ?", [$this->top_price_sale_percent]);
+        // $query->havingRaw("(ak_products.price - ak_products.old_price) <= ?", [90000]);
+        $query->whereRaw("ak_products.old_price - ak_products.price > ak_products.price / ?", [$this->top_price_sale_percent]);
       })
 
       // Price filter
@@ -261,14 +245,11 @@ class ProductController extends \App\Http\Controllers\Controller
     // and ordering to query
     if($order_by) {
       if($order_by === 'in_stock') {
-        if(config('backpack.store.supplier.enable', false)) 
-        {
+        if(config('backpack.store.supplier.enable', false)) {
           $products = $products
             ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) ' . $order_dir, [0, 1, 0])
             ->groupBy('ak_products.id');
-        }
-        else 
-        {
+        }else {
           $products = $products
             ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) ' . $order_dir, [0, 1, 0]);
         }
@@ -277,7 +258,6 @@ class ProductController extends \App\Http\Controllers\Controller
       {
         $products = $products
           ->leftJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
-          ->orderByRaw('CASE WHEN COALESCE(SUM(sp.in_stock), 0) > 0 THEN 1 ELSE 0 END DESC')
           ->orderByRaw('SUM(op.amount) ' . $order_dir)
           ->groupBy('ak_products.id');
       }
@@ -289,21 +269,24 @@ class ProductController extends \App\Http\Controllers\Controller
       }
       else 
       {
-        $products = $products
-            ->orderByRaw('CASE WHEN COALESCE(SUM(sp.in_stock), 0) > 0 THEN 1 ELSE 0 END DESC')
-            ->orderBy($order_by, $order_dir)
-            ->groupBy('ak_products.id');
+        $products = $products->orderBy($order_by, $order_dir);
       }
-    }
-    else 
-    { 
+    }else {
+      // at first in_stock > 0
+      if(config('backpack.store.supplier.enable', false)) {
+        $products = $products
+          ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) DESC', [0, 1, 0])
+          ->groupBy('ak_products.id');
+      }else {
+        $products = $products
+          ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0]);
+      }
+
       $products = $products
-        ->orderByRaw('CASE WHEN COALESCE(SUM(sp.in_stock), 0) > 0 THEN 1 ELSE 0 END DESC')
         // at first with images
-        // ->orderBy('images', 'desc')
+        ->orderBy('images', 'desc')
         // new at first
-        ->orderBy('created_at', 'desc')
-        ->groupBy('ak_products.id');
+        ->orderBy('created_at', 'desc');
     }
 
     // Finish query

@@ -22,6 +22,8 @@ Route::prefix('api/product')->controller(ProductController::class)->group(functi
 
   Route::get('/filters', 'filters')->middleware('api');
 
+  Route::get('/prices', 'prices')->middleware('api');
+
   Route::get('/brands', 'brands')->middleware('api');
   
   Route::get('/random', 'random')->middleware('api');
