@@ -48,7 +48,6 @@ class ProductController extends \App\Http\Controllers\Controller
       $this->is_with_rating = in_array('with_rating', $request->input('selections'));
       $this->is_in_stock = in_array('in_stock', $request->input('selections'));
     }
-
   }
     
   /**
@@ -378,6 +377,9 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function prices(Request $request) {
+
+    $this->setSelections($request);
+
     $products_query = $this->getQuery($request, false);
 
     $prices = $products_query
