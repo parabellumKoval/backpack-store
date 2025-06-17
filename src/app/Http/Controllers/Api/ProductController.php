@@ -124,7 +124,7 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function catalog(Request $request) {
-    $response = [];
+    $data = [];
     $settings = $request->input('settings', ['selections', 'brands', 'prices', 'attributes']);
 
     $this->setSelections($request);
@@ -133,7 +133,7 @@ class ProductController extends \App\Http\Controllers\Controller
     $price_and_selections = $this->calculatePriceAndSelections($products_query);
 
     if(in_array('prices', $settings)) {
-      $response['price'] = $price_and_selections['price'] ?? ['min' => 0, 'max' => 0];
+      $data['price'] = $price_and_selections['price'] ?? ['min' => 0, 'max' => 0];
     }
 
     if(in_array('selections', $settings)) {
@@ -147,16 +147,67 @@ class ProductController extends \App\Http\Controllers\Controller
         return $item;
       }, $selections);
 
-      $response['selections'] = $selections_with_counts;
+      $data['selections'] = $selections_with_counts;
     }
 
     if(in_array('brands', $settings)) {
-      // $response['brands'] = $this->brandsCount($products_query);
-      $response['brands'] = $this->brands($request);
+      // $data['brands'] = $this->brandsCount($products_query);
+      $data['brands'] = $this->brands($request);
     }
     
+    //
+    $response = $this->toFrontendFormat($data);
+
     return response()->json($response);
   }
+  
+  /**
+   * Method toFrontendFormat
+   *
+   * @param $data $data [explicite description]
+   *
+   * @return void
+   */
+  private function toFrontendFormat($data) {
+    $filters = [];
+
+    if(isset($data['selections'])) {
+      $filters[] = [
+        'id' => 'selections',
+        'name' =>  __('backpack-store::filter.label.selections'),
+        'si' => null,
+        'isOpen' => true,
+        'noSearch' => true,
+        'type' => 'checkbox',
+        'values' => $data['selections']
+      ];
+    }
+
+    if(isset($data['brands'])) {
+      $filters[] = [
+        'id' => 'brand',
+        'name' => __('backpack-store::filter.label.brand'),
+        'si' => null,
+        'isOpen' => true,
+        'noMeta' => true,
+        'type' => 'brand',
+        'values' => $data['brands']
+      ];
+    }
+    
+    if(isset($data['price'])) {
+      $filters[] = [
+        'id' => 'price',
+        'name' => __('backpack-store::filter.label.price'),
+        'si' => __('backpack-store::filter.label.grn'),
+        'isOpen' => true,
+        'type' => 'number',
+        'values' => $data['price']
+      ];
+    }
+
+    return $filters;
+  } 
 
   /**
    * getQuery
