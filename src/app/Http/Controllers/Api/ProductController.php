@@ -86,6 +86,36 @@ class ProductController extends \App\Http\Controllers\Controller
     ]);
   }
   
+  private function getSelections() {
+    return [
+      'with_sales' => [
+        'id' => 'with_sales',
+        'name' => __('backpack-store::filter.selections.with_sales'),
+        'count' => 0
+      ],
+      'top_price' => [
+        'id' => 'top_price',
+        'name' => __('backpack-store::filter.selections.top_price'),
+        'count' => 0
+      ],
+      'top_sales' => [
+        'id' => 'top_sales',
+        'name' => __('backpack-store::filter.selections.top_sales'),
+        'count' => 0
+      ],
+      'with_rating' => [
+        'id' => 'with_rating',
+        'name' => __('backpack-store::filter.selections.with_rating'),
+        'count' => 0
+      ],
+      'in_stock' => [
+        'id' => 'in_stock',
+        'name' => __('backpack-store::filter.selections.in_stock'),
+        'count' => 0
+      ]
+    ];
+  }
+
   /**
    * Method catalog
    *
@@ -94,17 +124,38 @@ class ProductController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function catalog(Request $request) {
-    
+    $response = [];
+    $settings = $request->input('settings', ['selections', 'brands', 'prices', 'attributes']);
+
     $this->setSelections($request);
     $products_query = $this->getQuery($request, false);
 
     $price_and_selections = $this->calculatePriceAndSelections($products_query);
-    $brands = $this->brandsCount($products_query);
 
-    return response()->json([
-      ...$price_and_selections,
-      'brands' => $brands
-    ]);
+    if(in_array('prices', $settings)) {
+      $response['price'] = $price_and_selections['price'] ?? ['min' => 0, 'max' => 0];
+    }
+
+    if(in_array('selections', $settings)) {
+      $selections = $this->getSelections();
+      $selections_count = $price_and_selections['selections'] ?? [];
+      $selections_with_counts = array_map(function($item) use($selections_count) {
+        if(isset($selections_count[$item['id']])) {
+          $item['count'] = $selections_count[$item['id']];
+        }
+
+        return $item;
+      }, $selections);
+
+      $response['selections'] = $selections_with_counts;
+    }
+
+    if(in_array('brands', $settings)) {
+      // $response['brands'] = $this->brandsCount($products_query);
+      $response['brands'] = $this->brands($request);
+    }
+    
+    return response()->json($response);
   }
 
   /**
@@ -414,47 +465,47 @@ class ProductController extends \App\Http\Controllers\Controller
     ];
   }
   
-  private function calculateSelectionsCount($products_query) {
-    // Add debugging to see raw SQL
-    $debug_query = (clone $products_query)
-        ->select([
-            DB::raw('COUNT(DISTINCT CASE WHEN sp.old_price > 0 THEN ak_products.id END) as with_sales'),
-            DB::raw('COUNT(DISTINCT CASE WHEN (sp.old_price - sp.price) > sp.price / ' . $this->top_price_sale_percent . ' THEN ak_products.id END) as top_price'),
-            DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
-                SELECT 1 FROM ak_order_product op 
-                WHERE op.product_id = ak_products.id 
-                GROUP BY op.product_id
-                HAVING SUM(op.amount) >= 5
-            ) THEN ak_products.id END) as top_sales'),
-            DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
-                SELECT 1 FROM ak_reviews r 
-                WHERE r.reviewable_id = ak_products.id 
-                AND r.reviewable_type = "Backpack\\Store\\app\\Models\\Product"
-                AND r.is_moderated = 1
-            ) THEN ak_products.id END) as with_rating'),
-            DB::raw('COUNT(DISTINCT CASE WHEN sp.in_stock > 0 THEN ak_products.id END) as in_stock'),
-            DB::raw('ak_products.brand_id'),
-            DB::raw('COUNT(DISTINCT ak_products.id) as brand_count')
-        ]);
+//   private function calculateSelectionsCount($products_query) {
+//     // Add debugging to see raw SQL
+//     $debug_query = (clone $products_query)
+//         ->select([
+//             DB::raw('COUNT(DISTINCT CASE WHEN sp.old_price > 0 THEN ak_products.id END) as with_sales'),
+//             DB::raw('COUNT(DISTINCT CASE WHEN (sp.old_price - sp.price) > sp.price / ' . $this->top_price_sale_percent . ' THEN ak_products.id END) as top_price'),
+//             DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
+//                 SELECT 1 FROM ak_order_product op 
+//                 WHERE op.product_id = ak_products.id 
+//                 GROUP BY op.product_id
+//                 HAVING SUM(op.amount) >= 5
+//             ) THEN ak_products.id END) as top_sales'),
+//             DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
+//                 SELECT 1 FROM ak_reviews r 
+//                 WHERE r.reviewable_id = ak_products.id 
+//                 AND r.reviewable_type = "Backpack\\Store\\app\\Models\\Product"
+//                 AND r.is_moderated = 1
+//             ) THEN ak_products.id END) as with_rating'),
+//             DB::raw('COUNT(DISTINCT CASE WHEN sp.in_stock > 0 THEN ak_products.id END) as in_stock'),
+//             DB::raw('ak_products.brand_id'),
+//             DB::raw('COUNT(DISTINCT ak_products.id) as brand_count')
+//         ]);
 
-    // Get result
-    $result = $debug_query->first();
-      dd($result);
+//     // Get result
+//     $result = $debug_query->first();
+//       dd($result);
 
-    // If result is null, let's see the raw SQL that was executed
-    if (!$result) {
-        \Log::info('Selection counts SQL: ' . $debug_query->toSql());
-        \Log::info('Selection counts bindings: ', $debug_query->getBindings());
-    }
+//     // If result is null, let's see the raw SQL that was executed
+//     if (!$result) {
+//         \Log::info('Selection counts SQL: ' . $debug_query->toSql());
+//         \Log::info('Selection counts bindings: ', $debug_query->getBindings());
+//     }
 
-    return [
-        'with_sales' => (int)($result->with_sales ?? 0),
-        'top_price' => (int)($result->top_price ?? 0),
-        'top_sales' => (int)($result->top_sales ?? 0),
-        'with_rating' => (int)($result->with_rating ?? 0),
-        'in_stock' => (int)($result->in_stock ?? 0)
-    ];
-}
+//     return [
+//         'with_sales' => (int)($result->with_sales ?? 0),
+//         'top_price' => (int)($result->top_price ?? 0),
+//         'top_sales' => (int)($result->top_sales ?? 0),
+//         'with_rating' => (int)($result->with_rating ?? 0),
+//         'in_stock' => (int)($result->in_stock ?? 0)
+//     ];
+// }
 
   /**
    * Method prices
