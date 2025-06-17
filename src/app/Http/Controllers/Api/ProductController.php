@@ -178,6 +178,7 @@ class ProductController extends \App\Http\Controllers\Controller
         'si' => null,
         'isOpen' => true,
         'noSearch' => true,
+        'isNarrowing' => true,
         'type' => 'checkbox',
         'values' => $data['selections']
       ];
