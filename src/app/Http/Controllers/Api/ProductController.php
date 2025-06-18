@@ -476,7 +476,7 @@ class ProductController extends \App\Http\Controllers\Controller
     $attributes_count = $this->attributesCount($products_collection);
 
 
-    $attributes_count['brands'] = $this->brandsCount($products_query);
+    $attributes_count['brand'] = $this->brandsCount($products_query);
     $attributes_count = $attributes_count + $price_and_selections;
 
     return $attributes_count;
