@@ -190,7 +190,7 @@ class ProductController extends \App\Http\Controllers\Controller
         'name' => __('backpack-store::filter.label.brand'),
         'si' => null,
         'isOpen' => true,
-        'noMeta' => true,
+        'noMeta' => false,
         'type' => 'brand',
         'values' => $data['brands']
       ];
@@ -217,7 +217,7 @@ class ProductController extends \App\Http\Controllers\Controller
    * @param  mixed $includeAvailable
    * @return void
    */
-  public function getQuery(Request $request, $isQuery = true, $where = 'and') {
+  public function getQuery(Request $request, $isQuery = true, $where = 'and', $exclude = null) {
 
     // Array of category id and all offspring ids
     $node_ids = Category::getCategoryNodeIdList($request->input('category_slug'), $request->input('category_id'));
@@ -273,7 +273,7 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // filtering by brands id's list
-      ->when($request->input('brands'), function($query) use($request) {
+      ->when($request->input('brands') && $exclude !== 'brand', function($query) use($request) {
         $query->leftJoin('ak_brands as brnd', 'ak_products.brand_id', '=', 'brnd.id');
         $query->whereIn('brnd.id', $request->input('brands'));
       })
@@ -476,7 +476,9 @@ class ProductController extends \App\Http\Controllers\Controller
     $attributes_count = $this->attributesCount($products_collection);
 
 
-    $attributes_count['brand'] = $this->brandsCount($products_query);
+    $products_query_for_brands = $this->getQuery($request, false, 'or', 'brand');
+
+    $attributes_count['brand'] = $this->brandsCount($products_query_for_brands);
     $attributes_count = $attributes_count + $price_and_selections;
 
     return $attributes_count;
