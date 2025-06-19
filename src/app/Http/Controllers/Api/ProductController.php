@@ -115,51 +115,6 @@ class ProductController extends \App\Http\Controllers\Controller
       ]
     ];
   }
-
-  /**
-   * Method catalog
-   *
-   * @param Request $request [explicite description]
-   *
-   * @return void
-   */
-  public function catalog(Request $request) {
-    $data = [];
-    $settings = $request->input('settings', ['selections', 'brands', 'prices', 'attributes']);
-
-    $this->setSelections($request);
-    $products_query = $this->getQuery($request, false);
-
-    $price_and_selections = $this->calculatePriceAndSelections($products_query);
-
-    if(in_array('prices', $settings)) {
-      $data['price'] = $price_and_selections['price'] ?? ['min' => 0, 'max' => 0];
-    }
-
-    if(in_array('selections', $settings)) {
-      $selections = $this->getSelections();
-      $selections_count = $price_and_selections['selections'] ?? [];
-      $selections_with_counts = array_map(function($item) use($selections_count) {
-        if(isset($selections_count[$item['id']])) {
-          $item['count'] = $selections_count[$item['id']];
-        }
-
-        return $item;
-      }, $selections);
-
-      $data['selections'] = $selections_with_counts;
-    }
-
-    if(in_array('brands', $settings)) {
-      // $data['brands'] = $this->brandsCount($products_query);
-      $data['brands'] = $this->brands($request);
-    }
-    
-    //
-    $response = $this->toFrontendFormat($data);
-
-    return response()->json($response);
-  }
   
   /**
    * Method toFrontendFormat
@@ -328,7 +283,7 @@ class ProductController extends \App\Http\Controllers\Controller
       })
 
       // Price filter
-      ->when($request->input('price') && is_array($request->input('price')), function($query) use($request) {
+      ->when($request->input('price') && is_array($request->input('price'))  && $exclude !== 'price', function($query) use($request) {
         $query->whereBetween('sp.price', array_values($request->input('price')));
       })
 
@@ -461,8 +416,7 @@ class ProductController extends \App\Http\Controllers\Controller
   public function filters(Request $request) {
 
     $products_query = $this->getQuery($request, false, 'or');
-
-    $price_and_selections = $this->calculatePriceAndSelections($products_query);
+    $selections_count = $this->calculateSelectionsCount($products_query);
     
     // Get filters count
     $products_collection = $products_query
@@ -477,18 +431,117 @@ class ProductController extends \App\Http\Controllers\Controller
 
 
     $products_query_for_brands = $this->getQuery($request, false, 'or', 'brand');
-
     $attributes_count['brand'] = $this->brandsCount($products_query_for_brands);
-    $attributes_count = $attributes_count + $price_and_selections;
+
+    $products_query_for_price = $this->getQuery($request, false, 'or', 'price');
+    $attributes_count['price'] = $this->calculatePriceCount($products_query_for_price);
+
+    $attributes_count['selections'] = $selections_count;
 
     return $attributes_count;
   }
 
-  private function calculatePriceAndSelections($products_query) {
+
+
+  /**
+   * Method catalog
+   *
+   * @param Request $request [explicite description]
+   *
+   * @return void
+   */
+  public function catalog(Request $request) {
+    $data = [];
+    $settings = $request->input('settings', ['selections', 'brands', 'prices', 'attributes']);
+
+    $this->setSelections($request);
+    $products_query = $this->getQuery($request, false);
+
+    if(in_array('prices', $settings)) {
+      $data['price'] = $this->calculatePriceCount($products_query);
+    }
+
+    if(in_array('selections', $settings)) {
+      $selections = $this->getSelections();
+      $selections_count =$this->calculateSelectionsCount($products_query);
+
+      $selections_with_counts = array_map(function($item) use($selections_count) {
+        if(isset($selections_count[$item['id']])) {
+          $item['count'] = $selections_count[$item['id']];
+        }
+
+        return $item;
+      }, $selections);
+
+      $data['selections'] = $selections_with_counts;
+    }
+
+    if(in_array('brands', $settings)) {
+      // $data['brands'] = $this->brandsCount($products_query);
+      $data['brands'] = $this->brands($request);
+    }
+    
+    //
+    $response = $this->toFrontendFormat($data);
+
+    return response()->json($response);
+  }
+
+  private function calculatePriceCount($products_query) {
     $query = (clone $products_query)
         ->select([
             DB::raw('MAX(sp.price) as max_price'),
             DB::raw('MIN(sp.price) as min_price'),
+        ]);
+
+    // Get result
+    $result = $query->first();
+
+    return [
+      'min' => $result->min_price,
+      'max' => $result->max_price,
+    ];
+  }
+
+  // private function calculatePriceAndSelections($products_query) {
+  //   $query = (clone $products_query)
+  //       ->select([
+  //           DB::raw('MAX(sp.price) as max_price'),
+  //           DB::raw('MIN(sp.price) as min_price'),
+  //           DB::raw('COUNT(DISTINCT CASE WHEN sp.old_price > 0 THEN ak_products.id END) as with_sales'),
+  //           DB::raw('COUNT(DISTINCT CASE WHEN (sp.old_price - sp.price) > sp.price / ' . $this->top_price_sale_percent . ' THEN ak_products.id END) as top_price'),
+  //           DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
+  //               SELECT 1 FROM ak_order_product op 
+  //               WHERE op.product_id = ak_products.id 
+  //               GROUP BY op.product_id
+  //               HAVING SUM(op.amount) >= 5
+  //           ) THEN ak_products.id END) as top_sales'),
+  //           DB::raw('COUNT(DISTINCT r.reviewable_id) as with_rating'),
+  //           DB::raw('COUNT(DISTINCT CASE WHEN sp.in_stock > 0 THEN ak_products.id END) as in_stock')
+  //       ]);
+
+  //   // Get result
+  //   $result = $query->first();
+
+  //   return [
+  //     'price' => [
+  //       'min' => $result->min_price,
+  //       'max' => $result->max_price,
+  //     ],
+  //     'selections' => [
+  //       'with_sales' => (int)($result->with_sales ?? 0),
+  //       'top_price' => (int)($result->top_price ?? 0),
+  //       'top_sales' => (int)($result->top_sales ?? 0),
+  //       'with_rating' => (int)($result->with_rating ?? 0),
+  //       'in_stock' => (int)($result->in_stock ?? 0)
+  //     ]
+  //   ];
+  // }
+  
+  private function calculateSelectionsCount($products_query) {
+    // Add debugging to see raw SQL
+    $query = (clone $products_query)
+        ->select([
             DB::raw('COUNT(DISTINCT CASE WHEN sp.old_price > 0 THEN ak_products.id END) as with_sales'),
             DB::raw('COUNT(DISTINCT CASE WHEN (sp.old_price - sp.price) > sp.price / ' . $this->top_price_sale_percent . ' THEN ak_products.id END) as top_price'),
             DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
@@ -505,61 +558,13 @@ class ProductController extends \App\Http\Controllers\Controller
     $result = $query->first();
 
     return [
-      'price' => [
-        'min' => $result->min_price,
-        'max' => $result->max_price,
-      ],
-      'selections' => [
         'with_sales' => (int)($result->with_sales ?? 0),
         'top_price' => (int)($result->top_price ?? 0),
         'top_sales' => (int)($result->top_sales ?? 0),
         'with_rating' => (int)($result->with_rating ?? 0),
         'in_stock' => (int)($result->in_stock ?? 0)
-      ]
     ];
-  }
-  
-//   private function calculateSelectionsCount($products_query) {
-//     // Add debugging to see raw SQL
-//     $debug_query = (clone $products_query)
-//         ->select([
-//             DB::raw('COUNT(DISTINCT CASE WHEN sp.old_price > 0 THEN ak_products.id END) as with_sales'),
-//             DB::raw('COUNT(DISTINCT CASE WHEN (sp.old_price - sp.price) > sp.price / ' . $this->top_price_sale_percent . ' THEN ak_products.id END) as top_price'),
-//             DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
-//                 SELECT 1 FROM ak_order_product op 
-//                 WHERE op.product_id = ak_products.id 
-//                 GROUP BY op.product_id
-//                 HAVING SUM(op.amount) >= 5
-//             ) THEN ak_products.id END) as top_sales'),
-//             DB::raw('COUNT(DISTINCT CASE WHEN EXISTS (
-//                 SELECT 1 FROM ak_reviews r 
-//                 WHERE r.reviewable_id = ak_products.id 
-//                 AND r.reviewable_type = "Backpack\\Store\\app\\Models\\Product"
-//                 AND r.is_moderated = 1
-//             ) THEN ak_products.id END) as with_rating'),
-//             DB::raw('COUNT(DISTINCT CASE WHEN sp.in_stock > 0 THEN ak_products.id END) as in_stock'),
-//             DB::raw('ak_products.brand_id'),
-//             DB::raw('COUNT(DISTINCT ak_products.id) as brand_count')
-//         ]);
-
-//     // Get result
-//     $result = $debug_query->first();
-//       dd($result);
-
-//     // If result is null, let's see the raw SQL that was executed
-//     if (!$result) {
-//         \Log::info('Selection counts SQL: ' . $debug_query->toSql());
-//         \Log::info('Selection counts bindings: ', $debug_query->getBindings());
-//     }
-
-//     return [
-//         'with_sales' => (int)($result->with_sales ?? 0),
-//         'top_price' => (int)($result->top_price ?? 0),
-//         'top_sales' => (int)($result->top_sales ?? 0),
-//         'with_rating' => (int)($result->with_rating ?? 0),
-//         'in_stock' => (int)($result->in_stock ?? 0)
-//     ];
-// }
+}
 
   /**
    * Method prices
