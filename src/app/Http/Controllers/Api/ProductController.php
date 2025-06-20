@@ -200,13 +200,19 @@ class ProductController extends \App\Http\Controllers\Controller
       
       // joint with supplier  with in_stock > 0 and lowest price
       ->leftJoin(DB::raw('(
-            SELECT 
-                product_id,
-                old_price,
-                FIRST_VALUE(price) OVER (PARTITION BY product_id ORDER BY in_stock DESC, price ASC) as price,
-                FIRST_VALUE(in_stock) OVER (PARTITION BY product_id ORDER BY in_stock DESC, price ASC) as in_stock
-            FROM ak_supplier_product
-        ) as sp'), 'ak_products.id', '=', 'sp.product_id')
+          SELECT 
+              product_id,
+              old_price,
+              FIRST_VALUE(price) OVER (PARTITION BY product_id ORDER BY 
+                  CASE WHEN in_stock > 0 THEN 1 ELSE 0 END DESC,
+                  price ASC
+              ) as price,
+              FIRST_VALUE(in_stock) OVER (PARTITION BY product_id ORDER BY 
+                  CASE WHEN in_stock > 0 THEN 1 ELSE 0 END DESC,
+                  price ASC
+              ) as in_stock
+          FROM ak_supplier_product
+      ) as sp'), 'ak_products.id', '=', 'sp.product_id')
 
       // filtering by category if "category_id" or "category_slug" is presented in request
       ->when($node_ids, function($query) use($node_ids){
