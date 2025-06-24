@@ -11,6 +11,7 @@ use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Http\Resources\ProductCollection;
 
 use Backpack\Store\app\Services\ProductFilterService;
+use Backpack\Store\app\Services\ProductQueryService;
 
 class ProductController extends \App\Http\Controllers\Controller
 {
@@ -27,8 +28,9 @@ class ProductController extends \App\Http\Controllers\Controller
   protected $top_price_sale_percent = 10;
   
   protected $filterService;
+  protected $productService;
 
-  function __construct(ProductFilterService $filterService) {
+  function __construct() {
 
     self::resources_init();
 
@@ -37,12 +39,10 @@ class ProductController extends \App\Http\Controllers\Controller
     //  - extends it from Backpack\Store\app\Models\Product
     //  - set path to your Product Model in config "backpack.store.product.class"
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
-
-    $this->filterService = $filterService;
   }
     
 
-  public function catalog(Request $request, ProductFilterService $filterService) {
+  public function catalog(Request $request, ProductFilterService $filterService, ProductQueryService $productService) {
     $response = [];
 
     $filters_data = $request->input('with_filter', []);
@@ -50,8 +50,6 @@ class ProductController extends \App\Http\Controllers\Controller
 
     if(!empty($filters_data)){
       $response['filters']['data'] = $filterService
-        ->startQuery()
-        ->filterByCategories()
         ->getFiltersData();
     }
 
@@ -60,8 +58,8 @@ class ProductController extends \App\Http\Controllers\Controller
         ->getFiltersCount();
     }
 
-    $response['products'] = $filterService
-      ->startQuery()
+    $response['products'] = $productService
+      ->startQuery(true)
       ->filterByCategories()
       ->filterByBrandSlug()
       ->filterByBrands()
@@ -69,7 +67,7 @@ class ProductController extends \App\Http\Controllers\Controller
       ->filterByAttributes()
       ->filterBySelections()
       ->filterBySearch()
-      // ->sorting()
+      ->sorting()
       ->getProducts();
 
     return response()->json($response);
