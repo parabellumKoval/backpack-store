@@ -126,7 +126,7 @@ class ProductFilterService
     }
 
     if(in_array('brands', $with_filter)) {
-      $filters['brands'] = $this->countBrands();
+      $filters['brand'] = $this->countBrands();
     }
     
     if(in_array('price', $with_filter)) {
