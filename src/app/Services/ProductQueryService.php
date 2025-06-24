@@ -90,7 +90,7 @@ class ProductQueryService
 
     // only in stock
     if(in_array('in_stock', $this->request->input('selections', []))) {
-      $query->where('sp.in_stock', '>', 0);
+      $this->query->where('sp.in_stock', '>', 0);
     }
     
     // only with rating 
