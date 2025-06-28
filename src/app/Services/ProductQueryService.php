@@ -40,7 +40,11 @@ class ProductQueryService
    *
    * @return self
    */
-  public function startQuery($use_model = false): self {
+  public function startQuery($use_model = false, Request $request = null): self {
+
+    if($request) {
+      $this->request = $request;
+    }
 
     if($use_model) {
       $start = $this->product_class::query();

@@ -72,10 +72,18 @@ class ProductController extends \App\Http\Controllers\Controller
 
     return response()->json($response);
   }
-
+  
+  /**
+   * Method index
+   *
+   * @param Request $request [explicite description]
+   * @param ProductQueryService $productService [explicite description]
+   *
+   * @return void
+   */
   public function index(Request $request, ProductQueryService $productService) {
     $response = $productService
-      ->startQuery(true)
+      ->startQuery(true, $request)
       ->filterByCategories()
       ->filterByBrandSlug()
       ->filterByBrands()
