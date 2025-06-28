@@ -18,22 +18,10 @@ use Backpack\Store\app\Http\Controllers\Api\ProductController;
 
 Route::prefix('api/product')->controller(ProductController::class)->group(function () {
   
-
+  Route::get('', 'index')->middleware('api');
   Route::get('/catalog', 'catalog')->middleware('api');
   Route::get('/{slug}', 'show')->middleware('api');
   Route::get('/random', 'random')->middleware('api');
   Route::get('/ids', 'getByIds')->middleware('api');
 
-
-  // Route::get('', 'index')->middleware('api');
-
-  // Route::get('/filters', 'filters')->middleware('api');
-
-
-
-  // Route::get('/prices', 'prices')->middleware('api');
-
-  // Route::get('/brands', 'brands')->middleware('api');
-
-  // Route::get('/category', 'category')->middleware('api');
 });
