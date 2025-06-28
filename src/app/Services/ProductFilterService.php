@@ -135,7 +135,7 @@ class ProductFilterService
 
     if(in_array('attributes', $with_filter)) {
       $attributes = $this->countAttributes() ?? [];
-      $filters = $filters + $attribute;
+      $filters = $filters + $attributes;
     }
 
     return $filters;
