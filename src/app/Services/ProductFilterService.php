@@ -336,7 +336,6 @@ class ProductFilterService
           $query->join('ak_attribute_category as ac', 'ac.attribute_id', '=', 'a.id')
                 ->whereIn('ac.category_id', $node_ids);
       })
-      // <-- change here: leftJoin so number‐only attributes survive
       ->leftJoin('ak_attribute_values as v', 'v.id', '=', 'ap.attribute_value_id')
       ->where('a.is_active', 1)
       ->where('a.in_filters', 1)
@@ -357,13 +356,10 @@ class ProductFilterService
           'v.id AS value_id',
           // CASE: if it's a number pull ap.value, otherwise the JSON value from v
           DB::raw("
-              CASE
-                WHEN a.type = 'number' THEN ap.value
-                ELSE COALESCE(
-                    NULLIF(JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$locale}\"')), ''),
-                    JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$fallback}\"'))
-                )
-              END AS value
+              COALESCE(
+                NULLIF(JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$locale}\"')), ''),
+                JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$fallback}\"'))
+              ) AS value
           "),
       ]);
 
