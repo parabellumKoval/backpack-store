@@ -81,6 +81,21 @@ class ProductFilterService
         'values' => $this->getBrandValues()
       ];
     }
+
+    if(in_array('attributes', $with_filter)) {
+      $attrs = $this->getAttributes();
+
+      foreach($attrs as $attr){
+        $filters[] = [
+          'id' => $attr['id'],
+          'name' => $attr['name'],
+          'si' => $attr['si'] ?? null,
+          'isOpen' => false,
+          'type' => $attr['type'],
+          'values' => $attr['values']
+        ];
+      }
+    }
     
     if(in_array('price', $with_filter)) {
       $filters[] = [
@@ -90,21 +105,6 @@ class ProductFilterService
         'isOpen' => true,
         'type' => 'number'
       ];
-    }
-
-    if(in_array('attributes', $with_filter)) {
-      $attrs = $this->getAttributes();
-
-      foreach($attrs as $attr){
-        $filters[] = [
-          'id' => $attr['id'],
-          'name' => $attr['name'],
-          'si' => $attr['si'],
-          'isOpen' => true,
-          'type' => $attr['type'],
-          'values' => $attr['values']
-        ];
-      }
     }
 
     return $filters;
