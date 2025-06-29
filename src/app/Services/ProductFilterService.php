@@ -328,7 +328,13 @@ class ProductFilterService
     $locale = app()->getLocale();
     $fallback = config('app.fallback_locale');
 
+    $node_ids = Category::getParentNodeIds($this->request->input('category_slug'), $this->request->input('category_id'));
+
     $rows = DB::table('ak_attributes as a')
+      ->when($node_ids, function($query) use($node_ids){
+        $query->leftJoin('ak_attribute_category as ac', 'ac.attribute_id', '=', 'a.id');
+        $query->whereIn('ac.category_id', $node_ids);
+      })
       ->join('ak_attribute_values as v', 'v.attribute_id', '=', 'a.id')
       ->join('ak_attribute_product as ap', 'ap.attribute_value_id', '=', 'v.id')
       ->joinSub(
@@ -338,7 +344,7 @@ class ProductFilterService
       )
       ->where('a.is_active', 1)
       ->where('a.in_filters', 1)
-      ->whereIn('a.type', ['checkbox','radio'])
+      ->whereIn('a.type', ['checkbox','radio','number'])
       ->distinct()
       ->get([
           'a.id',
@@ -368,14 +374,15 @@ class ProductFilterService
         ->groupBy('id')
         ->map(function($group) {
             $first = $group->first();
+            
             return [
                 'id' => $first->id,
                 'name' => $first->name,
                 'type' => $first->type,
                 'si' => $first->si,
-                'values' => $group->map(function($row) {
+                'values' => $first->type !== 'number'? $group->map(function($row) {
                     return ['id' => $row->value_id, 'value' => $row->value];
-                })->unique('id')->values()->all(),
+                })->unique('id')->values()->all(): null,
             ];
         })
         ->values()
@@ -383,6 +390,65 @@ class ProductFilterService
     
     return $attributes;
   }
+  // private function getAttributes() {
+  //   $locale = app()->getLocale();
+  //   $fallback = config('app.fallback_locale');
+
+  //   $rows = DB::table('ak_attributes as a')
+  //     ->join('ak_attribute_values as v', 'v.attribute_id', '=', 'a.id')
+  //     ->join('ak_attribute_product as ap', 'ap.attribute_value_id', '=', 'v.id')
+  //     ->joinSub(
+  //         $this->query->select('ak_products.id'),  // подзапрос с фильтрованными товарами
+  //         'products',
+  //         function($join) { $join->on('products.id', '=', 'ap.product_id'); }
+  //     )
+  //     ->where('a.is_active', 1)
+  //     ->where('a.in_filters', 1)
+  //     ->whereIn('a.type', ['checkbox','radio','number'])
+  //     ->distinct()
+  //     ->get([
+  //         'a.id',
+  //         DB::raw("
+  //             COALESCE(
+  //               NULLIF(JSON_UNQUOTE(JSON_EXTRACT(a.name, '$.\"{$locale}\"')), ''),
+  //               JSON_UNQUOTE(JSON_EXTRACT(a.name, '$.\"{$fallback}\"'))
+  //             ) AS name
+  //         "),
+  //         'a.type',
+  //         DB::raw("
+  //             COALESCE(
+  //               NULLIF(JSON_UNQUOTE(JSON_EXTRACT(a.extras_trans, '$.\"{$locale}\".si')), ''),
+  //               JSON_UNQUOTE(JSON_EXTRACT(a.extras_trans, '$.\"{$fallback}\".si'))
+  //             ) AS si
+  //         "),
+  //         'v.id AS value_id',
+  //         DB::raw("
+  //             COALESCE(
+  //               NULLIF(JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$locale}\"')), ''),
+  //               JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$fallback}\"'))
+  //             ) AS value
+  //         "),
+  //     ]);
+
+  //   $attributes = $rows
+  //       ->groupBy('id')
+  //       ->map(function($group) {
+  //           $first = $group->first();
+  //           return [
+  //               'id' => $first->id,
+  //               'name' => $first->name,
+  //               'type' => $first->type,
+  //               'si' => $first->si,
+  //               'values' => $group->map(function($row) {
+  //                   return ['id' => $row->value_id, 'value' => $row->value];
+  //               })->unique('id')->values()->all(),
+  //           ];
+  //       })
+  //       ->values()
+  //       ->all();
+    
+  //   return $attributes;
+  // }
   
 
   /**
