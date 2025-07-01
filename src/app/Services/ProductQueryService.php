@@ -149,8 +149,8 @@ class ProductQueryService
   public function filterByCategories(): self
   {
     // Array of category id and all offspring ids
-    // $node_ids = Category::getCategoryNodeIdList($this->request->input('category_slug'), $this->request->input('category_id'));
-    $node_ids = Category::getParentNodeIds($this->request->input('category_slug'), $this->request->input('category_id'));
+    $node_ids = Category::getCategoryNodeIdList($this->request->input('category_slug'), $this->request->input('category_id'));
+    // $node_ids = Category::getParentNodeIds($this->request->input('category_slug'), $this->request->input('category_id'));
     
     // filtering by category if "category_id" or "category_slug" is presented in request
     if ($node_ids) {
