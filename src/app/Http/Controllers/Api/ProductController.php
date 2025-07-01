@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Category;
@@ -40,22 +41,51 @@ class ProductController extends \App\Http\Controllers\Controller
     //  - set path to your Product Model in config "backpack.store.product.class"
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
-    
-
+  
+  /**
+   * Method catalog
+   *
+   * @param Request $request [explicite description]
+   * @param ProductFilterService $filterService [explicite description]
+   * @param ProductQueryService $productService [explicite description]
+   *
+   * @return void
+   */
   public function catalog(Request $request, ProductFilterService $filterService, ProductQueryService $productService) {
     $response = [];
 
     $filters_data = $request->input('with_filter', []);
     $filters_count = $request->input('with_filter_count', []);
+    $cache = $request->input('cache', true);
+
+    $filter_params = $this->getFilterParams($request);
+
+    // Cache filters data list only by category slug or brand slug or no-slug
+    // No matter what specifical filters presented 
+    $category_slug = $request->input('category_slug', null);
+    $brand_slug = $request->input('brand_slug', null);
+    $any_slug = $category_slug ?? $brand_slug ?? '';
 
     if(!empty($filters_data)){
-      $response['filters']['data'] = $filterService
-        ->getFiltersData();
+      $specCacheKey = 'filters-data-' . $any_slug;
+
+      if(Cache::has($specCacheKey) && $cache) {
+        $response['filters']['data'] = Cache::get($specCacheKey);
+      }else {
+        $response['filters']['data'] = $filterService->getFiltersData();
+        if($cache) Cache::put($specCacheKey, $response['filters']['data']);
+      }
     }
 
     if(!empty($filters_count)){
-      $response['filters']['count'] = $filterService
-        ->getFiltersCount();
+      $specCacheKey = 'filters-count-' . $any_slug;
+
+      if(Cache::has($specCacheKey) && $cache && empty($filter_params)) {
+        $response['filters']['count'] = Cache::get($specCacheKey);
+      }else {
+        $response['filters']['count'] = $filterService->getFiltersCount();
+        if($cache && empty($filter_params)) Cache::put($specCacheKey, $response['filters']['count']);
+      }
     }
 
     $response['products'] = $productService
@@ -159,5 +189,42 @@ class ProductController extends \App\Http\Controllers\Controller
     $collection = self::$resources['product']['large']::collection($products); 
 
     return $collection;
+  }
+
+    
+  
+  /**
+   * Method getCacheKey
+   *
+   * @param Request $request [explicite description]
+   *
+   * @return void
+   */
+  private function getCacheKey(Request $request) {
+    $queryParams = $request->query();
+    $exclude_keys = ['page', 'order_by', 'order_dir'];
+    $exclude_map = array_flip($exclude_keys);
+    $filtered_params = array_diff_key($queryParams, $exclude_map);
+    ksort($queryParams);
+    $cacheKey = http_build_query($queryParams);
+
+    return $cacheKey;
+  }
+
+  
+  /**
+   * Method getFilterParams
+   *
+   * @param Request $request [explicite description]
+   *
+   * @return void
+   */
+  private function getFilterParams(Request $request) {
+    $queryParams = $request->query();
+    $exclude_keys = ['page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'cache'];
+    $exclude_map = array_flip($exclude_keys);
+    $filtered_params = array_diff_key($queryParams, $exclude_map);
+
+    return $filtered_params;
   }
 }

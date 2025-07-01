@@ -186,26 +186,81 @@ class ProductFilterService
    */
   private function calculateAllAttributes($product_query)
   {
-    $attributes = AttributeValue::query()
-        ->join('ak_attribute_product', 'ak_attribute_values.id', '=', 'ak_attribute_product.attribute_value_id')
-        ->whereIn('ak_attribute_product.product_id', $product_query->select('ak_products.id'))
-        ->groupBy('ak_attribute_product.attribute_id', 'ak_attribute_values.id')
-        ->select(
-            'ak_attribute_product.attribute_id as id',
-            'ak_attribute_values.id as value_key',
-            DB::raw('COUNT(DISTINCT ak_attribute_product.product_id) as products_count')
-        )
-        ->get();
+      // 1) Дискретные значения: агрегируем по attribute_value_id
+      $discrete = AttributeProduct::query()
+          ->whereIn('product_id', $product_query->select('ak_products.id'))
+          ->whereNotNull('attribute_value_id')
+          ->leftJoin('ak_attribute_values as v', 'v.id', '=', 'ak_attribute_product.attribute_value_id')
+          ->groupBy('ak_attribute_product.attribute_id', 'v.id')
+          ->select([
+              'ak_attribute_product.attribute_id as id',
+              'v.id as value_key',
+              DB::raw('COUNT(DISTINCT ak_attribute_product.product_id) as products_count'),
+          ])
+          ->get();
 
-    $result = [];
-    foreach ($attributes->groupBy('id') as $attr_id => $values) {
-        $result[$attr_id] = $values->pluck('products_count', 'value_key')->toArray();
-    }
+      // 2) Диапазоны: агрегируем по NULL-значениям attribute_value_id
+      $ranges = AttributeProduct::query()
+          ->whereIn('product_id', $product_query->select('ak_products.id'))
+          ->whereNull('attribute_value_id')
+          ->groupBy('attribute_id')
+          ->select([
+              'attribute_id as id',
+              DB::raw('MIN(value) as min'),
+              DB::raw('MAX(value) as max'),
+          ])
+          ->get();
 
-    return $result;
+      // 3) Сборка результата
+      $result = [];
+
+      // Заполним дискретные
+      foreach ($discrete as $row) {
+          $result[$row->id][$row->value_key] = $row->products_count;
+      }
+
+      // Заполним диапазоны
+      foreach ($ranges as $row) {
+          $result[$row->id] = [
+              'min' => $row->min,
+              'max' => $row->max,
+          ];
+      }
+
+      return $result;
   }
 
-  
+  // private function calculateAllAttributes($product_query)
+  // {
+  //     $attributes = AttributeProduct::query() 
+  //             ->whereIn('product_id', $product_query->select('ak_products.id'))
+  //             ->leftJoin('ak_attribute_values as v', 'v.id', '=', 'ak_attribute_product.attribute_value_id')
+  //             ->groupBy('ak_attribute_product.attribute_id', 'v.id')
+  //             ->select(
+  //               'ak_attribute_product.attribute_id as id',
+  //               'v.id as value_key',
+  //               DB::raw('COUNT(DISTINCT ak_attribute_product.product_id) as products_count'),
+  //               DB::raw('MIN(ak_attribute_product.value) as min, MAX(ak_attribute_product.value) as max')
+  //             )
+  //              ->get();
+
+  //   $result = [];
+  //   foreach ($attributes->groupBy('id') as $attr_id => $values) {
+  //     foreach($values as $value) {
+  //       if($value->value_key) {
+  //         $result[$attr_id][$value->value_key] = $value->products_count;
+  //       }elseif($value->min && $value->max) {
+  //         $result[$attr_id] = [
+  //           'min' => $value->min,
+  //           'max' => $value->max
+  //         ];
+  //       }
+  //     }
+  //   }
+
+  //   return $result;
+  // }
+
   /**
    * Method calculateSingleAttribute
    *
@@ -352,9 +407,7 @@ class ProductFilterService
               NULLIF(JSON_UNQUOTE(JSON_EXTRACT(a.extras_trans, '$.\"{$locale}\".si')), ''),
               JSON_UNQUOTE(JSON_EXTRACT(a.extras_trans, '$.\"{$fallback}\".si'))
           ) AS si"),
-          // keep the raw attribute_value_id so you can group the non-number ones
           'v.id AS value_id',
-          // CASE: if it's a number pull ap.value, otherwise the JSON value from v
           DB::raw("
               COALESCE(
                 NULLIF(JSON_UNQUOTE(JSON_EXTRACT(v.value, '$.\"{$locale}\"')), ''),
