@@ -34,27 +34,27 @@ class Catalog
         [
           'by' => 'created_at',
           'dir' => 'desc',
-          'caption' => __('label.sorting.news_desc')
+          'caption' => __('backpack-store::filter.sorting.news_desc')
         ],[
           'by' => 'created_at',
           'dir' => 'asc',
-          'caption' => __('label.sorting.news_asc')
+          'caption' => __('backpack-store::filter.sorting.news_asc')
         ],[
           'by' => 'price',
           'dir' => 'asc',
-          'caption' => __('label.sorting.price_asc')
+          'caption' => __('backpack-store::filter.sorting.price_asc')
         ], [
           'by' => 'price',
           'dir' => 'desc',
-          'caption' => __('label.sorting.price_desc')
+          'caption' => __('backpack-store::filter.sorting.price_desc')
         ],[
           'by' => 'in_stock',
           'dir' => 'desc',
-          'caption' => __('label.sorting.in_stock_desc')
+          'caption' => __('backpack-store::filter.sorting.in_stock_desc')
         ],[
           'by' => 'in_stock',
           'dir' => 'asc',
-          'caption' => __('label.sorting.in_stock_asc')
+          'caption' => __('backpack-store::filter.sorting.in_stock_asc')
         ]
       ];
     }
