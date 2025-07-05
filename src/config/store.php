@@ -268,5 +268,10 @@ return [
         'enable' => env('STORE_SOURCE_TEST', false),
         'items' => env('STORE_SOURCE_TEST_ITEMS', 1)
       ]
+    ],
+
+    // CACHE
+    'cache' => [
+      'enable' => true
     ]
 ];

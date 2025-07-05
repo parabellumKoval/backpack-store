@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
+use Backpack\Store\app\Models\Catalog;
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\AttributeProduct;
@@ -42,6 +43,43 @@ class ProductController extends \App\Http\Controllers\Controller
     $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
   }
   
+
+  public function cache(Request $request, ProductFilterService $filterService, ProductQueryService $productService) {
+    $with_filters_data = $request->input('with_filter', []);
+    $with_filters_count = $request->input('with_filter_count', []);
+    $with_products = $request->input('with_products', false);
+
+    // Filters data
+    if(!empty($with_filters_data)) {
+      $specCacheKey = $this->getCacheKey($request, 'filters-data', ['with_filter_count', 'with_products', 'page', 'order_by', 'order_dir', 'cache']);
+      $data = $filterService->getFiltersData();
+      Cache::put($specCacheKey, $data);
+    }
+
+    // Filters count
+    if(!empty($with_filters_count)) {
+      $specCacheKey = $this->getCacheKey($request, 'filters-count', ['with_filter', 'with_products', 'page', 'order_by', 'order_dir', 'cache']);
+      $data = $filterService->getFiltersCount();
+      Cache::put($specCacheKey, $data);
+    }
+
+    // Products
+    if($with_products) {
+      $specCacheKey = $this->getCacheKey($request, 'products', ['with_filter', 'with_filter_count', 'with_products', 'cache']);
+      $data = $productService
+        ->startQuery(true)
+        ->filterByCategories()
+        ->filterByBrandSlug()
+        ->filterByBrands()
+        ->filterByPrice()
+        ->filterByAttributes()
+        ->filterBySelections()
+        ->filterBySearch()
+        ->sorting()
+        ->getProducts();
+      Cache::put($specCacheKey, $data);
+    }
+  }
   /**
    * Method catalog
    *
@@ -54,51 +92,69 @@ class ProductController extends \App\Http\Controllers\Controller
   public function catalog(Request $request, ProductFilterService $filterService, ProductQueryService $productService) {
     $response = [];
 
-    $filters_data = $request->input('with_filter', []);
-    $filters_count = $request->input('with_filter_count', []);
-    $cache = $request->input('cache', true);
+    $order_by = $request->input('order_by', null);
+    $order_dir = $request->input('order_dir', 'desc');
+
+    $with_filters_data = $request->input('with_filter', []);
+    $with_filters_count = $request->input('with_filter_count', []);
+    $with_products = $request->input('with_products', true);
+
+    $sorting_data = $request->input('with_sorting', false);
+    $cache = $request->input('cache', []);
 
     $filter_params = $this->getFilterParams($request);
 
-    // Cache filters data list only by category slug or brand slug or no-slug
-    // No matter what specifical filters presented 
-    $category_slug = $request->input('category_slug', null);
-    $brand_slug = $request->input('brand_slug', null);
-    $any_slug = $category_slug ?? $brand_slug ?? '';
+    // Filters data
+    if(!empty($with_filters_data)){
+      $specCacheKey = $this->getCacheKey($request, 'filters-data', ['with_filter_count', 'with_products', 'with_sorting', 'page', 'order_by', 'order_dir', 'cache']);
 
-    if(!empty($filters_data)){
-      $specCacheKey = 'filters-data-' . $any_slug;
-
-      if(Cache::has($specCacheKey) && $cache) {
+      if(Cache::has($specCacheKey) && in_array('with_filter', $cache)) {
         $response['filters']['data'] = Cache::get($specCacheKey);
       }else {
         $response['filters']['data'] = $filterService->getFiltersData();
-        if($cache) Cache::put($specCacheKey, $response['filters']['data']);
+        if(in_array('with_filter', $cache)) Cache::put($specCacheKey, $response['filters']['data']);
       }
     }
 
-    if(!empty($filters_count)){
-      $specCacheKey = 'filters-count-' . $any_slug;
+    // Filters count
+    if(!empty($with_filters_count)){
+      $specCacheKey = $this->getCacheKey($request, 'filters-count', ['with_filter', 'with_products', 'with_sorting', 'page', 'order_by', 'order_dir', 'cache']);
 
-      if(Cache::has($specCacheKey) && $cache && empty($filter_params)) {
+      if(Cache::has($specCacheKey) && in_array('with_filter_count', $cache) && empty($filter_params)) {
         $response['filters']['count'] = Cache::get($specCacheKey);
       }else {
         $response['filters']['count'] = $filterService->getFiltersCount();
-        if($cache && empty($filter_params)) Cache::put($specCacheKey, $response['filters']['count']);
+        if(in_array('with_filter_count', $cache) && empty($filter_params)) Cache::put($specCacheKey, $response['filters']['count']);
       }
     }
 
-    $response['products'] = $productService
-      ->startQuery(true)
-      ->filterByCategories()
-      ->filterByBrandSlug()
-      ->filterByBrands()
-      ->filterByPrice()
-      ->filterByAttributes()
-      ->filterBySelections()
-      ->filterBySearch()
-      ->sorting()
-      ->getProducts();
+    // Sorting
+    if($sorting_data){
+      $response['sorting'] = Catalog::getSortingDataWithActive($order_by, $order_dir);
+    }
+
+    // Products
+    if($with_products) {
+      $specCacheKey = $this->getCacheKey($request, 'products', ['with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache']);
+
+      if(Cache::has($specCacheKey) && in_array('with_products', $cache)){
+        $response['products'] = Cache::get($specCacheKey);
+      }else {
+        $response['products'] = $productService
+          ->startQuery(true)
+          ->filterByCategories()
+          ->filterByBrandSlug()
+          ->filterByBrands()
+          ->filterByPrice()
+          ->filterByAttributes()
+          ->filterBySelections()
+          ->filterBySearch()
+          ->sorting()
+          ->getProducts();
+
+        if(in_array('with_products', $cache)) Cache::put($specCacheKey, $response['products']);
+      }
+    }
 
     return response()->json($response);
   }
@@ -200,15 +256,14 @@ class ProductController extends \App\Http\Controllers\Controller
    *
    * @return void
    */
-  private function getCacheKey(Request $request) {
+  private function getCacheKey(Request $request, String $prefix = '', Array $exclude_keys = []) {
     $queryParams = $request->query();
-    $exclude_keys = ['page', 'order_by', 'order_dir'];
     $exclude_map = array_flip($exclude_keys);
     $filtered_params = array_diff_key($queryParams, $exclude_map);
-    ksort($queryParams);
-    $cacheKey = http_build_query($queryParams);
+    ksort($filtered_params);
+    $cacheKey = http_build_query($filtered_params);
 
-    return $cacheKey;
+    return !empty($prefix)? $prefix . '-' . $cacheKey: $cacheKey;
   }
 
   
@@ -221,7 +276,7 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   private function getFilterParams(Request $request) {
     $queryParams = $request->query();
-    $exclude_keys = ['page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'cache'];
+    $exclude_keys = ['page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
     $exclude_map = array_flip($exclude_keys);
     $filtered_params = array_diff_key($queryParams, $exclude_map);
 
