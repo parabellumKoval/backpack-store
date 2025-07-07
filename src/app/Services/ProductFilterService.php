@@ -160,7 +160,7 @@ class ProductFilterService
         $attr_id = $active_attr['attr_id'];
         $product_query = $this->product_service->applyAllFiltersExcept($attr_id)->getQuery();
         $single_result = $this->calculateSingleAttribute($product_query, $active_attr);
-        $result = array_merge($result, $single_result);
+        $result[$attr_id] = $single_result;
       }
 
       
