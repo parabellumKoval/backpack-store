@@ -32,6 +32,10 @@ class ProductController extends \App\Http\Controllers\Controller
   protected $filterService;
   protected $productService;
 
+  protected $filters_data_exclude = ['with_filter_count', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache'];
+  protected $filters_count_exclude = ['with_filter', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache'];
+  protected $products_exclude = ['with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
+
   function __construct() {
 
     self::resources_init();
@@ -51,21 +55,21 @@ class ProductController extends \App\Http\Controllers\Controller
 
     // Filters data
     if(!empty($with_filters_data)) {
-      $specCacheKey = $this->getCacheKey($request, 'filters-data', ['with_filter_count', 'with_products', 'page', 'order_by', 'order_dir', 'cache']);
+      $specCacheKey = $this->getCacheKey($request, 'filters-data', $this->filters_data_exclude);
       $data = $filterService->getFiltersData();
       Cache::put($specCacheKey, $data);
     }
 
     // Filters count
     if(!empty($with_filters_count)) {
-      $specCacheKey = $this->getCacheKey($request, 'filters-count', ['with_filter', 'with_products', 'page', 'order_by', 'order_dir', 'cache']);
+      $specCacheKey = $this->getCacheKey($request, 'filters-count', $this->filters_count_exclude);
       $data = $filterService->getFiltersCount();
       Cache::put($specCacheKey, $data);
     }
 
     // Products
     if($with_products) {
-      $specCacheKey = $this->getCacheKey($request, 'products', ['with_filter', 'with_filter_count', 'with_products', 'cache']);
+      $specCacheKey = $this->getCacheKey($request, 'products', $this->products_exclude);
       $data = $productService
         ->startQuery(true)
         ->filterByCategories()
@@ -106,7 +110,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     // Filters data
     if(!empty($with_filters_data)){
-      $specCacheKey = $this->getCacheKey($request, 'filters-data', ['with_filter_count', 'with_products', 'with_sorting', 'page', 'order_by', 'order_dir', 'cache']);
+      $specCacheKey = $this->getCacheKey($request, 'filters-data', $this->filters_data_exclude);
 
       if(Cache::has($specCacheKey) && in_array('with_filter', $cache)) {
         $response['filters']['data'] = Cache::get($specCacheKey);
@@ -118,7 +122,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     // Filters count
     if(!empty($with_filters_count)){
-      $specCacheKey = $this->getCacheKey($request, 'filters-count', ['with_filter', 'with_products', 'with_sorting', 'page', 'order_by', 'order_dir', 'cache']);
+      $specCacheKey = $this->getCacheKey($request, 'filters-count', $this->filters_count_exclude);
 
       if(Cache::has($specCacheKey) && in_array('with_filter_count', $cache) && empty($filter_params)) {
         $response['filters']['count'] = Cache::get($specCacheKey);
@@ -135,7 +139,7 @@ class ProductController extends \App\Http\Controllers\Controller
 
     // Products
     if($with_products) {
-      $specCacheKey = $this->getCacheKey($request, 'products', ['with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache']);
+      $specCacheKey = $this->getCacheKey($request, 'products', $this->products_exclude);
 
       if(Cache::has($specCacheKey) && in_array('with_products', $cache)){
         $response['products'] = Cache::get($specCacheKey);
