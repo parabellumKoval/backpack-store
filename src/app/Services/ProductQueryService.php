@@ -440,7 +440,7 @@ class ProductQueryService
   {
 
     // Make pagination
-    $per_page = $this->request->input('per_page', config('backpack.store.per_page', 12));
+    $per_page = $this->request->input('per_page', config('backpack.store.per_page', 24));
 
     $products = $this->query->select('ak_products.*')->distinct()->paginate($per_page);
     $products = new ProductCollection($products);

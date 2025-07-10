@@ -36,6 +36,8 @@ class ProductController extends \App\Http\Controllers\Controller
   protected $filters_count_exclude = ['with_filter', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache'];
   protected $products_exclude = ['with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
 
+  protected $non_filters_exclude = ['page', 'per_page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
+
   function __construct() {
 
     self::resources_init();
@@ -141,6 +143,7 @@ class ProductController extends \App\Http\Controllers\Controller
     if($with_products) {
       $specCacheKey = $this->getCacheKey($request, 'products', $this->products_exclude);
 
+      // dd($specCacheKey);
       if(Cache::has($specCacheKey) && in_array('with_products', $cache)){
         $response['products'] = Cache::get($specCacheKey);
       }else {
@@ -280,7 +283,7 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   private function getFilterParams(Request $request) {
     $queryParams = $request->query();
-    $exclude_keys = ['page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
+    $exclude_keys = $this->non_filters_exclude;
     $exclude_map = array_flip($exclude_keys);
     $filtered_params = array_diff_key($queryParams, $exclude_map);
 
