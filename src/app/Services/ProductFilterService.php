@@ -281,7 +281,7 @@ class ProductFilterService
               ->selectRaw('MIN(value) as min, MAX(value) as max')
               ->first();
 
-          $values = [$minMax->min, $minMax->max];
+          $values = ['min' => $minMax->min, 'max' => $minMax->max];
       } else {
           // Это "checkbox" или "radio" ([attr_id, attr_value_id])
           $values = AttributeValue::query()
