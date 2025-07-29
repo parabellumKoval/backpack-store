@@ -34,6 +34,7 @@ class Supplier extends Model
 
     protected $casts = [
       'extras' => 'array',
+      'regions' => 'array',
     ];
 
     protected $fakeColumns = ['extras'];

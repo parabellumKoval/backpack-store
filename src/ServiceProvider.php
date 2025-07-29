@@ -14,9 +14,6 @@ use Illuminate\Support\Facades\File;
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
-
-  const CONFIG_PATH = __DIR__ . '/config/store.php';
-
   public function boot()
   {
     // Добавляем кастомный путь для представлений Backpack
@@ -43,8 +40,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     
 
     $this->publishes([
-      self::CONFIG_PATH => config_path('/backpack/store.php'),
-      // __DIR__ . '/config/auth.php' => config_path('/auth.php'),
+      __DIR__ . '/config/store.php' => config_path('/backpack/store.php'),
+      __DIR__ . '/config/multistore.php' => config_path('/backpack/multistore.php'),
     ], 'config');
     
     $this->publishes([
@@ -112,7 +109,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
   {
     $this->app->register(EventServiceProvider::class);
 
-    $this->mergeConfigFrom(self::CONFIG_PATH, 'backpack.store');
+    $this->mergeConfigFrom(__DIR__ . '/config/store.php', 'backpack.store');
+    $this->mergeConfigFrom(__DIR__ . '/config/multistore.php', 'backpack.multistore');
   }
 
     // public function configurePackage(Package $package): void

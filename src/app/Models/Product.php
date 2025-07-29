@@ -28,7 +28,7 @@ use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Brand;
-use Backpack\Store\app\Models\Suppliers;
+use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\SupplierProduct;
 
 // RESOURCES
@@ -77,7 +77,8 @@ class Product extends Model
       'suppliersData',
       'props',
       'defaultSupplier',
-      'defaultSupplierVirtual'
+      'defaultSupplierVirtual',
+      'disabledRegions'
     ];
     // protected $hidden = [];
     // protected $dates = [];
@@ -97,7 +98,7 @@ class Product extends Model
       // 'custom_attrs',
     ];
     
-    protected $translatable = ['name', 'short_name', 'content', 'merchant_content', 'extras_trans', 'seo'];
+    protected $translatable = ['name', 'short_name', 'content', 'excerpt', 'merchant_content', 'extras_trans', 'seo'];
     
     public $images_array = [];
     
@@ -226,21 +227,25 @@ class Product extends Model
 
       $data = [];
 
-      foreach($names as $lang => $name) {
-        $extras_trans = $ets[$lang] ?? [];
-        $extras_trans_array = !empty($extras_trans)? json_decode($extras_trans, true): [];
+      try {
+        foreach($names as $lang => $name) {
+          $extras_trans = $ets[$lang] ?? [];
+          $extras_trans_array = !empty($extras_trans)? json_decode($extras_trans, true): [];
 
-        if($rewrite === false && isset($extras_trans_array['original_name']) && !empty($extras_trans_array['original_name'])) {
-          return;
-        }else {
-          $extras_trans_array['original_name'] = $name;
-          $data[$lang] = $extras_trans_array;
+          if($rewrite === false && isset($extras_trans_array['original_name']) && !empty($extras_trans_array['original_name'])) {
+            return;
+          }else {
+            $extras_trans_array['original_name'] = $name;
+            $data[$lang] = $extras_trans_array;
+          }
         }
-      }
 
-      $multilangs_extras_trans = array_merge($ets, $data);
-      
-      $this->setTranslations('extras_trans', $multilangs_extras_trans);
+        $multilangs_extras_trans = array_merge($ets, $data);
+        
+        $this->setTranslations('extras_trans', $multilangs_extras_trans);
+      }catch(\Exception $e) {
+        Log::error('Fail to saveOriginalName with message: ' . $e->getMessage());
+      }
     }
 
     /*

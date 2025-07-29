@@ -95,6 +95,11 @@ class SupplierCrudController extends CrudController
           'type' => 'text',
         ]);
 
+        // MULTISTORE
+        if(config('backpack.multistore.enable', true)){
+            $this->setMultistoreFields();
+        }
+
         // COLOR
         $this->crud->addField([
           'name' => 'color',
@@ -133,5 +138,26 @@ class SupplierCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+
+    
+    private function setMultistoreFields() {
+
+        $regions = config('backpack.multistore.options', []);
+        $regions_filtered = array_filter($regions, function($item) {
+            return !isset($item['enabled']) || $item['enabled'] !== false? true: false;
+        });
+
+        $localeToCountry = array_column($regions_filtered, 'country', 'locale');
+
+        $this->crud->addField([
+            'name'        => 'regions',
+            'label'       => "Регионы",
+            'type'        => 'select2_from_array',
+            'options'     => $localeToCountry,
+            'allows_null' => false,
+            'allows_multiple' => true,
+        ]);
     }
 }

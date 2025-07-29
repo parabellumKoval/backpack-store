@@ -291,6 +291,10 @@ class Product extends BaseProduct
     public function setDefaultSupplierVirtualAttribute($value) {
       $this->default_supplier = Request::input('defaultSupplier', []);
     }
+
+
+    public function setDisabledRegionsAttribute($value) {
+    }
 }
 
 

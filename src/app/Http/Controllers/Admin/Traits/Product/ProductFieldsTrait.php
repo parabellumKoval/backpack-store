@@ -159,45 +159,6 @@ trait ProductFieldsTrait
         ]);
         
         
-        // IMAGES
-        if(config('backpack.store.product.images.enable', true)) {
-            $this->crud->addField([
-                'name'  => 'images',
-                'label' => trans('backpack-store::product-field.fields.images.label'),
-                'type'  => 'repeatable',
-                'fields' => [
-                [
-                    'name' => 'src',
-                    'label' => trans('backpack-store::product-field.fields.images.image'),
-                    'type' => 'browse',
-                ],
-                [
-                    'name' => 'alt',
-                    'label' => trans('backpack-store::product-field.fields.images.alt')
-                ],
-                [
-                    'name' => 'title',
-                    'label' => trans('backpack-store::product-field.fields.images.title')
-                ],
-                [
-                    'name' => 'size',
-                    'type' => 'radio',
-                    'label' => trans('backpack-store::product-field.fields.images.size'),
-                    'options' => [
-                    'cover' => 'Cover',
-                    'contain' => 'Contain'
-                    ],
-                    'inline' => true
-                ]
-                ],
-                'new_item_label'  => trans('backpack-store::product-field.fields.images.add'),
-                'init_rows' => 1,
-                'default' => [],
-                'tab' => trans('backpack-store::product-field.tabs.images')
-            ]);
-        }
-        
-        
         // CUSTOM PROPERTIES
         $this->setCustomPropertiesFields();
 
@@ -208,6 +169,21 @@ trait ProductFieldsTrait
 
         // SUPPLIERS
         if(config('backpack.store.supplier.enable')) {
+
+            $regionsField = [];
+            // MULTISTORE
+            if(config('backpack.multistore.enable', true)){
+                $regionsField = [
+                    'name'  => 'regionsString',
+                    'type'  => 'text',
+                    'label' => trans('backpack-store::product-field.fields.suppliers.regions'),
+                    'attributes' => [
+                        'readonly'  => 'readonly',
+                        'disabled'  => 'disabled'
+                    ]
+                ];
+            }
+
             $this->crud->addField([
                 'name'  => 'suppliersData',
                 'label' => trans('backpack-store::product-field.fields.suppliers.label'),
@@ -270,6 +246,7 @@ trait ProductFieldsTrait
                         'disabled'  => 'disabled'
                         ]
                     ],
+                    ...$regionsField
                 ],
             
                 // optional
@@ -278,6 +255,8 @@ trait ProductFieldsTrait
                 'min_rows' => 2,
                 'tab' => trans('backpack-store::product-field.tabs.warehouse'),
             ]);
+
+
         }
 
 
@@ -285,6 +264,46 @@ trait ProductFieldsTrait
         if(config('backpack.store.product.modifications.enable', true)) {
             $this->setModificationsFields();
         }
+
+
+        // IMAGES
+        if(config('backpack.store.product.images.enable', true)) {
+            $this->crud->addField([
+                'name'  => 'images',
+                'label' => trans('backpack-store::product-field.fields.images.label'),
+                'type'  => 'repeatable',
+                'fields' => [
+                [
+                    'name' => 'src',
+                    'label' => trans('backpack-store::product-field.fields.images.image'),
+                    'type' => 'browse',
+                ],
+                [
+                    'name' => 'alt',
+                    'label' => trans('backpack-store::product-field.fields.images.alt')
+                ],
+                [
+                    'name' => 'title',
+                    'label' => trans('backpack-store::product-field.fields.images.title')
+                ],
+                [
+                    'name' => 'size',
+                    'type' => 'radio',
+                    'label' => trans('backpack-store::product-field.fields.images.size'),
+                    'options' => [
+                    'cover' => 'Cover',
+                    'contain' => 'Contain'
+                    ],
+                    'inline' => true
+                ]
+                ],
+                'new_item_label'  => trans('backpack-store::product-field.fields.images.add'),
+                'init_rows' => 1,
+                'default' => [],
+                'tab' => trans('backpack-store::product-field.tabs.images')
+            ]);
+        }
+
 
         // SEO FIELDS
         if(config('backpack.store.product.seo.enable', true)){
@@ -302,7 +321,7 @@ trait ProductFieldsTrait
             'tab' => 'Google Merchants'
         ]);
     }
-    
+
     /**
      * Method setCustomPropertiesFields
      *

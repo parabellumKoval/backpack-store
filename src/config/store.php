@@ -273,5 +273,5 @@ return [
     // CACHE
     'cache' => [
       'enable' => true
-    ]
+    ],
 ];
