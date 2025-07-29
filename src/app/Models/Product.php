@@ -227,25 +227,22 @@ class Product extends Model
 
       $data = [];
 
-      try {
-        foreach($names as $lang => $name) {
-          $extras_trans = $ets[$lang] ?? [];
-          $extras_trans_array = !empty($extras_trans)? json_decode($extras_trans, true): [];
+      foreach($names as $lang => $name) {
+        $extras_trans = $ets[$lang] ?? [];
+        $extras_trans_array = !empty($extras_trans)? json_decode($extras_trans, true): [];
 
-          if($rewrite === false && isset($extras_trans_array['original_name']) && !empty($extras_trans_array['original_name'])) {
-            return;
-          }else {
-            $extras_trans_array['original_name'] = $name;
-            $data[$lang] = $extras_trans_array;
-          }
+        if($rewrite === false && isset($extras_trans_array['original_name']) && !empty($extras_trans_array['original_name'])) {
+          return;
+        }else {
+          $extras_trans_array['original_name'] = $name;
+          $data[$lang] = $extras_trans_array;
         }
-
-        $multilangs_extras_trans = array_merge($ets, $data);
-        
-        $this->setTranslations('extras_trans', $multilangs_extras_trans);
-      }catch(\Exception $e) {
-        Log::error('Fail to saveOriginalName with message: ' . $e->getMessage());
       }
+
+      $multilangs_extras_trans = array_merge($ets, $data);
+      
+      $this->setTranslations('extras_trans', $multilangs_extras_trans);
+
     }
 
     /*
