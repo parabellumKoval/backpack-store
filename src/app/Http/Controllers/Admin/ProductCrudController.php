@@ -79,6 +79,9 @@ class ProductCrudController extends CrudController
 
     public function setup()
     {
+
+      $this->crud->enableExportButtons(); 
+      
       $this->crud->setModel($this->product_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/product');
       $this->crud->setEntityNameStrings(
