@@ -42,6 +42,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->publishes([
       __DIR__ . '/config/store.php' => config_path('/backpack/store.php'),
       __DIR__ . '/config/multistore.php' => config_path('/backpack/multistore.php'),
+      __DIR__ . '/config/product_quality.php' => config_path('/backpack/product_quality.php'),
     ], 'config');
     
     $this->publishes([
@@ -111,6 +112,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     $this->mergeConfigFrom(__DIR__ . '/config/store.php', 'backpack.store');
     $this->mergeConfigFrom(__DIR__ . '/config/multistore.php', 'backpack.multistore');
+    $this->mergeConfigFrom(__DIR__ . '/config/product_quality.php', 'backpack.pq');
   }
 
     // public function configurePackage(Package $package): void

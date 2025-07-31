@@ -170,19 +170,19 @@ trait ProductFieldsTrait
         // SUPPLIERS
         if(config('backpack.store.supplier.enable')) {
 
-            $regionsField = [];
-            // MULTISTORE
-            if(config('backpack.multistore.enable', true)){
-                $regionsField = [
-                    'name'  => 'regionsString',
-                    'type'  => 'text',
-                    'label' => trans('backpack-store::product-field.fields.suppliers.regions'),
-                    'attributes' => [
-                        'readonly'  => 'readonly',
-                        'disabled'  => 'disabled'
-                    ]
-                ];
-            }
+            // $regionsField = [];
+            // // MULTISTORE
+            // if(config('backpack.multistore.enable', true)){
+            //     $regionsField = [
+            //         'name'  => 'regionsString',
+            //         'type'  => 'text',
+            //         'label' => trans('backpack-store::product-field.fields.suppliers.regions'),
+            //         'attributes' => [
+            //             'readonly'  => 'readonly',
+            //             'disabled'  => 'disabled'
+            //         ]
+            //     ];
+            // }
 
             $this->crud->addField([
                 'name'  => 'suppliersData',
@@ -246,7 +246,7 @@ trait ProductFieldsTrait
                         'disabled'  => 'disabled'
                         ]
                     ],
-                    ...$regionsField
+                    // ...$regionsField
                 ],
             
                 // optional

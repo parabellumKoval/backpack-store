@@ -104,12 +104,12 @@ trait ProductColumnsTrait
             'priority' => 7
         ]);
 
-        $this->crud->addColumn([
-            'name' => 'fillAdmin',
-            'label' => '<span title="' . trans('backpack-store::product-column.quality.title') . '">' . trans('backpack-store::product-column.quality.label') . '</span>',
-            'escaped' => false,
-            'limit' => 1500,
-            'priority' => 4
-        ]);
+        // $this->crud->addColumn([
+        //     'name' => 'fillAdmin',
+        //     'label' => '<span title="' . trans('backpack-store::product-column.quality.title') . '">' . trans('backpack-store::product-column.quality.label') . '</span>',
+        //     'escaped' => false,
+        //     'limit' => 1500,
+        //     'priority' => 4
+        // ]);
     }
 }

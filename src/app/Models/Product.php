@@ -487,123 +487,129 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
     
-    public function getFillAdminAttribute() {
-      $html = '';
-
-      if($this->fillQuality['num'] <= 40) {
-        $color = 'red';
-      }else if($this->fillQuality['num'] > 40 && $this->fillQuality['num'] <= 70) {
-        $color = 'orange';
-      }else {
-        $color = 'green';
-      }
-
-      $html .= '<b style="color: ' . $color . '">' . $this->fillQuality['num'] . '</b>';
-      return $html;
-
-      // return $this->fillQuality['string'];
+     public function getFillAdminAttribute() {
+      return view('store-crud::columns.product_quality', $this->fillQuality);
     }
 
+    // public function getFillAdminAttribute() {
+    //   $html = '';
+
+    //   if($this->fillQuality['num'] <= 40) {
+    //     $color = 'red';
+    //   }else if($this->fillQuality['num'] > 40 && $this->fillQuality['num'] <= 70) {
+    //     $color = 'orange';
+    //   }else {
+    //     $color = 'green';
+    //   }
+
+    //   $html .= '<b style="color: ' . $color . '">' . $this->fillQuality['num'] . '</b>';
+    //   return $html;
+    // }
+
+
+    public function getFillQualityAttribute() {
+      return app(\Backpack\Store\app\Services\ProductQualityService::class)->calculate($this);
+    }
     /**
      * getFillQualityAttribute
      *
      * @return void
      */
-    public function getFillQualityAttribute() {
-      $score = 0;
-      $string = '';
+    // public function getFillQualityAttribute() {
+    //   $score = 0;
+    //   $string = '';
 
-      $score_rates = [
-        'suppliers' => 5,
-        'one_image' => 10,
-        'multiple_images' => 15,
-        'category' => 10,
-        'brand' => 10,
-        'props_1' => 5,
-        'props_2' => 10,
-        'props_3' => 15,
-        // using below for multiple languages
-        'content' => 20,
-        'name' => 5,
-      ];
+    //   $score_rates = [
+    //     'suppliers' => 5,
+    //     'one_image' => 10,
+    //     'multiple_images' => 15,
+    //     'category' => 10,
+    //     'brand' => 10,
+    //     'props_1' => 5,
+    //     'props_2' => 10,
+    //     'props_3' => 15,
+    //     // using below for multiple languages
+    //     'content' => 20,
+    //     'name' => 5,
+    //   ];
 
-      $total_available = $score_rates['suppliers'] + $score_rates['multiple_images'] + $score_rates['category']
-         + $score_rates['brand'] + $score_rates['props_3'];
+    //   $total_available = $score_rates['suppliers'] + $score_rates['multiple_images'] + $score_rates['category']
+    //      + $score_rates['brand'] + $score_rates['props_3'];
 
-      // Has supplier
-      if($this->sp) {
-        $score += $score_rates['suppliers'];
-        $string .= ' + supplier';
-      }
+    //   // Has supplier
+    //   if($this->sp) {
+    //     $score += $score_rates['suppliers'];
+    //     $string .= ' + supplier';
+    //   }
 
-      foreach($this->langs_list as $lang) {
-        // each content translation + 15, each name translation + 5
-        $total_available += $score_rates['content'] + $score_rates['name'];
+    //   foreach($this->langs_list as $lang) {
+    //     // each content translation + 15, each name translation + 5
+    //     $total_available += $score_rates['content'] + $score_rates['name'];
 
-        // Has content translations
-        $content = $this->getTranslation('content', $lang, false);
-        if(!empty($content) && strlen($content) > 150) {
-          $score += $score_rates['content'];
-          $string .= ' + content';
-        }
+    //     // Has content translations
+    //     $content = $this->getTranslation('content', $lang, false);
+    //     if(!empty($content) && strlen($content) > 150) {
+    //       $score += $score_rates['content'];
+    //       $string .= ' + content';
+    //     }
 
-        // Has name translations
-        $content = $this->getTranslation('name', $lang, false);
-        if(!empty($content) && strlen($content) > 2) {
-          $score += $score_rates['name'];
-          $string .= ' + name';
-        }
-      }
+    //     // Has name translations
+    //     $content = $this->getTranslation('name', $lang, false);
+    //     if(!empty($content) && strlen($content) > 2) {
+    //       $score += $score_rates['name'];
+    //       $string .= ' + name';
+    //     }
+    //   }
 
-      // Has images
-      if($this->images) {
-        if(count($this->images) === 1){
-          $score += $score_rates['one_image'];
-          $string .= ' + one_image';
-        }else if(count($this->images) > 1) {
-          $score += $score_rates['multiple_images'];
-          $string .= ' + multiple_images';
-        }
-      }
+    //   // Has images
+    //   if($this->images) {
+    //     if(count($this->images) === 1){
+    //       $score += $score_rates['one_image'];
+    //       $string .= ' + one_image';
+    //     }else if(count($this->images) > 1) {
+    //       $score += $score_rates['multiple_images'];
+    //       $string .= ' + multiple_images';
+    //     }
+    //   }
 
-      // Has categories
-      if($this->categories->count()) {
-        $score += $score_rates['category'];
-        $string .= ' + category';
-      }
+    //   // Has categories
+    //   if($this->categories->count()) {
+    //     $score += $score_rates['category'];
+    //     $string .= ' + category';
+    //   }
 
-      // Has Brand
-      if($this->brand) {
-        $score += $score_rates['brand'];
-        $string .= ' + brand';
-      }
+    //   // Has Brand
+    //   if($this->brand) {
+    //     $score += $score_rates['brand'];
+    //     $string .= ' + brand';
+    //   }
 
-      // Has properties
-      if($this->properties) {
-        if(count($this->properties) === 1) {
-          $score += $score_rates['props_1'];
-          $string .= ' + props_1';
-        }else if(count($this->properties) > 1 && count($this->properties) <= 3) {
-          $score += $score_rates['props_2'];
-          $string .= ' + props_2';
-        }else if(count($this->properties) > 3) {
-          $score += $score_rates['props_3'];
-          $string .= ' + props_3';
-        }
-      }else if($this->customProperties) {
-        if(count($this->customProperties) === 1) {
-          $score += $score_rates['props_1'];
-        }else if(count($this->customProperties) > 1 && count($this->customProperties) <= 3) {
-          $score += $score_rates['props_2'];
-        }else if(count($this->customProperties) > 3) {
-          $score += $score_rates['props_3'];
-        }
-      }
+    //   // Has properties
+    //   if($this->properties) {
+    //     if(count($this->properties) === 1) {
+    //       $score += $score_rates['props_1'];
+    //       $string .= ' + props_1';
+    //     }else if(count($this->properties) > 1 && count($this->properties) <= 3) {
+    //       $score += $score_rates['props_2'];
+    //       $string .= ' + props_2';
+    //     }else if(count($this->properties) > 3) {
+    //       $score += $score_rates['props_3'];
+    //       $string .= ' + props_3';
+    //     }
+    //   }else if($this->customProperties) {
+    //     if(count($this->customProperties) === 1) {
+    //       $score += $score_rates['props_1'];
+    //     }else if(count($this->customProperties) > 1 && count($this->customProperties) <= 3) {
+    //       $score += $score_rates['props_2'];
+    //     }else if(count($this->customProperties) > 3) {
+    //       $score += $score_rates['props_3'];
+    //     }
+    //   }
 
-      $total = round($score * 100 / $total_available);
+    //   $total = round($score * 100 / $total_available);
 
-      return ['num' => $total, 'string' => $string];
-    }
+    //   return ['num' => $total, 'string' => $string];
+    // }
         
     /**
      * getSimpleCodeAttribute
