@@ -245,6 +245,15 @@ class Product extends Model
 
     }
 
+
+    public function setDataToExtras(string $key = null, $data = null) {
+      if(!$key || !$data) return false;
+
+      $extras = $this->extras;
+      $extras[$key] = $data;
+      $this->extras = $extras;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -488,7 +497,8 @@ class Product extends Model
     */
     
      public function getFillAdminAttribute() {
-      return view('store-crud::columns.product_quality', $this->fillQuality);
+      $data = $this->extras['fill_quality'] ?? [];
+      return view('store-crud::columns.product_quality', $data);
     }
 
     // public function getFillAdminAttribute() {
@@ -505,7 +515,6 @@ class Product extends Model
     //   $html .= '<b style="color: ' . $color . '">' . $this->fillQuality['num'] . '</b>';
     //   return $html;
     // }
-
 
     public function getFillQualityAttribute() {
       return app(\Backpack\Store\app\Services\ProductQualityService::class)->calculate($this);
@@ -1050,6 +1059,7 @@ class Product extends Model
     //   // $this->attributes['extras_trans'] = json_encode($new_extras_trans);
     //   $this->attributes['extras_trans'] = $new_extras_trans;
     // }
+
 
     
 }

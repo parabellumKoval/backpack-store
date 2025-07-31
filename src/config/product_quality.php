@@ -3,32 +3,32 @@
 return [
   'parameters' => [
     'description' => [
-        'unit' => 'символы',
-        'ideal' => 2000, // 100% при >=2000 символов
-        'weight' => 30, // % в общей оценке
+        'unit' => 'symbols',
+        'ideal' => 2000,
+        'weight' => 30,
     ],
     'images' => [
-        'unit' => 'шт',
-        'ideal' => 5, // 5 фото = 100%
+        'unit' => 'pieces',
+        'ideal' => 3,
         'weight' => 20,
     ],
     'properties' => [
-        'unit' => 'шт',
+        'unit' => 'pieces',
         'ideal' => 5,
         'weight' => 15,
     ],
     'brand' => [
-        'unit' => 'наличие',
+        'unit' => null,
         'ideal' => 1,
         'weight' => 10,
     ],
     'category' => [
-        'unit' => 'наличие',
+        'unit' => null,
         'ideal' => 1,
         'weight' => 10,
     ],
     'name' => [
-        'unit' => 'символы',
+        'unit' => 'symbols',
         'ideal' => 50,
         'weight' => 15,
     ]

@@ -26,7 +26,7 @@ class ProductQualityService
             $details[$key] = [
                 'value' => $value,
                 'unit' => $param['unit'],
-                'rate' => round($rate * 100, 1) . '%',
+                'rate' => round($rate * 100, 1),
                 'weight' => $param['weight']
             ];
 

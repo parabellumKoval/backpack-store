@@ -386,7 +386,7 @@ class ProductCrudController extends CrudController
         if (empty($ids)) {
             return response()->json([
                 'success' => false,
-                'message' => trans('backpack-store::product.bulk_actions.select_items'),
+                'message' => trans('backpack-store::bulk_actions.select_items'),
             ]);
         }
 
@@ -395,14 +395,30 @@ class ProductCrudController extends CrudController
                 $this->crud->model->whereIn('id', $ids)->update(['is_active' => 1]);
                 return response()->json([
                     'success' => true,
-                    'message' => trans('backpack-store::product.bulk_actions.activated', ['count' => count($ids)]),
+                    'message' => trans('backpack-store::bulk_actions.activated', ['count' => count($ids)]),
                 ]);
 
             case 'set_inactive':
                 $this->crud->model->whereIn('id', $ids)->update(['is_active' => 0]);
                 return response()->json([
                     'success' => true,
-                    'message' => trans('backpack-store::product.bulk_actions.deactivated', ['count' => count($ids)]),
+                    'message' => trans('backpack-store::bulk_actions.deactivated', ['count' => count($ids)]),
+                ]);
+
+
+            case 'set_brand':
+                $brandId = request()->input('brand_id');
+                
+                // Обновляем бренд для всех выбранных продуктов
+                $this->crud->model->whereIn('id', $ids)->update(['brand_id' => $brandId]);
+
+                $message = is_null($brandId) 
+                    ? trans('backpack-store::bulk_actions.brand_removed', ['count' => count($ids)])
+                    : trans('backpack-store::bulk_actions.brand_assigned', ['count' => count($ids)]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
                 ]);
 
             case 'set_category':
@@ -421,14 +437,22 @@ class ProductCrudController extends CrudController
                         // Если категории пустые или выбран "Без категории" - отвязываем все категории
                         $product->categories()->detach();
                     } else {
-                        // Иначе синхронизируем с выбранными категориями
-                        $product->categories()->sync($categoryIds);
+                        // Получаем текущие категории продукта
+                        $existingCategoryIds = $product->categories()->pluck('ak_product_categories.id')->toArray();
+                        
+                        // Фильтруем только новые категории, которых еще нет у продукта
+                        $newCategoryIds = array_diff($categoryIds, $existingCategoryIds);
+                        
+                        if (!empty($newCategoryIds)) {
+                            // Добавляем только новые категории
+                            $product->categories()->attach($newCategoryIds);
+                        }
                     }
                 }
 
                 $message = empty($categoryIds) 
-                    ? trans('backpack-store::product.bulk_actions.categories_removed', ['count' => count($ids)])
-                    : trans('backpack-store::product.bulk_actions.categories_assigned', ['count' => count($ids)]);
+                    ? trans('backpack-store::bulk_actions.categories_removed', ['count' => count($ids)])
+                    : trans('backpack-store::bulk_actions.categories_assigned', ['count' => count($ids)]);
 
                 return response()->json([
                     'success' => true,
@@ -438,7 +462,7 @@ class ProductCrudController extends CrudController
             default:
                 return response()->json([
                     'success' => false,
-                    'message' => trans('backpack-store::product.bulk_actions.invalid_action'),
+                    'message' => trans('backpack-store::bulk_actions.invalid_action'),
                 ]);
         }
     }

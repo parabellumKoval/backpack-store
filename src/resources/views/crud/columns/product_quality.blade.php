@@ -1,3 +1,4 @@
+@if(isset($details) && isset($total))
 <span>
   @php
       // $details — это массив вида:
@@ -23,3 +24,6 @@
     @endif
   </span>
 </span>
+@else
+<span>-</span>
+@endif

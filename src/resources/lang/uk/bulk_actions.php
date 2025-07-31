@@ -1,20 +1,26 @@
 <?php
 
 return [
-    'button' => 'Масові дії',
-    'actions' => [
-        'activate' => 'Активувати вибрані',
-        'deactivate' => 'Деактивувати вибрані',
-        'set_category' => 'Встановити категорію'
-    ],
-    'modal' => [
-        'title' => 'Виберіть категорію',
-        'cancel' => 'Скасувати',
-        'apply' => 'Застосувати',
-        'placeholder' => 'Виберіть категорії'
-    ],
-    'messages' => [
-        'error' => 'Сталася помилка під час виконання дії.',
-        'success' => 'Операцію успішно виконано.'
-    ]
+    'bulk_actions' => 'Масові дії', 
+    'activate' => 'Активувати', 
+    'deactivate' => 'Деактивувати', 
+    'set_category' => 'Встановити категорію', 
+    'set_brand' => 'Встановити бренд', 
+    'select_categories' => 'Виберіть категорії', 
+    'select_brand' => 'Виберіть бренд', 
+    'cancel' => 'Скасування', 
+    'confirm' => 'Прийняти', 
+    'no_items_selected' => 'Елементи не вибрані', 
+    'please_select_items' => 'Будь ласка, виберіть один або кілька елементів', 
+    'error_occurred' => 'Помилка при виконанні дії', 
+    'categories_assigned' => 'Призначені бренди для :count товарів', 
+    'categories_required' => 'Виберіть категорії', 
+    'brand_removed' => 'Вилучений бренд у :count товарів', 
+    'brand_assigned' => 'Бренд встановлений', 
+    'select_items' => 'Будь ласка, виберіть елементи для обробки', 
+    'activated' => 'Активовано товарів: :count', 
+    'deactivated' => 'Деактивовано товарів: :count', 
+    'categories_assigned' => 'Призначено категорій для :count товарів', 
+    'categories_removed' => 'Видалені всі категорії у :count товарів', 
+    'invalid_action' => 'Неправильна дія',
 ];

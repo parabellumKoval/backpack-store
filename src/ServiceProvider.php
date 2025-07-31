@@ -8,6 +8,7 @@ use Backpack\Store\app\Console\Commands\AttributesTransform;
 use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
 use Backpack\Store\app\Console\Commands\ImportGoogleTaxonomy;
 use Backpack\Store\app\Console\Commands\CatalogCache;
+use Backpack\Store\app\Console\Commands\ProductPreprocessing;
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\File;
@@ -102,6 +103,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         XmlCorrectInStock::class,
         ImportGoogleTaxonomy::class,
         CatalogCache::class,
+        ProductPreprocessing::class
       ]);
     }
   }

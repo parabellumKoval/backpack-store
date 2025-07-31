@@ -3,14 +3,6 @@
 return [
     'entity_singular' => 'товар',
     'entity_plural' => 'товары',
-    'bulk_actions' => [
-        'select_items' => 'Пожалуйста, выберите элементы для обработки',
-        'activated' => 'Активировано товаров: :count',
-        'deactivated' => 'Деактивировано товаров: :count',
-        'categories_assigned' => 'Назначено категорий для :count товаров',
-        'categories_removed' => 'Удалены все категории у :count товаров',
-        'invalid_action' => 'Неверное действие'
-    ],
     'fields' => [
         'barcode' => 'Баркод/код',
         'name' => 'Название',
