@@ -15,6 +15,7 @@ return [
         'source' => 'Источник',
         'in_stock' => 'Фильтровать по наличию',
         'show_discount' => 'Показывать цену со скидкой',
+        'order' => 'Порядок',
     ],
 
     'popular_categories' => [

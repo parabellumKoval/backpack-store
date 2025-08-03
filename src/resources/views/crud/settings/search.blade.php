@@ -28,7 +28,7 @@
     <div class="card-body">
       <div class="form-group">
         <label>{{ trans('backpack-store::search.popular_products.source') }}</label>
-        <select name="popular_products_source" class="form-control">
+        <select name="popular_products_source" id="popular_products_source" class="form-control js-source" data-target="products">
           <option value="auto" {{ $settings['popular_products_source'] == 'auto' ? 'selected' : '' }}>
             {{ trans('backpack-store::search.common.auto') }}
           </option>
@@ -36,6 +36,24 @@
             {{ trans('backpack-store::search.common.manual') }}
           </option>
         </select>
+      </div>
+
+      <div id="popular_products_manual" class="{{ $settings['popular_products_source'] == 'manual' ? '' : 'd-none' }}">
+        <label>{{ trans('backpack-store::search.popular_categories.order') }}</label>
+        <select id="products-select" class="form-control mb-2"></select>
+        <ul id="products-sortable" class="list-group mb-3">
+          @foreach($settings['popular_products_order'] ?? [] as $product)
+            <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ $product['id'] }}">
+              <span class="handle"><i class="fa fa-arrows-alt mr-2"></i><span class="item-title">{{ $product['name'] }}</span></span>
+              <span class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-light move-up"><i class="fa fa-arrow-up"></i></button>
+                <button type="button" class="btn btn-light move-down"><i class="fa fa-arrow-down"></i></button>
+                <button type="button" class="btn btn-light remove-item"><i class="fa fa-times"></i></button>
+              </span>
+            </li>
+          @endforeach
+        </ul>
+        <input type="hidden" name="popular_products_order_json" id="popular_products_order_json" value="">
       </div>
 
       <div class="custom-control custom-switch">
@@ -58,7 +76,7 @@
     <div class="card-body">
       <div class="form-group">
         <label>{{ trans('backpack-store::search.popular_categories.source') }}</label>
-        <select name="popular_categories_source" class="form-control">
+        <select name="popular_categories_source" id="popular_categories_source" class="form-control js-source" data-target="categories">
           <option value="auto" {{ $settings['popular_categories_source'] == 'auto' ? 'selected' : '' }}>
             {{ trans('backpack-store::search.common.auto') }}
           </option>
@@ -68,17 +86,23 @@
         </select>
       </div>
 
-      @if($settings['popular_categories_source'] == 'manual')
+      <div id="popular_categories_manual" class="{{ $settings['popular_categories_source'] == 'manual' ? '' : 'd-none' }}">
         <label>{{ trans('backpack-store::search.popular_categories.order') }}</label>
+        <select id="categories-select" class="form-control mb-2"></select>
         <ul id="categories-sortable" class="list-group mb-3">
           @foreach($settings['popular_categories_order'] ?? [] as $category)
-            <li class="list-group-item" data-id="{{ $category['id'] }}">
-              <i class="fa fa-arrows-alt mr-2"></i> {{ $category['name'] }}
+            <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ $category['id'] }}">
+              <span class="handle"><i class="fa fa-arrows-alt mr-2"></i><span class="item-title">{{ $category['name'] }}</span></span>
+              <span class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-light move-up"><i class="fa fa-arrow-up"></i></button>
+                <button type="button" class="btn btn-light move-down"><i class="fa fa-arrow-down"></i></button>
+                <button type="button" class="btn btn-light remove-item"><i class="fa fa-times"></i></button>
+              </span>
             </li>
           @endforeach
         </ul>
         <input type="hidden" name="popular_categories_order_json" id="popular_categories_order_json">
-      @endif
+      </div>
     </div>
   </div>
 
@@ -161,22 +185,101 @@
 @endsection
 
 @section('after_scripts')
-@if($settings['popular_categories_source'] == 'manual')
+  <link href="{{ asset('packages/select2/dist/css/select2.min.css') }}" rel="stylesheet" type="text/css" />
+  <link href="{{ asset('packages/select2-bootstrap-theme/dist/select2-bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
+  <script src="{{ asset('packages/select2/dist/js/select2.full.min.js') }}"></script>
+  <script src="{{ asset('packages/select2/dist/js/i18n/' . str_replace('_', '-', app()->getLocale()) . '.js') }}"></script>
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
   <script>
     $(function () {
-      $('#categories-sortable').sortable({
-        update: function () {
-          const result = $(this).children().map(function () {
-            return {
-              id: $(this).data('id'),
-              name: $(this).text().trim()
-            };
-          }).get();
-          $('#popular_categories_order_json').val(JSON.stringify(result));
-        }
-      });
+      const locale = '{{ app()->getLocale() }}';
+
+      function updateHidden($sortable, $hidden) {
+        const result = $sortable.children().map(function () {
+          return {
+            id: $(this).data('id'),
+            name: $(this).find('.item-title').text().trim()
+          };
+        }).get();
+        $hidden.val(JSON.stringify(result));
+      }
+
+      function initSection(type, url) {
+        const $source = $('#popular_' + type + '_source');
+        const $wrapper = $('#popular_' + type + '_manual');
+        const $select = $('#' + type + '-select');
+        const $sortable = $('#' + type + '-sortable');
+        const $hidden = $('#popular_' + type + '_order_json');
+
+        $sortable.sortable({
+          handle: '.handle',
+          update: function () { updateHidden($sortable, $hidden); }
+        });
+
+        $sortable.on('click', '.move-up', function () {
+          const $li = $(this).closest('li');
+          $li.prev().before($li);
+          updateHidden($sortable, $hidden);
+        });
+        $sortable.on('click', '.move-down', function () {
+          const $li = $(this).closest('li');
+          $li.next().after($li);
+          updateHidden($sortable, $hidden);
+        });
+        $sortable.on('click', '.remove-item', function () {
+          $(this).closest('li').remove();
+          updateHidden($sortable, $hidden);
+        });
+
+        $select.select2({
+          theme: 'bootstrap',
+          ajax: {
+            url: url,
+            dataType: 'json',
+            delay: 250,
+            data: function (params) { return { q: params.term }; },
+            processResults: function (data) {
+              return {
+                results: data.data.map(function (item) {
+                  let text = item.name;
+                  if (typeof text === 'object') {
+                    text = text[locale] || Object.values(text)[0];
+                  }
+                  return { id: item.id, text: text };
+                })
+              };
+            }
+          },
+          minimumInputLength: 1
+        }).on('select2:select', function (e) {
+          const data = e.params.data;
+          if ($sortable.find('li[data-id="' + data.id + '"]').length === 0) {
+            const $li = $('<li class="list-group-item d-flex justify-content-between align-items-center" data-id="' + data.id + '">' +
+              '<span class="handle"><i class="fa fa-arrows-alt mr-2"></i><span class="item-title">' + data.text + '</span></span>' +
+              '<span class="btn-group btn-group-sm">' +
+              '<button type="button" class="btn btn-light move-up"><i class="fa fa-arrow-up"></i></button>' +
+              '<button type="button" class="btn btn-light move-down"><i class="fa fa-arrow-down"></i></button>' +
+              '<button type="button" class="btn btn-light remove-item"><i class="fa fa-times"></i></button>' +
+              '</span></li>');
+            $sortable.append($li);
+            updateHidden($sortable, $hidden);
+          }
+          $select.val(null).trigger('change');
+        });
+
+        $source.on('change', function () {
+          if ($(this).val() === 'manual') {
+            $wrapper.removeClass('d-none');
+          } else {
+            $wrapper.addClass('d-none');
+          }
+        }).trigger('change');
+
+        updateHidden($sortable, $hidden);
+      }
+
+      initSection('products', '{{ url(config('backpack.base.route_prefix', 'admin') . '/api/product') }}');
+      initSection('categories', '{{ url(config('backpack.base.route_prefix', 'admin') . '/api/category') }}');
     });
   </script>
-@endif
 @endsection
