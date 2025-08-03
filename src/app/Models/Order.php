@@ -321,6 +321,31 @@ class Order extends Model
       }
     }
 
+
+    public function getIsMutedAttribute(){
+      return $this->status === 'failed' || $this->status === 'canceled'? true: false;
+    }
+
+    public function getOrderStatusHtmlAttribute(){
+      return view('store-crud::columns.status', ['status' => $this->status, 'context' => 'order', 'type' => 'badge']);
+    }
+
+    public function getPayInfoHtmlAttribute() {
+      return view('store-crud::columns.pay', ['status' => $this->pay_status, 'payment' => $this->payment, 'muted' => $this->isMuted]);
+    }
+
+    public function getDeliveryInfoHtmlAttribute() {
+      return view('store-crud::columns.delivery', ['status' => $this->delivery_status, 'delivery' => $this->delivery, 'muted' => $this->isMuted]);
+    }
+
+
+    public function getUserInfoHtmlAttribute() {
+      return view('store-crud::columns.user', ['user' => $this->user, 'muted' => $this->isMuted]);
+    }
+
+    public function getPriceHtmlAttribute() {
+      return view('store-crud::columns.price', ['price' => $this->price, 'muted' => $this->isMuted]);
+    }
     /*
     |--------------------------------------------------------------------------
     | MUTATORS

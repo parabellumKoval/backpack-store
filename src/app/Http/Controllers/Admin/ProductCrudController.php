@@ -147,6 +147,9 @@ class ProductCrudController extends CrudController
         // Add bulk actions button
         $this->crud->addButton('bottom', 'bulk_actions', 'view', 'store-crud::buttons.product_bulk_actions', 'end');
 
+        //
+        $this->crud->addButton('top', 'export_csv', 'view', 'store-crud::buttons.product_bulk_actions', 'top_search');
+
         // System Trait   
         $this->setupColumns();
 

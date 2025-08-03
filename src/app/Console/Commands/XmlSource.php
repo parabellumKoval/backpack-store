@@ -92,6 +92,9 @@ class XmlSource extends Command
      */
     public function handle()
     {
+
+      $this->searchInArray('ФУТБОЛКА !!!) Creatine Monohydrate AMIX 500 g unflavored', ['%пошкоджена%', '^футболка']);
+
       $sources = Source::active()->get();
 
       $bar = $this->output->createProgressBar(count($sources));
@@ -366,7 +369,6 @@ class XmlSource extends Command
       // OVERPRICE
       if(isset($this->rules['overprice']) && !empty($this->rules['overprice'])) {
         foreach($this->rules['overprice'] as $rule) {
-          // dd($rule);
           if($this->isRuleForProduct($rule, $data)) {
             $overPrice = $rule['overprice'];
           }
@@ -751,8 +753,9 @@ class XmlSource extends Command
         
         // Try to find %% rule
         preg_match('/^%(.+)%$/i', $item, $matches, PREG_UNMATCHED_AS_NULL);
+
         if(!empty($matches[1])) {
-          $search_anywhere = strpos($search, $matches[1]);
+          $search_anywhere = mb_stripos($search, $matches[1]);
 
           // if false continue to search
           if($search_anywhere !== false) {
@@ -763,8 +766,9 @@ class XmlSource extends Command
         $matches = null;
         // Try find starts with rule
         preg_match('/^\^(.+)/i', $item, $matches, PREG_UNMATCHED_AS_NULL);
+
         if(!empty($matches[1])) {
-          $search_starts_with = str_starts_with($search, $matches[1]);
+          $search_starts_with = str_starts_with(mb_strtolower($search), mb_strtolower($matches[1]));
 
           // if false continue to search
           if($search_starts_with) {

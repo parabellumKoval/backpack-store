@@ -3,6 +3,8 @@
 namespace Backpack\Store;
 
 use Backpack\Store\app\Providers\EventServiceProvider;
+use Backpack\Store\app\Providers\SettingsServiceProvider;
+
 use Backpack\Store\app\Console\Commands\XmlSource;
 use Backpack\Store\app\Console\Commands\AttributesTransform;
 use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
@@ -31,6 +33,8 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     // Routes
     $this->loadRoutesFrom(__DIR__.'/routes/backpack/routes.php');
+    $this->loadRoutesFrom(__DIR__.'/routes/backpack/settings.php');
+
     $this->loadRoutesFrom(__DIR__.'/routes/api/product.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/category.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/order.php');
@@ -111,6 +115,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
   public function register()
   {
     $this->app->register(EventServiceProvider::class);
+    $this->app->register(SettingsServiceProvider::class);
 
     $this->mergeConfigFrom(__DIR__ . '/config/store.php', 'backpack.store');
     $this->mergeConfigFrom(__DIR__ . '/config/multistore.php', 'backpack.multistore');

@@ -177,31 +177,65 @@ class OrderCrudController extends CrudController
       ]);
       
       $this->crud->addColumn([
-        'name' => 'status',
-        'label' => '✅',
-        'type' => 'select_from_array',
-        'options' => $this->status['order']
+        'name' => 'orderStatusHtml',
+        'label' => 'Статус',
+        'escaped' => false,
+        'limit' => 5500,
       ]);
       
       $this->crud->addColumn([
-        'name' => 'pay_status',
-        'label' => '💳',
-        'type' => 'select_from_array',
-        'options' => $this->status['pay']
+        'name' => 'payInfoHtml',
+        'label' => 'Доставка',
+        'escaped' => false,
+        'limit' => 5500,
       ]);
       
       $this->crud->addColumn([
-        'name' => 'delivery_status',
-        'label' => '🛵',
-        'type' => 'select_from_array',
-        'options' => $this->status['delivery']
+        'name' => 'deliveryInfoHtml',
+        'label' => 'Оплата',
+        'escaped' => false,
+        'limit' => 5500,
       ]);
-      
+
       $this->crud->addColumn([
-        'name' => 'price',
+        'name' => 'userInfoHtml',
+        'label' => 'Клиент',
+        'escaped' => false,
+        'limit' => 5500,
+      ]);
+
+      $this->crud->addColumn([
+        'name' => 'priceHtml',
         'label' => '💵',
-        'prefix' => config('backpack.store.currency.symbol')
+        'escaped' => false,
+        'limit' => 5500,
       ]);
+
+      // $this->crud->addColumn([
+      //   'name' => 'status',
+      //   'label' => '✅',
+      //   'type' => 'select_from_array',
+      //   'options' => $this->status['order']
+      // ]);
+
+      // $this->crud->addColumn([
+      //   'name' => 'pay_status',
+      //   'label' => '💳',
+      //   'type' => 'select_from_array',
+      //   'options' => $this->status['pay']
+      // ]);
+      
+      // $this->crud->addColumn([
+      //   'name' => 'delivery_status',
+      //   'label' => '🛵',
+      //   'type' => 'select_from_array',
+      //   'options' => $this->status['delivery']
+      // ]);
+      
+      // $this->crud->addColumn([
+      //   'name' => 'price',
+      //   'label' => '💵',
+      // ]);
 
       // TRAIT
       $this->listOperation();
