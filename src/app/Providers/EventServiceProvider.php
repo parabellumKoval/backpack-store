@@ -16,6 +16,9 @@ use Backpack\Store\app\Listeners\AttributeSavedListener;
 use Backpack\Store\app\Events\ProductSaved;
 use Backpack\Store\app\Listeners\ProductSavedListener;
 
+use Backpack\Store\app\Events\ProductSaving;
+use Backpack\Store\app\Listeners\ProductSavingListener;
+
 use Backpack\Store\app\Events\ProductCreating;
 use Backpack\Store\app\Listeners\ProductCreatingListener;
 
@@ -30,6 +33,9 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
       ProductCreating::class => [
         ProductCreatingListener::class,
+      ],
+      ProductSaving::class => [
+        ProductSavingListener::class,
       ],
       ProductSaved::class => [
         ProductSavedListener::class,

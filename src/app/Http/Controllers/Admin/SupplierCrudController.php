@@ -16,8 +16,8 @@ use Backpack\LangFileManager\app\Models\Language;
 class SupplierCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation { store as traitStore; }
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation { update as traitUpdate; }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     // use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
@@ -25,15 +25,18 @@ class SupplierCrudController extends CrudController
     use \App\Http\Controllers\Admin\Traits\SupplierCrud;
     
     private $brand_class = null;
+    private $ui;
 
     public function setup()
     {
       $this->brand_class = config('backpack.store.supplier.class', 'Backpack\Store\app\Models\Supplier');
 
-        $this->crud->setModel($this->brand_class);
-        $this->crud->setRoute(config('backpack.base.route_prefix') . '/supplier');
-        $this->crud->setEntityNameStrings('поставщик', 'поставщики');
+      $this->crud->setModel($this->brand_class);
+      $this->crud->setRoute(config('backpack.base.route_prefix') . '/supplier');
+      $this->crud->setEntityNameStrings('поставщик', 'поставщики');
         
+
+      $this->ui = app(\Backpack\Store\app\Contracts\Admin\SupplierFormStrategy::class);
     }
 
     protected function setupListOperation()
@@ -70,6 +73,8 @@ class SupplierCrudController extends CrudController
       // ]);
 
       $this->listOperation();
+
+      $this->ui->setupList($this->crud);
     }
 
     protected function setupCreateOperation()
@@ -96,9 +101,9 @@ class SupplierCrudController extends CrudController
         ]);
 
         // MULTISTORE
-        if(config('backpack.multistore.enable', true)){
-            $this->setMultistoreFields();
-        }
+        // if(\Store::isMulti()){
+        //     $this->setMultistoreFields();
+        // }
 
         // COLOR
         $this->crud->addField([
@@ -133,6 +138,7 @@ class SupplierCrudController extends CrudController
 
 
       $this->createOperation();
+      $this->ui->setupCreateUpdate($this->crud);
     }
 
     protected function setupUpdateOperation()
@@ -141,23 +147,78 @@ class SupplierCrudController extends CrudController
     }
 
 
+    // private function setMultistoreFields() {
+    //   $this->setRegionsFields();
+    //   $this->setCurrencyFields();
+    // }
     
-    private function setMultistoreFields() {
+    // private function setCurrencyFields() {
 
-        $regions = config('backpack.multistore.options', []);
-        $regions_filtered = array_filter($regions, function($item) {
-            return !isset($item['enabled']) || $item['enabled'] !== false? true: false;
-        });
+    //     $currencies = \Store::currencies();
+    //     $data= array_column($currencies, 'name', 'code');
 
-        $localeToCountry = array_column($regions_filtered, 'country', 'locale');
+    //     $this->crud->addField([
+    //         'name'        => 'currency_code',
+    //         'label'       => __('backpack-store::admin.supplier_currency_title'),
+    //         'type'        => 'select2_from_array',
+    //         'options'     => $data,
+    //         'allows_null' => false,
+    //         'allows_multiple' => false,
+    //     ]);
+    // }
 
-        $this->crud->addField([
-            'name'        => 'regions',
-            'label'       => "Регионы",
-            'type'        => 'select2_from_array',
-            'options'     => $localeToCountry,
-            'allows_null' => false,
-            'allows_multiple' => true,
-        ]);
+    // private function setRegionsFields() {
+
+    //     $countries = \Store::countries();
+    //     $localeToCountry = array_column($countries, 'country', 'locale');
+
+    //     $this->crud->addField([
+    //         'name'        => 'countries',
+    //         'label'       => __('backpack-store::admin.countries'),
+    //         'type'        => 'select2_from_array',
+    //         'hint'        => __('backpack-store::admin.supplier_countries'),
+    //         'options'     => $localeToCountry,
+    //         'allows_null' => false,
+    //         'allows_multiple' => true,
+    //     ]);
+    // }
+
+    /**
+     * Сохранение связей страна-склад
+     */
+    protected function saveCountries($supplier, $countries)
+    {
+        // Удалить старые связи
+        \DB::table('ak_supplier_country')->where('supplier_id', $supplier->id)->delete();
+
+        // Добавить новые
+        $insert = [];
+        foreach ((array) $countries as $code) {
+            $insert[] = [
+                'supplier_id'  => $supplier->id,
+                'country_code' => $code,
+            ];
+        }
+        if ($insert) {
+            \DB::table('ak_supplier_country')->insert($insert);
+        }
+    }
+
+
+
+    public function store()
+    {
+        $response = $this->traitStore();
+
+        $this->saveCountries($this->crud->entry, request()->input('countries', []));
+        return $response;
+    }
+
+    public function update()
+    {
+        $response = $this->traitUpdate();
+
+        $this->saveCountries($this->crud->entry, request()->input('countries', []));
+        return $response;
     }
 }

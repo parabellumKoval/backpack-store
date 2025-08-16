@@ -2,32 +2,55 @@
 
 return [
   'enabled' => true,
-  'options' => [
+  
+  'default_country' => 'cz',
+  
+  'default_currency' => 'CZK',
+
+  'currencies' => [
     [
       'enabled' => true,
+      'name' => 'EUR (Euro)',
+      'code' => 'EUR',
+      'key' => 'eur'
+    ],[
+      'enabled' => true,
+      'name' => 'CZK (Czech crown)',
+      'code' => 'CZK',
+      'key' => 'czk'
+    ],[
+      'enabled' => true,
+      'name'  => 'UAH (Ukrainian hryvnia)',
+      'code' => 'UAH',
+      'key' => 'uah'
+    ]
+  ],
+
+  'countries' => [
+    'uk' => [
+      'enabled' => true,
       'country' => 'Ukraine',
-      'currency' => 'UAH',
       'locale' => 'uk',
       'delivery' => [],
       'payment' => []
-    ],[
+    ],
+    'es' => [
       'enabled' => true,
       'country' => 'Spain',
-      'currency' => 'EUR',
       'locale' => 'es',
       'delivery' => [],
       'payment' => []
-    ],[
+    ],
+    'de' => [
       'enabled' => true,
       'country' => 'Germany',
-      'currency' => 'EUR',
       'locale' => 'de',
       'delivery' => [],
       'payment' => []
-    ],[
+    ],
+    'cz' => [
       'enabled' => true,
       'country' => 'Czech',
-      'currency' => 'CZK',
       'locale' => 'cz',
       'delivery' => [],
       'payment' => []

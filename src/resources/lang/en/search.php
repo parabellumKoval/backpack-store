@@ -8,20 +8,20 @@ return [
         'manual' => 'Manual selection',
     ],
 
-    'save' => '💾 Save',
+    'save' => 'Save',
 
     'popular_products' => [
         'title' => '🔥 Popular products',
         'source' => 'Source',
         'in_stock' => 'Filter by stock',
         'show_discount' => 'Show discounted price',
-        'order' => 'Order',
+        'order' => 'Select products',
     ],
 
     'popular_categories' => [
         'title' => '🧭 Popular categories',
         'source' => 'Source',
-        'order' => 'Order',
+        'order' => 'Select categories',
     ],
 
     'search_history' => [

@@ -1,6 +1,6 @@
 <?php
 
-namespace Backpack\Store\app\Services;
+namespace Backpack\Store\app\Services\Currency;
 
 use Backpack\Store\app\Contracts\ExchangeRateProvider;
 

@@ -11,4 +11,8 @@ class Settings extends Model
 
     protected $fillable = ['key', 'value'];
     protected $casts = ['value' => 'json'];
+
+    protected $primaryKey = 'key';
+    public $incrementing = false;
+    protected $keyType = 'string';
 }

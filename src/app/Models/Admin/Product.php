@@ -85,12 +85,107 @@ class Product extends BaseProduct
     */
 
 
+    
+    /**
+     * scopeFillQuality20
+     *
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopeFillQualityLow($query) {
+      $langs_list = $this->langs_list;
+      return $query
+              // Has not images
+              // ->where(function($query) {
+              //   $query->whereRaw('JSON_LENGTH(images) = ?', 0)
+              //         ->orWhere('images', null);
+              // })
+              // Has not any content translation
+              ->where(function($query) use($langs_list) {
+                foreach($langs_list as $lang_key) {
+                  $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) < ? ', 150);
+                }
+
+                $query->orWhere('content', null);
+              });
+              // Has not categories
+              // ->has('categories', '=', 0)
+              // Has not brand
+              // ->has('brand', '=', 0)
+              // Has no attributes
+              // ->has('ap', '=', 0);
+    }
+    
+    /**
+     * scopeFillQuality40
+     *
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopeFillQualityNormal($query) {
+      $langs_list = $this->langs_list;
+      return $query
+            // Has one at least one image
+            // ->whereRaw('JSON_LENGTH(images) >= ?', 1)
+            // has at least one translation 
+            ->where(function($query) use($langs_list) {
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index? 'orWhereRaw': 'whereRaw';
+                $query->{$function_name}('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
+              }
+            });
+            // has category
+            // ->has('categories', '>=', 1)
+            // has brand
+            // ->has('brand', '>=', 1)
+            // has few attributes
+            // ->has('ap', '<=', 3);
+    }
+    
+    /**
+     * scopeFillQuality100
+     *
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopefillQualityHight($query) {
+      $langs_list = $this->langs_list;
+      return $query
+              // ->whereRaw('JSON_LENGTH(images) >= ?', 1)
+              // has category
+              // ->has('categories', '>=', 1)
+              // has brand
+              // ->has('brand', '>=', 1)
+              // Name with all translations
+              // ->where(function($query) use($langs_list) {
+              //   foreach($langs_list as $lang_key) {
+              //     $query->whereRaw('LENGTH(JSON_EXTRACT(name, "$.' . $lang_key . '")) >= ? ', 2);
+              //   }
+              // })
+              // Content with all translations
+              ->where(function($query) use($langs_list) {
+                foreach($langs_list as $lang_key) {
+                  $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
+                }
+              });
+              // has attributes
+              // ->has('ap', '>=', 1);
+    }
     /*
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
-        
+    
+    public function getFillAdminAttribute() {
+      $data = $this->extras['fill_quality'] ?? [];
+      return view('store-crud::columns.product_quality', $data);
+    }
+
+    public function getFillQualityAttribute() {
+      return app(\Backpack\Store\app\Services\ProductQualityService::class)->calculate($this);
+    }
+
     /**
      * getAdminTranslationsAttribute
      *
@@ -205,13 +300,14 @@ class Product extends BaseProduct
           'code' => $supplier->pivot->code,
           'barcode' => $supplier->pivot->barcode,
           'in_stock' => $supplier->pivot->in_stock,
+          'is_active' => $supplier->pivot->is_active,
           'price' => $supplier->pivot->price,
           'old_price' => $supplier->pivot->old_price,
+          'currency' => $supplier->currency,
+          'countries' => $supplier->countries,
           'updated_at' => $supplier->pivot->updated_at->format('Y-m-d @ H:i:s'),
         ];
       }
-
-      // dd($data_array);
 
       return $data_array;
     }
@@ -225,12 +321,95 @@ class Product extends BaseProduct
       return $this->currentSp->toArray();
     }
 
+
+    
+    public function getPriceOverridesAttribute()
+    {
+        return $this->countryOverrides()
+            ->get()
+            ->map(function ($override) {
+                return [
+                    'country'    => $override->country_code,
+                    'currency'   => $override->currency_code,
+                    'price'      => $override->price_override,
+                    'old_price'  => $override->old_price_override,
+                ];
+            })
+            ->toArray();
+    }
+    
+
+
+    public function getCategoryLinksAdminAttribute() {
+      if(!$this->categories || !$this->categories->count())
+        return '-';
+        
+      $cat_links = $this->categories->map(function($item) {
+        return "<a href='/admin/product?category={$item->id}'>{$item->name}</a>";
+      });
+
+      return implode(', ', $cat_links->toArray());
+    }
+
+
+    public function getBrandLinkAdminAttribute() {
+      if(!$this->brand)
+        return '-';
+        
+        return "<a href='/admin/product?brand={$this->brand->id}'>{$this->brand->name}</a>";
+    }
+
+    public function getAdminNameAttribute() {
+        return view('store-crud::columns.product_name', [
+            // product
+            'name' => $this->name,
+            'brand' => $this->brand,
+            'category' => $this->category,
+            'brandLinkAdmin' => $this->brandLinkAdmin,
+            'categoryLinksAdmin' => $this->categoryLinksAdmin,
+            'modifications' => \Store::isModVertical()? $this->children->map(function($item) {
+              return [
+                'id' => $item->id,
+                'name' => $item->short_name
+              ];
+            }): null
+        ])->render();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
     |--------------------------------------------------------------------------
     */
     
+
+    public function setPriceOverridesAttribute($value)
+    {
+        // Нормализуем вход
+        $value = is_array($value) ? $value : [];
+
+        // Очищаем пустые строки (без country)
+        $value = array_filter($value, function ($row) {
+            return !empty($row['country']);
+        });
+
+        // Преобразуем в формат для вставки
+        $data = collect($value)->map(function ($row) {
+            return [
+                'country_code'        => $row['country'],
+                'currency_code'       => $row['currency'] ?? null,
+                'price_override'      => $row['price'] ?? null,
+                'old_price_override'  => $row['old_price'] ?? null,
+            ];
+        });
+
+        // Синхронизируем через отношение
+        $this->countryOverrides()->delete(); // проще всего очистить и вставить
+        if ($data->isNotEmpty()) {
+            $this->countryOverrides()->createMany($data);
+        }
+    }
+
     /**
      * setPropsAttribute
      *
@@ -260,7 +439,6 @@ class Product extends BaseProduct
         // $this->ap()->
       }
     }
-
     
     /**
      * setModificationsAttribute
@@ -279,7 +457,8 @@ class Product extends BaseProduct
      * @return void
      */
     public function setSuppliersDataAttribute($value) {
-      $this->suppliers_data = json_decode($value, true);
+      // $this->suppliers_data = json_decode($value, true);
+      $this->suppliers_data = $value;
     }
     
     /**
@@ -299,9 +478,7 @@ class Product extends BaseProduct
 
 
 class FakeRelation {
-  public function sync($value){
-    dd($value);
-  }
+  public function sync($value){}
 
   public function getRelated() {
     return new AttributeValue;

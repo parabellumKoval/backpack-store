@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Http\Controllers\Admin;
 
 use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\ProductRequest;
+use Backpack\Store\app\Http\Requests\ProductModificationRequest;
 
 use Backpack\Store\app\Http\Controllers\Admin\Base\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
@@ -18,6 +19,7 @@ use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\SupplierProduct;
 
 //EVENTS
+use Backpack\Store\app\Events\ProductSaving;
 use Backpack\Store\app\Events\ProductSaved;
 use Backpack\Store\app\Events\ProductCreating;
 
@@ -67,6 +69,10 @@ class ProductCrudController extends CrudController
         ProductSaved::dispatch($entry);
       });
 
+
+      $this->product_class::saving(function($entry) {
+        ProductSaving::dispatch($entry);
+      });
 
       // Set event listiner to Model
       $this->product_class::creating(function($entry) {
@@ -164,13 +170,59 @@ class ProductCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
-        $this->crud->setValidation(ProductRequest::class);
+
+      $op = $this->crud->getCurrentOperation();
+
+      if($op !== 'create') {
+        return;
+      }
+
+        // $this->crud->setValidation(ProductRequest::class);
 
         // System Trait
-        $this->setupFields();
+        // $this->setupFields();
         
         // User Trait
+        // $this->createOperation();
+
+      // 1) Кладём кастомный шаблон (он один и для create, и для edit)
+      $this->crud->setCreateView('store-crud::create_product');
+
+      // 2) Если передан parent_id — это создание модификации. По умолчанию показываем ЛАЙТ-набор полей.
+      $isVariantCreate = request()->filled('parent_id');
+      $full = request()->boolean('full'); // ?full=1 для «все поля»
+
+      if($isVariantCreate) {
+        $this->crud->setValidation(ProductModificationRequest::class);
+      }
+
+      if ($isVariantCreate && !$full) {
+        $this->addLiteFields();
+      } else {
+        // System Trait
+        $this->setupFields();
+
+        // User Trait
         $this->createOperation();
+      }
+
+      // 3) Значение поля parent_id
+      // if ($isVariantCreate) {
+      //     $this->crud->addField([
+      //         'name'  => 'parent_id',
+      //         'type'  => 'hidden',
+      //         'value' => (int) request('parent_id'),
+      //     ]);
+      // }
+      if($parentId = request()->input('parent_id')) {
+        $parent = $this->product_class::findOrFail($parentId);
+
+        $this->crud->setOperationSetting('parent', [
+            'parent'   => $parent,
+            'isBaseProduct'  => $parent? false: true,
+        ]);
+      }
+
     }
     
     /**
@@ -180,10 +232,56 @@ class ProductCrudController extends CrudController
      */
     protected function setupUpdateOperation()
     {
-      $this->setupCreateOperation();
+      // $this->setupCreateOperation();
+
+      $this->crud->setEditView('store-crud::edit_product');
+
+      $entry = $this->crud->getCurrentEntry();
+      $isVariant = (bool) $entry->parent_id;
+      $full = request()->boolean('full'); // ?full=1 для «все поля»
+
+      if($isVariant) {
+        $this->crud->setValidation(ProductModificationRequest::class);
+      }else{
+        $this->crud->setValidation(ProductRequest::class);
+      }
+
+      if ($isVariant && !$full) {
+          $this->addLiteFields();
+      } else {
+        // System Trait
+        $this->setupFields();
+
+        // User Trait
+        $this->createOperation();
+      }
+
+      // ---- ДАННЫЕ ДЛЯ ТАБОВ МОДИФИКАЦИЙ (и для create, и для edit) ----
+      // в update — показываем siblings (все дети одного parent) либо своих детей
+      $parent = $entry->parent ?: $entry;
+      $siblings = $parent->children()
+          ->select('id','short_name','price')
+          ->orderBy('id')
+          ->get()
+          ->map(function($p){
+              // $title = trim(($p->short_name ?: '—').' - '.(isset($p->simplePrice) ? $p->simplePrice : '—'), ' -');
+              $title = $p->short_name;
+              return [
+                  'id'    => $p->id,
+                  'title' => $title ?: ('#'.$p->id),
+                  'parentId' => $p->parent_id
+              ];
+          })->values()->all();
+
+      // отдадим в шаблон через operation settings
+      $this->crud->setOperationSetting('variantTabs', [
+          'currentId'  => $entry->id,
+          'parentId'   => $parent->id,
+          'items'      => $siblings,
+          'isBaseProduct'     => $isVariant? false: true,
+      ]);
     }
-    
-    
+
     /**
      * Method showDetailsRow
      *

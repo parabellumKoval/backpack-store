@@ -2,6 +2,8 @@
 
 namespace Backpack\Store;
 
+use Illuminate\Foundation\AliasLoader;
+
 use Backpack\Store\app\Providers\EventServiceProvider;
 use Backpack\Store\app\Providers\SettingsServiceProvider;
 
@@ -11,6 +13,9 @@ use Backpack\Store\app\Console\Commands\XmlCorrectInStock;
 use Backpack\Store\app\Console\Commands\ImportGoogleTaxonomy;
 use Backpack\Store\app\Console\Commands\CatalogCache;
 use Backpack\Store\app\Console\Commands\ProductPreprocessing;
+
+use Backpack\Store\app\Contracts\ProductService;
+use Backpack\Store\app\Contracts\Admin\SupplierFormStrategy;
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\File;
@@ -45,9 +50,11 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     
 
     $this->publishes([
+      __DIR__ . '/config/modifications.php' => config_path('/backpack-store/modifications.php'),
+      __DIR__ . '/config/multistore.php' => config_path('/backpack-store/multistore.php'),
+      __DIR__ . '/config/product_quality.php' => config_path('/backpack-store/product_quality.php'),
+
       __DIR__ . '/config/store.php' => config_path('/backpack/store.php'),
-      __DIR__ . '/config/multistore.php' => config_path('/backpack/multistore.php'),
-      __DIR__ . '/config/product_quality.php' => config_path('/backpack/product_quality.php'),
     ], 'config');
     
     $this->publishes([
@@ -110,30 +117,59 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         ProductPreprocessing::class
       ]);
     }
+
+    $this->addStyles();
+    $this->registerFacadeAlias();
+
+    // Resolve dependencies for multistore (regions and currency) and single mode 
+    $this->resolveMode();
   }
+
+  private function resolveMode() {
+    $isMultistore = \Store::isMulti();
+    $isVertical = \Store::isModVertical();
+
+    $this->app->scoped(\Backpack\Store\app\Services\StoreContext::class, function ($app) {
+        return $app->make(\Backpack\Store\app\Services\Resolvers\StoreContextResolver::class)->resolve();
+    });
+
+    // Резолвер можно сделать singleton — он статичен
+    $this->app->singleton(\Backpack\Store\app\Services\Resolvers\StoreContextResolver::class);
+
+    $namespace = $isVertical? '\Backpack\Store\app\Services\Variant\Vertical': '\Backpack\Store\app\Services\Variant\Horizontal';
+    $this->app->bind(\Backpack\Store\app\Contracts\VariantAvailability::class, "{$namespace}\VariantAvailability");
+
+    $namespace = $isMultistore? '\Backpack\Store\app\Services\Region\Multi': '\Backpack\Store\app\Services\Region\Single';
+    $this->app->bind(\Backpack\Store\app\Contracts\SupplierFilter::class, "{$namespace}\SupplierFilter");
+    $this->app->bind(SupplierFormStrategy::class, "{$namespace}\Admin\SupplierFormStrategy");
+    $this->app->bind(ProductService::class, "{$namespace}\ProductService");
+
+
+  }
+
+  private function addStyles() {
+    $styles = config('backpack.base.styles', []);
+    $path = 'packages/backpack/store/css/name.css';
+
+    if (!in_array($path, $styles, true)) {
+        config()->set('backpack.base.styles', array_merge($styles, [$path]));
+    }
+  } 
 
   public function register()
   {
     $this->app->register(EventServiceProvider::class);
     $this->app->register(SettingsServiceProvider::class);
 
+    $this->mergeConfigFrom(__DIR__ . '/config/modifications.php', 'bs.modifications');
     $this->mergeConfigFrom(__DIR__ . '/config/store.php', 'backpack.store');
     $this->mergeConfigFrom(__DIR__ . '/config/multistore.php', 'backpack.multistore');
     $this->mergeConfigFrom(__DIR__ . '/config/product_quality.php', 'backpack.pq');
   }
 
-    // public function configurePackage(Package $package): void
-    // {
-    //     /*
-    //      * This class is a Package Service Provider
-    //      *
-    //      * More info: https://github.com/spatie/laravel-package-tools
-    //      */
-    //     $package
-    //         ->name('products-for-backpack')
-    //         ->hasConfigFile()
-    //         ->hasViews()
-    //         ->hasMigration('create_products-for-backpack_table')
-    //         ->hasCommand(ProductCommand::class);
-    // }
+  protected function registerFacadeAlias()
+  {
+      // Делаем alias глобально
+      AliasLoader::getInstance()->alias('Store', \Backpack\Store\Facades\Store::class);
+  }
 }

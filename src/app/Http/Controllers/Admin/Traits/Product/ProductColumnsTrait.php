@@ -69,18 +69,34 @@ trait ProductColumnsTrait
             'orderable'   => true,
         ]);
 
+        // $this->crud->addColumn([
+        //     'name' => 'name',
+        //     'label' => trans('backpack-store::product-column.name'),
+        //     'type' => 'textarea',
+        //     'limit' => 100,
+        //     'priority' => 1,
+        //     'searchLogic' => function ($query, $column, $searchTerm) {
+        //         $query->orWhere(function($query) use ($searchTerm){
+        //             foreach($this->langs_list as $index => $lang_key) {
+        //                 $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+        //                 $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+        //             }
+        //         });
+        //     },
+        // ]);
+
         $this->crud->addColumn([
-            'name' => 'name',
-            'label' => trans('backpack-store::product-column.name'),
+            'name' => 'adminName',
+            'label' => 'Название',
             'type' => 'textarea',
             'limit' => 100,
             'priority' => 1,
             'searchLogic' => function ($query, $column, $searchTerm) {
                 $query->orWhere(function($query) use ($searchTerm){
-                    foreach($this->langs_list as $index => $lang_key) {
-                        $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
-                        $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
-                    }
+                foreach($this->langs_list as $index => $lang_key) {
+                    $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                    $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($searchTerm)).'%']);
+                }
                 });
             },
         ]);

@@ -70,7 +70,8 @@ class Category extends Model
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'children' => $this->children
+        'children' => $this->children,
+        'uniq_title' => $this->uniqTitle
       ];    
     }
     
@@ -206,6 +207,19 @@ class Category extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */ 
+
+    
+    public function getUniqTitleAttribute() {
+      $categories_array = $this->getParentNode($this);
+
+      // Собираем имена категорий в массив
+      $names = $categories_array->reverse()->pluck('name')->toArray();
+
+      // Формируем строку цепочки
+      $node = implode(' -> ', $names);
+
+      return "id: {$this->id} ➡ {$node}";
+    }
 
     public function getAdminColumnSeo() {
       $html = "";

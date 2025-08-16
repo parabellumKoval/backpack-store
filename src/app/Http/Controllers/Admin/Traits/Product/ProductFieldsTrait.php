@@ -3,19 +3,105 @@
 namespace Backpack\Store\app\Http\Controllers\Admin\Traits\Product;
 
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Supplier;
 
 trait ProductFieldsTrait
 {
-    protected function setupFields()
-    {
-        // IS ACTIVE
-        $this->crud->addField([
+
+    protected function getBackToBaseLink($parentId, $full = false) {
+        $mb = $full? 'mb-0': '';
+
+        if($parentId) {
+            $parent = $this->product_class::findOrFail($parentId);
+
+            $editUrl = fn($id) => url($this->crud->route.'/'.$id.'/edit');    
+
+            $op = $this->crud->getCurrentOperation(); // 'create'|'update'
+            $title = $op === 'create'? "Создание модификации": "Редактирование модификации";
+
+            $this->crud->addField([
+                'name' => 'parent_title',
+                'type' => 'custom_html',
+                'wrapper' => ['class' => "form-group col-md-12 {$mb}"],
+                'value' => "
+                    <div class='mb-3'>
+                        <a href='{$editUrl($parentId)}'><i class='la la-arrow-left'></i> {$parent->name}</a>
+                    </div>
+                    <h4>{$title}</h4>
+                "
+            ]);
+
+        }
+    }
+
+    protected function setIsActiveField($tab = null) {
+        $field = [
             'name' => 'is_active',
             'label' => trans('backpack-store::product-field.fields.is_active'),
             'type' => 'boolean',
             'default' => '1',
-            'tab' => trans('backpack-store::product-field.tabs.main')
-        ]);
+            'tab' => $tab
+        ];
+
+        $this->crud->addField($field);
+    }
+
+    protected function setNameField($tab = null) {
+        $field = [
+            'name' => 'name',
+            'label' => trans('backpack-store::product-field.fields.name'),
+            'type' => 'text',
+            'tab' => $tab
+        ];
+
+        $this->crud->addField($field);
+    }
+
+    protected function setSuppliersFields($tab = null){
+        $field = [
+            'name'  => 'suppliersData',
+            'label' => trans('backpack-store::product-field.tabs.warehouse'),
+            'type'  => 'product_suppliers',
+            'suppliers'  => Supplier::where('is_active', 1)->get()->toArray(),
+            'currencies' => \Store::currencies(),
+            'hint' => 'Товар доступен в стране, только если его склад настроен и активен для торговли в этой стране.',
+            'tab' => $tab
+        ];
+
+        $this->crud->addField($field);
+
+
+        $field = [
+            'name' => 'priceOverrides',
+            'label' => 'Витрина',
+            'type' => 'price_overrides',
+            'currencies' => \Store::currencies(), // [['code'=>'EUR','name'=>'Euro'], ...]
+            'countries' => \Store::countries(),  // [['code'=>'UA','name'=>'Ukraine'], ...]
+            'hint' => 'Позволяет задать отдельную цену для страны: 1) отличную от базовой, 2) фиксированную, без автоматической конвертации по курсу.',
+            'tab' => $tab
+        ];
+
+        $this->crud->addField($field);
+    }
+
+    protected function setupFields()
+    {
+
+        $parentId = $this->entry->parent_id ?? request()->input('parent_id') ?? null;
+        
+        $this->getBackToBaseLink($parentId, true);
+
+        if($parentId) {
+            $disable_if_modification = [
+                'readonly'  => 'readonly',
+                'disabled'  => 'disabled'
+            ];
+        }else {
+            $disable_if_modification = [];
+        }
+
+        // IS ACTIVE
+        $this->setIsActiveField(trans('backpack-store::product-field.tabs.main'));
   
         // CODE
         if(config('backpack.store.product.code.enable', true)) {
@@ -44,13 +130,7 @@ trait ProductFieldsTrait
         }
 
         // NAME
-        $this->crud->addField([
-            'name' => 'name',
-            'label' => trans('backpack-store::product-field.fields.name'),
-            'type' => 'text',
-            'tab' => trans('backpack-store::product-field.tabs.main')
-        ]);
-
+        $this->setNameField(trans('backpack-store::product-field.tabs.main'));
         
         // SLUG
         $this->crud->addField([
@@ -60,12 +140,23 @@ trait ProductFieldsTrait
             'tab' => trans('backpack-store::product-field.tabs.main')
         ]);
 
+        if(\Store::isModVertical() && $parentId) {
+            // Short name of modification
+            $this->crud->addField([
+                'name' => 'short_name',
+                'label' => trans('backpack-store::product-field.fields.modifications.short_name.label'),
+                'type' => 'text',
+                'hint' => trans('backpack-store::product-field.fields.modifications.short_name.hint'),
+                'tab' => trans('backpack-store::product-field.tabs.main')
+            ]);
+        }
 
         if(!config('backpack.store.supplier.enable', false)) {
             $this->crud->addField([
                 'name' => 'defaultSupplierVirtual',
                 'type' => 'hidden',
-                'value' => 'fakevalue'
+                'value' => 'fakevalue',
+                'tab' => trans('backpack-store::product-field.tabs.main')
             ]);
 
             // PRICE
@@ -130,7 +221,8 @@ trait ProductFieldsTrait
             'model' => 'Backpack\Store\app\Models\Category',
             'tab' => trans('backpack-store::product-field.tabs.main'),
             'hint' => trans('backpack-store::product-field.fields.categories.hint'),
-            'value' => $this->categories? $this->categories: null,
+            // 'value' => $this->categories? $this->categories: null,
+            'attributes' => $disable_if_modification
         ]);
 
 
@@ -144,6 +236,7 @@ trait ProductFieldsTrait
                 'attribute' => 'name',
                 'model' => 'Backpack\Store\app\Models\Brand',
                 'tab' => trans('backpack-store::product-field.tabs.main'),
+                'attributes' => $disable_if_modification
             ]);
         }
 
@@ -169,100 +262,22 @@ trait ProductFieldsTrait
 
         // SUPPLIERS
         if(config('backpack.store.supplier.enable')) {
-
-            // $regionsField = [];
-            // // MULTISTORE
-            // if(config('backpack.multistore.enable', true)){
-            //     $regionsField = [
-            //         'name'  => 'regionsString',
-            //         'type'  => 'text',
-            //         'label' => trans('backpack-store::product-field.fields.suppliers.regions'),
-            //         'attributes' => [
-            //             'readonly'  => 'readonly',
-            //             'disabled'  => 'disabled'
-            //         ]
-            //     ];
-            // }
-
-            $this->crud->addField([
-                'name'  => 'suppliersData',
-                'label' => trans('backpack-store::product-field.fields.suppliers.label'),
-                'type'  => 'repeatable',
-                'fields' => [
-                    [
-                        'name'    => 'supplier',
-                        'type'    => 'select_from_array',
-                        'label'   => trans('backpack-store::product-field.fields.suppliers.supplier'),
-                        'options'     => $this->suppliers_list,
-                        'allows_null' => false,
-                        'wrapper' => ['class' => 'form-group col-md-4'],
-                    ],
-                    [
-                        'name'    => 'code',
-                        'type'    => 'text',
-                        'label'   => trans('backpack-store::product-field.fields.suppliers.code'),
-                        'wrapper' => ['class' => 'form-group col-md-4'],
-                    ],
-                    [
-                        'name'    => 'barcode',
-                        'type'    => 'text',
-                        'label'   => trans('backpack-store::product-field.fields.suppliers.barcode'),
-                        'wrapper' => ['class' => 'form-group col-md-4'],
-                    ],
-                    [
-                        'name'    => 'in_stock',
-                        'type'    => 'number',
-                        'label'   => trans('backpack-store::product-field.fields.suppliers.in_stock'),
-                        'wrapper' => ['class' => 'form-group col-md-4'],
-                    ],
-                    [
-                        'name'    => 'price',
-                        'type'    => 'number',
-                        'label'   => trans('backpack-store::product-field.fields.suppliers.price'),
-                        'prefix' => config('backpack.store.currency.symbol'),
-                        'attributes' => [
-                        'step' => 0.01,
-                        'min' => 0
-                        ],
-                        'wrapper' => ['class' => 'form-group col-md-4'],
-                    ],
-                    [
-                        'name'  => 'old_price',
-                        'type'  => 'number',
-                        'label' => trans('backpack-store::product-field.fields.suppliers.old_price'),
-                        'prefix' => config('backpack.store.currency.symbol'),
-                        'attributes' => [
-                        'step' => 0.01,
-                        'min' => 0
-                        ],
-                        'wrapper' => ['class' => 'form-group col-md-4'],
-                    ],
-                    [
-                        'name'  => 'updated_at',
-                        'type'  => 'text',
-                        'label' => trans('backpack-store::product-field.fields.suppliers.updated_at'),
-                        'attributes' => [
-                        'readonly'  => 'readonly',
-                        'disabled'  => 'disabled'
-                        ]
-                    ],
-                    // ...$regionsField
-                ],
-            
-                // optional
-                'new_item_label'  => trans('backpack-store::product-field.fields.suppliers.add'),
-                'init_rows' => 1,
-                'min_rows' => 2,
-                'tab' => trans('backpack-store::product-field.tabs.warehouse'),
-            ]);
-
-
+            $this->setSuppliersFields(trans('backpack-store::product-field.tabs.warehouse'));
         }
 
 
         // MODIFICATIONS
-        if(config('backpack.store.product.modifications.enable', true)) {
-            $this->setModificationsFields();
+        if(\Store::isModHorizontall()) {
+            $tab = trans('backpack-store::product-field.tabs.management');
+
+            $this->crud->addField([
+                'name' => 'delim_mod',
+                'type' => 'custom_html',
+                'value' => '<h4>' . trans('backpack-store::product-field.fields.modifications.related_products') . '</h4>',
+                'tab' => $tab
+            ]);
+
+            $this->setModificationsFields($tab);
         }
 
 
@@ -357,20 +372,24 @@ trait ProductFieldsTrait
      *
      * @return void
      */
-    private function setModificationsFields() {
-        $this->crud->addField([
-            'name' => 'delim_mod',
-            'type' => 'custom_html',
-            'value' => '<h3>' . trans('backpack-store::product-field.fields.modifications.related_products') . '</h3>',
-            'tab' => trans('backpack-store::product-field.tabs.management')
-        ]);
-
+    private function setModificationsFields($tab = null) {
         $this->crud->addField([
             'name' => 'parent_id',
             'type' => 'hidden',
-            'value' => \Request::query('parent_id') ?? null
+            'value' => \Request::query('parent_id') ?? null,
+            'tab' => $tab
         ]);
     
+
+        // Short name of modification
+        $this->crud->addField([
+            'name' => 'short_name',
+            'label' => trans('backpack-store::product-field.fields.modifications.short_name.label'),
+            'type' => 'text',
+            'hint' => trans('backpack-store::product-field.fields.modifications.short_name.hint'),
+            'tab' => $tab
+        ]);
+
         $this->crud->addField([
             'name' => 'modifications',
             'label' => trans('backpack-store::product-field.fields.modifications.related_products'),
@@ -388,16 +407,7 @@ trait ProductFieldsTrait
             'force_select' => true,
             ],
             'hint' => trans('backpack-store::product-field.fields.modifications.hint'),
-            'tab' => trans('backpack-store::product-field.tabs.management')
-        ]);
-
-        // Short name of modification
-        $this->crud->addField([
-            'name' => 'short_name',
-            'label' => trans('backpack-store::product-field.fields.modifications.short_name.label'),
-            'type' => 'text',
-            'hint' => trans('backpack-store::product-field.fields.modifications.short_name.hint'),
-            'tab' => trans('backpack-store::product-field.tabs.management')
+            'tab' => $tab
         ]);
     }
 
@@ -451,6 +461,7 @@ trait ProductFieldsTrait
             'name' => 'props',
             'type' => 'hidden_fake_array',
             'value' => null,
+            'tab' => trans('backpack-store::product-field.tabs.characteristics'),
           ]);
   
           $attr_fields = [];
@@ -617,5 +628,36 @@ trait ProductFieldsTrait
             'tab' => trans('backpack-store::product-field.tabs.characteristics')
           ]);
         }
+    }
+
+    
+    // Лёгкий набор для модификаций
+    protected function addLiteFields(): void
+    {
+
+        $entry = $this->crud->getCurrentEntry();
+        $parentId = $entry->parent_id ?? request()->input('parent_id') ?? null;
+
+
+        $this->crud->addField([
+            'name'  => 'parent_id',
+            'type'  => 'hidden',
+            'value' => $parentId,
+        ]);
+
+        $this->getBackToBaseLink($parentId);
+        $this->setIsActiveField();
+
+        $this->setNameField();
+        // Short name of modification
+        $this->crud->addField([
+            'name' => 'short_name',
+            'label' => trans('backpack-store::product-field.fields.modifications.short_name.label'),
+            'type' => 'text',
+            'hint' => trans('backpack-store::product-field.fields.modifications.short_name.hint'),
+        ]);
+
+        // $this->setModificationsFields();
+        $this->setSuppliersFields();
     }
 }

@@ -21,6 +21,8 @@ use Backpack\Store\database\factories\ProductFactory;
 
 // TRAITS
 use App\Models\Traits\ProductModel as ProductModelTrait;
+// use Backpack\Store\app\Models\Traits\EffectiveProductTrait;
+use Backpack\Store\app\Models\Traits\MultistoreProductTrait;
 
 // MODELS
 use Backpack\Store\app\Models\Attribute;
@@ -34,6 +36,13 @@ use Backpack\Store\app\Models\SupplierProduct;
 // RESOURCES
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
 
+//
+use Laravel\Scout\Searchable;
+
+// CONTRACTS
+use \Backpack\Store\app\Contracts\ProductService;
+use \Backpack\Store\app\Services\Resolvers\SupplierProductResolver;
+
 class Product extends Model
 {
     use HasFactory;
@@ -43,8 +52,10 @@ class Product extends Model
     use HasTranslations;
 
     use ProductModelTrait;
+    use MultistoreProductTrait;
     use \Backpack\Store\app\Traits\Resources;
 
+    // use Searchable;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -78,7 +89,8 @@ class Product extends Model
       'props',
       'defaultSupplier',
       'defaultSupplierVirtual',
-      'disabledRegions'
+      'disabledRegions',
+      'priceOverrides'
     ];
     // protected $hidden = [];
     // protected $dates = [];
@@ -105,12 +117,40 @@ class Product extends Model
     private $available_languages = [];
     private $langs_list = [];
 
+    private ?ProductService $productService = null;
+
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
-        
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->getTranslation('name', app()->getLocale()),
+            'brand' => optional($this->brand)->name,
+            'category' => optional($this->category)->name,
+        ];
+    }
+
+    public function searchableAs()
+    {
+        return 'products';
+    }
+    
+    /**
+     * Get product service instance
+     */
+    protected function productService(): ProductService
+    {
+        if (!$this->productService) {
+            $this->productService = app(ProductService::class);
+            $this->productService->setProduct($this);
+        }
+        return $this->productService;
+    }
+
     /**
      * __construct
      *
@@ -158,13 +198,14 @@ class Product extends Model
         'price' => $this->price,
         'old_price' => $this->old_price,
         'is_active' => $this->is_active,
-        'is_hit' => $this->is_hit,
+        'brand' => $this->brand,
         'rating' => $this->rating,
         'extras' => $this->extras,
         'images' => $this->images,
-        'code' => $this->code,
+        'code' => $this->simpleCode,
         'in_stock' => $this->in_stock,
-        'content' => nl2br($this->content),
+        // 'content' => nl2br($this->content),
+        'uniq_title' => $this->uniqTitle,
       ];
     }
     
@@ -210,6 +251,9 @@ class Product extends Model
     public function syncSuppliers($data)
     {
         $result = $this->suppliers()->sync($data);
+
+        // Диспатчим событие
+        // В самом пакете оно не использует / обработчиков стандартных нет
         SupplierProductSynced::dispatch($this, $data);
     }
 
@@ -279,8 +323,7 @@ class Product extends Model
     {
       return $this->belongsToMany(Supplier::class, 'ak_supplier_product')
             ->withTimestamps()
-            ->withPivot('in_stock', 'barcode', 'code', 'price', 'old_price', 'updated_at');
-            // ->withSum('in_stock');
+            ->withPivot('in_stock', 'is_active', 'barcode', 'code', 'price', 'old_price', 'updated_at');
     }
 
     /**
@@ -290,9 +333,10 @@ class Product extends Model
      */
     public function sp()
     {
-      return $this->hasMany(SupplierProduct::class);
+      return $this->productService()->supplierProducts();
     }
-    
+
+
     /**
      * brand
      *
@@ -365,92 +409,6 @@ class Product extends Model
     */
     
     /**
-     * scopeFillQuality20
-     *
-     * @param  mixed $query
-     * @return void
-     */
-    public function scopeFillQualityLow($query) {
-      $langs_list = $this->langs_list;
-      return $query
-              // Has not images
-              // ->where(function($query) {
-              //   $query->whereRaw('JSON_LENGTH(images) = ?', 0)
-              //         ->orWhere('images', null);
-              // })
-              // Has not any content translation
-              ->where(function($query) use($langs_list) {
-                foreach($langs_list as $lang_key) {
-                  $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) < ? ', 150);
-                }
-
-                $query->orWhere('content', null);
-              });
-              // Has not categories
-              // ->has('categories', '=', 0)
-              // Has not brand
-              // ->has('brand', '=', 0)
-              // Has no attributes
-              // ->has('ap', '=', 0);
-    }
-    
-    /**
-     * scopeFillQuality40
-     *
-     * @param  mixed $query
-     * @return void
-     */
-    public function scopeFillQualityNormal($query) {
-      $langs_list = $this->langs_list;
-      return $query
-            // Has one at least one image
-            // ->whereRaw('JSON_LENGTH(images) >= ?', 1)
-            // has at least one translation 
-            ->where(function($query) use($langs_list) {
-              foreach($langs_list as $index => $lang_key) {
-                $function_name = $index? 'orWhereRaw': 'whereRaw';
-                $query->{$function_name}('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
-              }
-            });
-            // has category
-            // ->has('categories', '>=', 1)
-            // has brand
-            // ->has('brand', '>=', 1)
-            // has few attributes
-            // ->has('ap', '<=', 3);
-    }
-    
-    /**
-     * scopeFillQuality100
-     *
-     * @param  mixed $query
-     * @return void
-     */
-    public function scopefillQualityHight($query) {
-      $langs_list = $this->langs_list;
-      return $query
-              // ->whereRaw('JSON_LENGTH(images) >= ?', 1)
-              // has category
-              // ->has('categories', '>=', 1)
-              // has brand
-              // ->has('brand', '>=', 1)
-              // Name with all translations
-              // ->where(function($query) use($langs_list) {
-              //   foreach($langs_list as $lang_key) {
-              //     $query->whereRaw('LENGTH(JSON_EXTRACT(name, "$.' . $lang_key . '")) >= ? ', 2);
-              //   }
-              // })
-              // Content with all translations
-              ->where(function($query) use($langs_list) {
-                foreach($langs_list as $lang_key) {
-                  $query->whereRaw('LENGTH(JSON_EXTRACT(content, "$.' . $lang_key . '")) >= ? ', 150);
-                }
-              });
-              // has attributes
-              // ->has('ap', '>=', 1);
-    }
-    
-    /**
      * scopeInStock
      *
      * Return only products that stock quantity is 1 or more
@@ -476,6 +434,21 @@ class Product extends Model
       return $query->where('is_active', 1);
     }
     
+
+    /**
+     * scopeAvailable
+     *
+     * Return only Available products
+     * 
+     * @param  mixed $query
+     * @return void
+     */
+    public function scopeAvailable($q, ?string $country = null)
+    {
+      return app(\Backpack\Store\app\Services\Product\AvailabilityFilter::class)
+        ->scopeAvailable($q, $country);
+    }
+
     /**
      * scopeBase
      *
@@ -496,151 +469,11 @@ class Product extends Model
     |--------------------------------------------------------------------------
     */
     
-     public function getFillAdminAttribute() {
-      $data = $this->extras['fill_quality'] ?? [];
-      return view('store-crud::columns.product_quality', $data);
+    public function getUniqTitleAttribute() {
+      $brand_name = $this->brand->name ?? '-';
+      return "id: {$this->id} | code: {$this->simpleCode} | brand: {$brand_name} ➡ {$this->name}";
     }
-
-    // public function getFillAdminAttribute() {
-    //   $html = '';
-
-    //   if($this->fillQuality['num'] <= 40) {
-    //     $color = 'red';
-    //   }else if($this->fillQuality['num'] > 40 && $this->fillQuality['num'] <= 70) {
-    //     $color = 'orange';
-    //   }else {
-    //     $color = 'green';
-    //   }
-
-    //   $html .= '<b style="color: ' . $color . '">' . $this->fillQuality['num'] . '</b>';
-    //   return $html;
-    // }
-
-    public function getFillQualityAttribute() {
-      return app(\Backpack\Store\app\Services\ProductQualityService::class)->calculate($this);
-    }
-    /**
-     * getFillQualityAttribute
-     *
-     * @return void
-     */
-    // public function getFillQualityAttribute() {
-    //   $score = 0;
-    //   $string = '';
-
-    //   $score_rates = [
-    //     'suppliers' => 5,
-    //     'one_image' => 10,
-    //     'multiple_images' => 15,
-    //     'category' => 10,
-    //     'brand' => 10,
-    //     'props_1' => 5,
-    //     'props_2' => 10,
-    //     'props_3' => 15,
-    //     // using below for multiple languages
-    //     'content' => 20,
-    //     'name' => 5,
-    //   ];
-
-    //   $total_available = $score_rates['suppliers'] + $score_rates['multiple_images'] + $score_rates['category']
-    //      + $score_rates['brand'] + $score_rates['props_3'];
-
-    //   // Has supplier
-    //   if($this->sp) {
-    //     $score += $score_rates['suppliers'];
-    //     $string .= ' + supplier';
-    //   }
-
-    //   foreach($this->langs_list as $lang) {
-    //     // each content translation + 15, each name translation + 5
-    //     $total_available += $score_rates['content'] + $score_rates['name'];
-
-    //     // Has content translations
-    //     $content = $this->getTranslation('content', $lang, false);
-    //     if(!empty($content) && strlen($content) > 150) {
-    //       $score += $score_rates['content'];
-    //       $string .= ' + content';
-    //     }
-
-    //     // Has name translations
-    //     $content = $this->getTranslation('name', $lang, false);
-    //     if(!empty($content) && strlen($content) > 2) {
-    //       $score += $score_rates['name'];
-    //       $string .= ' + name';
-    //     }
-    //   }
-
-    //   // Has images
-    //   if($this->images) {
-    //     if(count($this->images) === 1){
-    //       $score += $score_rates['one_image'];
-    //       $string .= ' + one_image';
-    //     }else if(count($this->images) > 1) {
-    //       $score += $score_rates['multiple_images'];
-    //       $string .= ' + multiple_images';
-    //     }
-    //   }
-
-    //   // Has categories
-    //   if($this->categories->count()) {
-    //     $score += $score_rates['category'];
-    //     $string .= ' + category';
-    //   }
-
-    //   // Has Brand
-    //   if($this->brand) {
-    //     $score += $score_rates['brand'];
-    //     $string .= ' + brand';
-    //   }
-
-    //   // Has properties
-    //   if($this->properties) {
-    //     if(count($this->properties) === 1) {
-    //       $score += $score_rates['props_1'];
-    //       $string .= ' + props_1';
-    //     }else if(count($this->properties) > 1 && count($this->properties) <= 3) {
-    //       $score += $score_rates['props_2'];
-    //       $string .= ' + props_2';
-    //     }else if(count($this->properties) > 3) {
-    //       $score += $score_rates['props_3'];
-    //       $string .= ' + props_3';
-    //     }
-    //   }else if($this->customProperties) {
-    //     if(count($this->customProperties) === 1) {
-    //       $score += $score_rates['props_1'];
-    //     }else if(count($this->customProperties) > 1 && count($this->customProperties) <= 3) {
-    //       $score += $score_rates['props_2'];
-    //     }else if(count($this->customProperties) > 3) {
-    //       $score += $score_rates['props_3'];
-    //     }
-    //   }
-
-    //   $total = round($score * 100 / $total_available);
-
-    //   return ['num' => $total, 'string' => $string];
-    // }
-        
-    /**
-     * getSimpleCodeAttribute
-     *
-     * @return void
-     */
-    public function getSimpleCodeAttribute() {
-      if(!empty($this->code))
-        return $this->code;
-
-      $sp = $this->currentSp;
-
-      if($sp) {
-        if(!empty($sp->code)) {
-          return $sp->code;
-        }elseif(!empty($sp->barcode)) {
-          return $sp->barcode;
-        }else {
-          return null;
-        }
-      }
-    }
+    
 
     /**
      * getCategoryAttribute
@@ -979,56 +812,52 @@ class Product extends Model
      *
      * @return void
      */
-    public function getCurrentSpAttribute() {
-      $sp = $this->sp()
-          // reduce integer value to boolean
-        ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
-        ->orderBy('price')
-        ->first();
+    // public function getCurrentSpAttribute() {
+    //   $sp = $this->sp()
+    //     ->where('is_active', 1)
+    //     // reduce integer value to boolean
+    //     ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
+    //     ->orderBy('price')
+    //     ->first();
 
-      return $sp;
-    }
+    //   return $sp;
+    // }
     
-    /**
-     * getSimpleInStockAttribute
-     *
-     * @return void
-     */
-    public function getSimpleInStockAttribute() {
-      if(config('backpack.store.supplier.enable', false)) {
-        return $this->currentSp->in_stock ?? 0;
-      }else {
-        return $this->in_stock;
-      }
+
+    public function getSupplierProductAttribute() {
+      return app(SupplierProductResolver::class)->current($this);
     }
 
-        
-    /**
-     * getSimplePriceAttribute
-     *
-     * @return void
-     */
-    public function getSimplePriceAttribute() {
-      if(config('backpack.store.supplier.enable', false)) {
-        return $this->currentSp->price ?? 0;
-      }else {
-        return $this->price;
+    public function getPriceAttribute() {
+      return $this->productService()->price();
+    }
+
+
+    public function getOldPriceAttribute() {
+      return $this->productService()->oldPrice();
+    }
+
+    public function getInStockAttribute() {
+      return $this->supplierProduct->in_stock;
+    }
+
+    public function getCodeAttribute() {
+      if(!empty($this->code))
+        return $this->code;
+
+      $sp = $this->supplierProduct;
+
+      if($sp) {
+        if(!empty($sp->code)) {
+          return $sp->code;
+        }elseif(!empty($sp->barcode)) {
+          return $sp->barcode;
+        }else {
+          return null;
+        }
       }
     }
-    
-    /**
-     * getSimpleOldPriceAttribute
-     *
-     * @return void
-     */
-    public function getSimpleOldPriceAttribute() {
-      if(config('backpack.store.supplier.enable', false)) {
-        return $this->currentSp->old_price ?? 0;
-      }else {
-        return $this->old_price;
-      }
-    }
-    
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
@@ -1037,29 +866,5 @@ class Product extends Model
     public function setModificationsAttribute($value) {
       $this->modificationsToSave = $value;
     }
-
-
-    // public function getCustomAttrsAttribute($value) {
-    //   // $this->extras_trans = null;
-    //   if(!empty($this->extras_trans)) {
-    //     return json_decode($this->extras_trans, true);
-    //   }else {
-    //     return [];
-    //   }
-    // }
-
-    // public function setCustomAttrsAttribute($value) {
-    //   $this->attributes['custom_attrs'] = $value;
-    // }
-
-    // public function setExtrasTransAttribute($value) {
-    //   $extras_trans = !empty($this->extras_trans)? json_decode($this->extras_trans, true): [];
-    //   $new_extras_trans = array_merge($extras_trans, $value);
-    //   // dd($new_extras_trans, $extras_trans, $value);
-    //   // $this->attributes['extras_trans'] = json_encode($new_extras_trans);
-    //   $this->attributes['extras_trans'] = $new_extras_trans;
-    // }
-
-
     
 }

@@ -11,6 +11,6 @@ class Store extends Facade
 {
     protected static function getFacadeAccessor()
     {
-        return \Backpack\Store\Store::class;
+        return \Backpack\Store\app\Services\Store::class;
     }
 }

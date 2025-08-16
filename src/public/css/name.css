@@ -1,0 +1,30 @@
+.product-admin-name {
+  position: relative;
+  font-size: 14px;
+}
+
+.product-admin-name__tags {
+  font-size: 14px;
+  margin-left: -10px;
+}
+
+.product-admin-name__title {
+  font-size: 17px;
+  margin-bottom: 5px;
+}
+
+.product-admin-name__metadata {
+  font-size: 14px;
+}
+
+.product-admin-name__metadata-label {
+  opacity: 0.6;
+}
+
+.mod-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+}

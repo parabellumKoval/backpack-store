@@ -13,7 +13,7 @@
   <div class="container-fluid">
     <h2>
       <span class="text-capitalize">{{ trans('backpack-store::search.title') }}</span>
-      <small id="datatable_info_stack">{{ trans('translator::settings.settings_desc') }}</small>
+      <!-- <small id="datatable_info_stack">{{ trans('backpack-store::search.desc') }}</small> -->
     </h2>
   </div>
 @endsection
@@ -28,27 +28,27 @@
     <div class="card-body">
       <div class="form-group">
         <label>{{ trans('backpack-store::search.popular_products.source') }}</label>
-        <select name="popular_products_source" id="popular_products_source" class="form-control js-source" data-target="products">
-          <option value="auto" {{ $settings['popular_products_source'] == 'auto' ? 'selected' : '' }}>
+        <select name="popular_products__source" id="popular_products_source" class="form-control js-source" data-target="products">
+          <option value="auto" {{ $settings['popular_products__source'] == 'auto' ? 'selected' : '' }}>
             {{ trans('backpack-store::search.common.auto') }}
           </option>
-          <option value="manual" {{ $settings['popular_products_source'] == 'manual' ? 'selected' : '' }}>
+          <option value="manual" {{ $settings['popular_products__source'] == 'manual' ? 'selected' : '' }}>
             {{ trans('backpack-store::search.common.manual') }}
           </option>
         </select>
       </div>
 
-      <div id="popular_products_manual" class="{{ $settings['popular_products_source'] == 'manual' ? '' : 'd-none' }}">
+      <div id="popular_products_manual" class="{{ $settings['popular_products__source'] == 'manual' ? '' : 'd-none' }}">
         <label>{{ trans('backpack-store::search.popular_categories.order') }}</label>
         <select id="products-select" class="form-control mb-2"></select>
         <ul id="products-sortable" class="list-group mb-3">
-          @foreach($settings['popular_products_order'] ?? [] as $product)
+          @foreach($settings['popular_products__order'] ?? [] as $product)
             <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ $product['id'] }}">
-              <span class="handle"><i class="fa fa-arrows-alt mr-2"></i><span class="item-title">{{ $product['name'] }}</span></span>
+              <span class="handle"><i class="la la-arrows-alt mr-2"></i><span class="item-title">{{ $product['name'] }}</span></span>
               <span class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-light move-up"><i class="fa fa-arrow-up"></i></button>
-                <button type="button" class="btn btn-light move-down"><i class="fa fa-arrow-down"></i></button>
-                <button type="button" class="btn btn-light remove-item"><i class="fa fa-times"></i></button>
+                <button type="button" class="btn btn-light move-up"><i class="la la-arrow-up"></i></button>
+                <button type="button" class="btn btn-light move-down"><i class="la la-arrow-down"></i></button>
+                <button type="button" class="btn btn-light remove-item"><i class="la la-times"></i></button>
               </span>
             </li>
           @endforeach
@@ -57,14 +57,14 @@
       </div>
 
       <div class="custom-control custom-switch">
-        <input type="hidden" name="popular_products_in_stock" value="0">
-        <input name="popular_products_in_stock" type="checkbox" class="custom-control-input" id="popular_products_in_stock" value="1" {{ $settings['popular_products_in_stock'] ? 'checked' : '' }}>
+        <input type="hidden" name="popular_products__in_stock" value="0">
+        <input name="popular_products__in_stock" type="checkbox" class="custom-control-input" id="popular_products_in_stock" value="1" {{ $settings['popular_products__in_stock'] ? 'checked' : '' }}>
         <label class="custom-control-label" for="popular_products_in_stock">{{ trans('backpack-store::search.popular_products.in_stock') }}</label>
       </div>
 
       <div class="custom-control custom-switch">
-        <input type="hidden" name="popular_products_show_discount" value="0">
-        <input name="popular_products_show_discount" type="checkbox" class="custom-control-input" id="popular_products_show_discount" value="1" {{ $settings['popular_products_show_discount'] ? 'checked' : '' }}>
+        <input type="hidden" name="popular_products__show_discount" value="0">
+        <input name="popular_products__show_discount" type="checkbox" class="custom-control-input" id="popular_products_show_discount" value="1" {{ $settings['popular_products__show_discount'] ? 'checked' : '' }}>
         <label class="custom-control-label" for="popular_products_show_discount">{{ trans('backpack-store::search.popular_products.show_discount') }}</label>
       </div>
     </div>
@@ -76,27 +76,27 @@
     <div class="card-body">
       <div class="form-group">
         <label>{{ trans('backpack-store::search.popular_categories.source') }}</label>
-        <select name="popular_categories_source" id="popular_categories_source" class="form-control js-source" data-target="categories">
-          <option value="auto" {{ $settings['popular_categories_source'] == 'auto' ? 'selected' : '' }}>
+        <select name="popular_categories__source" id="popular_categories_source" class="form-control js-source" data-target="categories">
+          <option value="auto" {{ $settings['popular_categories__source'] == 'auto' ? 'selected' : '' }}>
             {{ trans('backpack-store::search.common.auto') }}
           </option>
-          <option value="manual" {{ $settings['popular_categories_source'] == 'manual' ? 'selected' : '' }}>
+          <option value="manual" {{ $settings['popular_categories__source'] == 'manual' ? 'selected' : '' }}>
             {{ trans('backpack-store::search.common.manual') }}
           </option>
         </select>
       </div>
 
-      <div id="popular_categories_manual" class="{{ $settings['popular_categories_source'] == 'manual' ? '' : 'd-none' }}">
+      <div id="popular_categories_manual" class="{{ $settings['popular_categories__source'] == 'manual' ? '' : 'd-none' }}">
         <label>{{ trans('backpack-store::search.popular_categories.order') }}</label>
         <select id="categories-select" class="form-control mb-2"></select>
         <ul id="categories-sortable" class="list-group mb-3">
-          @foreach($settings['popular_categories_order'] ?? [] as $category)
+          @foreach($settings['popular_categories__order'] ?? [] as $category)
             <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ $category['id'] }}">
-              <span class="handle"><i class="fa fa-arrows-alt mr-2"></i><span class="item-title">{{ $category['name'] }}</span></span>
+              <span class="handle"><i class="la la-arrows-alt mr-2"></i><span class="item-title">{{ $category['name'] }}</span></span>
               <span class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-light move-up"><i class="fa fa-arrow-up"></i></button>
-                <button type="button" class="btn btn-light move-down"><i class="fa fa-arrow-down"></i></button>
-                <button type="button" class="btn btn-light remove-item"><i class="fa fa-times"></i></button>
+                <button type="button" class="btn btn-light move-up"><i class="la la-arrow-up"></i></button>
+                <button type="button" class="btn btn-light move-down"><i class="la la-arrow-down"></i></button>
+                <button type="button" class="btn btn-light remove-item"><i class="la la-times"></i></button>
               </span>
             </li>
           @endforeach
@@ -111,20 +111,20 @@
     <div class="card-header"><h4>{{ trans('backpack-store::search.search_history.title') }}</h4></div>
     <div class="card-body">
       <div class="custom-control custom-switch">
-        <input type="hidden" name="search_history_enabled" value="0">
-        <input name="search_history_enabled" type="checkbox" class="custom-control-input" id="search_history_enabled" value="1" {{ $settings['search_history_enabled'] ? 'checked' : '' }}>
-        <label class="custom-control-label" for="search_history_enabled">{{ trans('backpack-store::search.search_history.enabled') }}</label>
+        <input type="hidden" name="history__enabled" value="0">
+        <input name="history__enabled" type="checkbox" class="custom-control-input" id="history_enabled" value="1" {{ $settings['history__enabled'] ? 'checked' : '' }}>
+        <label class="custom-control-label" for="history_enabled">{{ trans('backpack-store::search.search_history.enabled') }}</label>
       </div>
 
       <div class="form-group mt-2">
         <label>{{ trans('backpack-store::search.search_history.limit') }}</label>
-        <input type="number" name="search_history_limit" class="form-control" value="{{ $settings['search_history_limit'] ?? 50 }}">
+        <input type="number" name="history__limit" class="form-control" value="{{ $settings['history__limit'] ?? 50 }}">
       </div>
 
       <div class="custom-control custom-switch">
-        <input type="hidden" name="search_history_clear_allowed" value="0">
-        <input name="search_history_clear_allowed" type="checkbox" class="custom-control-input" id="search_history_clear_allowed" value="1" {{ $settings['search_history_clear_allowed'] ? 'checked' : '' }}>
-        <label class="custom-control-label" for="search_history_clear_allowed">{{ trans('backpack-store::search.search_history.clear_allowed') }}</label>
+        <input type="hidden" name="history__clear_allowed" value="0">
+        <input name="history__clear_allowed" type="checkbox" class="custom-control-input" id="history_clear_allowed" value="1" {{ $settings['history__clear_allowed'] ? 'checked' : '' }}>
+        <label class="custom-control-label" for="history_clear_allowed">{{ trans('backpack-store::search.search_history.clear_allowed') }}</label>
       </div>
     </div>
   </div>
@@ -134,14 +134,14 @@
     <div class="card-header"><h4>{{ trans('backpack-store::search.algorithm.title') }}</h4></div>
     <div class="card-body">
       <div class="custom-control custom-switch">
-        <input type="hidden" name="transliteration_enabled" value="0">
-        <input name="transliteration_enabled" type="checkbox" class="custom-control-input" id="transliteration_enabled" value="1" {{ $settings['transliteration_enabled'] ? 'checked' : '' }}>
+        <input type="hidden" name="transliteration__enabled" value="0">
+        <input name="transliteration__enabled" type="checkbox" class="custom-control-input" id="transliteration_enabled" value="1" {{ $settings['transliteration__enabled'] ? 'checked' : '' }}>
         <label class="custom-control-label" for="transliteration_enabled">{{ trans('backpack-store::search.algorithm.transliteration') }}</label>
       </div>
 
       <div class="custom-control custom-switch">
-        <input type="hidden" name="spellcheck_enabled" value="0">
-        <input name="spellcheck_enabled" type="checkbox" class="custom-control-input" id="spellcheck_enabled" value="1" {{ $settings['spellcheck_enabled'] ? 'checked' : '' }}>
+        <input type="hidden" name="spellcheck__enabled" value="0">
+        <input name="spellcheck__enabled" type="checkbox" class="custom-control-input" id="spellcheck_enabled" value="1" {{ $settings['spellcheck__enabled'] ? 'checked' : '' }}>
         <label class="custom-control-label" for="spellcheck_enabled">{{ trans('backpack-store::search.algorithm.spellcheck') }}</label>
       </div>
 
@@ -152,8 +152,8 @@
         @endphp
         @foreach($availableFields as $field)
           <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="search_fields[]" value="{{ $field }}"
-              {{ in_array($field, $settings['search_fields'] ?? []) ? 'checked' : '' }}>
+            <input class="form-check-input" type="checkbox" name="fields[]" value="{{ $field }}"
+              {{ in_array($field, $settings['fields'] ?? []) ? 'checked' : '' }}>
             <label class="form-check-label">{{ ucfirst($field) }}</label>
           </div>
         @endforeach
@@ -166,10 +166,10 @@
     <div class="card-header"><h4>{{ trans('backpack-store::search.extra.title') }}</h4></div>
     <div class="card-body">
       @foreach([
-        'global_stats_enabled' => 'extra.stats',
-        'autocomplete_enabled' => 'extra.autocomplete',
-        'multilang_enabled' => 'extra.multilang',
-        'admin_analytics_enabled' => 'extra.analytics',
+        'global_stats__enabled' => 'extra.stats',
+        'autocomplete__enabled' => 'extra.autocomplete',
+        'multilang__enabled' => 'extra.multilang',
+        'admin_analytics__enabled' => 'extra.analytics',
       ] as $key => $label)
         <div class="custom-control custom-switch">
           <input type="hidden" name="{{ $key }}" value="0">
@@ -241,7 +241,7 @@
             processResults: function (data) {
               return {
                 results: data.data.map(function (item) {
-                  let text = item.name;
+                  let text = item.uniq_title;
                   if (typeof text === 'object') {
                     text = text[locale] || Object.values(text)[0];
                   }
@@ -255,11 +255,11 @@
           const data = e.params.data;
           if ($sortable.find('li[data-id="' + data.id + '"]').length === 0) {
             const $li = $('<li class="list-group-item d-flex justify-content-between align-items-center" data-id="' + data.id + '">' +
-              '<span class="handle"><i class="fa fa-arrows-alt mr-2"></i><span class="item-title">' + data.text + '</span></span>' +
+              '<span class="handle"><i class="la la-arrows-alt mr-2"></i><span class="item-title">' + data.text + '</span></span>' +
               '<span class="btn-group btn-group-sm">' +
-              '<button type="button" class="btn btn-light move-up"><i class="fa fa-arrow-up"></i></button>' +
-              '<button type="button" class="btn btn-light move-down"><i class="fa fa-arrow-down"></i></button>' +
-              '<button type="button" class="btn btn-light remove-item"><i class="fa fa-times"></i></button>' +
+              '<button type="button" class="btn btn-light move-up"><i class="la la-arrow-up"></i></button>' +
+              '<button type="button" class="btn btn-light move-down"><i class="la la-arrow-down"></i></button>' +
+              '<button type="button" class="btn btn-light remove-item"><i class="la la-times"></i></button>' +
               '</span></li>');
             $sortable.append($li);
             updateHidden($sortable, $hidden);

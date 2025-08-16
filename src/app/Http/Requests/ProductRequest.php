@@ -5,8 +5,13 @@ namespace Backpack\Store\app\Http\Requests;
 use App\Http\Requests\Request;
 use Illuminate\Foundation\Http\FormRequest;
 
+use Backpack\Store\app\Http\Requests\Traits\BuildsSuppliersDataRules;
+use App\Http\Requests\Traits\PriceOverridesRequest;
+
+
 class ProductRequest extends FormRequest
 {
+    use BuildsSuppliersDataRules;
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -18,6 +23,15 @@ class ProductRequest extends FormRequest
         return backpack_auth()->check();
     }
 
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'suppliersData' => $this->normalizeSuppliersData($this->input('suppliersData', [])),
+        ]);
+    }
+    
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -25,11 +39,18 @@ class ProductRequest extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
           'name' => 'required|min:1|max:255',
-          // 'short_name' => 'required_with:parent_id|min:1|max:255',
-          // 'categories' => 'required_without:parent_id',
         ];
+
+
+        $rules = array_merge(
+            $rules,
+            $this->buildSuppliersDataRules($this->input('suppliersData', [])),
+            PriceOverridesRequest::rulesArray()
+        );
+
+        return $rules;
     }
 
     /**
@@ -39,9 +60,11 @@ class ProductRequest extends FormRequest
      */
     public function attributes()
     {
-        return [
-            //
-        ];
+        return array_merge(
+            [],
+            $this->suppliersDataAttributes(),
+            PriceOverridesRequest::attributesArray()
+        );
     }
 
     /**
@@ -51,8 +74,10 @@ class ProductRequest extends FormRequest
      */
     public function messages()
     {
-        return [
-            //
-        ];
+        return array_merge(
+            [],
+            $this->suppliersDataMessages(),
+            PriceOverridesRequest::messagesArray()
+        );
     }
 }

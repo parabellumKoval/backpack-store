@@ -20,7 +20,6 @@ class ProductSavedListener
     public function __construct(){}
  
 
-
     /**
      * Handle the event.
      *
@@ -30,6 +29,7 @@ class ProductSavedListener
     public function handle(ProductSaved $event)
     {
       $suppliers = $event->product->suppliers_data ?? $event->product->default_supplier ?? null;
+
       if(!empty($suppliers)) {
         if(config('backpack.store.supplier.enable', false)) {
           $this->setMultipleSuppliers($event->product, $suppliers);
@@ -39,17 +39,14 @@ class ProductSavedListener
       }
       
 
-      if(config('backpack.store.product.modifications.enable', true)) {
+      // Бренды и категории у модификаций не могут отличаться от тех, которые у базового товара
+      // Поэтому присваивает автоматически
+      if(\Store::isModVertical()) {
+        $this->handleBrandAndCategory($event->product);
+      }      
 
-        // Save modifications
-        $modifications = $event->product->modificationsToSave;
-        $old_modifications = $event->product->modifications;
-
-        if(!empty($modifications) && is_array($modifications)) {
-          UpdateProductModifications::dispatch($modifications, $event->product);
-        }elseif(!empty($old_modifications) && empty($modifications)){
-          RemoveAllProductModifications::dispatch($event->product);
-        }
+      if(\Store::isModHorizontall()) {
+        $this->handleHorizontallModifications($event);
       }
 
 
@@ -111,6 +108,30 @@ class ProductSavedListener
       }
     }
 
+
+    private function handleBrandAndCategory($product) {
+      $parent = $product->parent;
+
+      if(!$parent) return;
+
+      // brand
+      $product->brand_id = $parent->brand_id;
+
+      // categories
+      $product->categories()->sync($parent->categories->pluck('id'));
+    }
+    
+    private function handleHorizontallModifications($event) {
+        // Save modifications
+        $modifications = $event->product->modificationsToSave;
+        $old_modifications = $event->product->modifications;
+
+        if(!empty($modifications) && is_array($modifications)) {
+          UpdateProductModifications::dispatch($modifications, $event->product);
+        }elseif(!empty($old_modifications) && empty($modifications)){
+          RemoveAllProductModifications::dispatch($event->product);
+        }  
+    }
     
     /**
      * setMultipleSuppliers
@@ -120,24 +141,29 @@ class ProductSavedListener
      * @return void
      */
     private function setMultipleSuppliers($product, $suppliers){
-      $sync_pivot_data = [];
+      $suppliers_pivot_data = [];
 
       foreach($suppliers as $key => $supplier) {
         $supplier_id = $supplier['supplier'];
 
-        $sync_pivot_data[$supplier_id] = [
-          'code' => (isset($supplier['code']) && !empty($supplier['code']))? $supplier['code']: null,
-          'barcode' => (isset($supplier['barcode']) && !empty($supplier['barcode']))? $supplier['barcode']: null,
-          'in_stock' => (isset($supplier['in_stock']) && !empty($supplier['in_stock']))? intval($supplier['in_stock']): 0,
-          'price' => (isset($supplier['price']) && !empty($supplier['price']))? doubleval($supplier['price']): null,
-          'old_price' => (isset($supplier['old_price']) && !empty($supplier['old_price']))? doubleval($supplier['old_price']): null,
-        ];
-        
+        $suppliers_pivot_data[$supplier_id] = $this->createSuppliersPivotData($supplier);
       }
 
-      $product->syncSuppliers($sync_pivot_data);
-      // $product->suppliers()->sync($sync_pivot_data);
+      // Устанавливаем связь с Supplier через SupplierProduct
+      $product->syncSuppliers($suppliers_pivot_data);
     }
+    
+    private function createSuppliersPivotData($supplier) {
+      return [
+        'is_active' => (isset($supplier['is_active']) && !empty($supplier['is_active']))? $supplier['is_active']: false,
+        'code' => (isset($supplier['code']) && !empty($supplier['code']))? $supplier['code']: null,
+        'barcode' => (isset($supplier['barcode']) && !empty($supplier['barcode']))? $supplier['barcode']: null,
+        'in_stock' => (isset($supplier['in_stock']) && !empty($supplier['in_stock']))? intval($supplier['in_stock']): 0,
+        'price' => (isset($supplier['price']) && !empty($supplier['price']))? doubleval($supplier['price']): null,
+        'old_price' => (isset($supplier['old_price']) && !empty($supplier['old_price']))? doubleval($supplier['old_price']): null,
+      ];
+    }
+
     
     /**
      * setDefaultSupplier
@@ -149,6 +175,7 @@ class ProductSavedListener
     private function setDefaultSupplier($product, $supplier) {
       $data = [
         'supplier_id' => null,
+        'is_active' => (isset($supplier['is_active']) && !empty($supplier['is_active']))? $supplier['is_active']: false,
         'code' => (isset($supplier['code']) && !empty($supplier['code']))? $supplier['code']: null,
         'barcode' => (isset($supplier['barcode']) && !empty($supplier['barcode']))? $supplier['barcode']: null,
         'in_stock' => (isset($supplier['in_stock']) && !empty($supplier['in_stock']))? intval($supplier['in_stock']): 0,
