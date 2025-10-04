@@ -2,24 +2,59 @@
 
 namespace Backpack\Store\app\Models;
 
-// use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
-class Catalog
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+// TRANSLATIONS
+use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
+
+use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Brand;
+
+use Backpack\Store\app\Models\Traits\SearchCatalogTrait;
+use Backpack\Store\app\Services\Search\SearchConfigurableAbstract;
+
+class Catalog extends SearchConfigurableAbstract
 {
 
+    use HasTranslations;
+    use SearchCatalogTrait;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
     |--------------------------------------------------------------------------
     */
 
-    // protected $table = 'ak_carts';
-    // protected $primaryKey = 'id';
-    // public $timestamps = false;
-    // protected $guarded = ['id'];
+    protected $table = 'ak_catalog';
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+    protected $keyType = 'int';
+
+    public $timestamps = false;
+    protected $guarded = [];
     // protected $fillable = [];
     // protected $hidden = [];
     // protected $dates = [];
+
+    protected $casts = [
+        'is_available' => 'boolean',
+        'in_stock'     => 'integer',
+        'price'        => 'decimal:2',
+        'old_price'    => 'decimal:2',
+        'name'         => 'array',
+        'short_name'   => 'array',
+        'excerpt'      => 'array',
+        'images'       => 'array',
+        'extras'       => 'array',
+        'category_ids' => 'array',
+        'rating'       => 'float',
+        'reviews'      => 'integer',
+        'ratings'      => 'integer',
+    ];
+
+    protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray'];
 
     const DEFAULT_BY = 'created_at';
     const DEFAULT_DIR = 'desc';
@@ -59,6 +94,10 @@ class Catalog
       ];
     }
     
+    public function scopeAvailable($q) {
+      return $q->where('is_available', 1);
+    }
+
     /**
      * Method getSortingDataWithActive
      *
@@ -81,7 +120,97 @@ class Catalog
     }
 
     public static function getCacheCases() {
-      $config = config('backpack.store.cache.cases');
+      $config = \Settings::get('dress.store.cache.cases');
       return $config;
     }
+
+   
+    /** Отношение (если вызвать КАК МЕТОД — будет SQL). Оставляем для совместимости. */
+    public function modifications(): HasMany
+    {
+        return $this->hasMany(self::class, 'group_id', 'group_id')
+            ->where('country_code', $this->country_code)
+            ->where('is_available', 1)
+            ->where('product_id', '!=', $this->product_id);
+    }
+
+    /** Коллекция модификаций БЕЗ SQL — только если их пришили через setRelation. */
+    public function getModificationsLoadedAttribute(): ?\Illuminate\Support\Collection
+    {
+        if ($this->relationLoaded('modifications')) {
+            return $this->getRelation('modifications');
+        }
+        return null;
+    }
+
+    /**
+     * Готовая ресурсная коллекция модификаций БЕЗ SQL.
+     * Класс ресурса берём из конфига: backpack.store.resources.product.tiny
+     * Если не задан — вернём null (чтобы не трогать БД).
+     */
+    public function getResourceModificationsAttribute()
+    {
+        $mods = $this->modifications_loaded;
+        if (!$mods || $mods->isEmpty()) {
+            return null;
+        }
+
+        $resourceClass = \Settings::get('dress.product.resource.mod');
+        if (!$resourceClass || !class_exists($resourceClass)) {
+            return null;
+        }
+
+        // на всякий случай оставим только доступные
+        $mods = $mods->filter(fn($m) => (int)$m->is_available === 1);
+
+        return $resourceClass::collection($mods->values());
+    }
+
+    /** Бренд */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brand_id', 'id');
+    }
+
+    /**
+     * Категории по JSON-списку id.
+     * Это НЕ стандартное Eloquent-отношение (нет pivot), но ресурсы часто просто читают коллекцию.
+     */
+    public function categories()
+    {
+        $ids = (array) ($this->category_ids ?? []);
+        if (empty($ids)) return collect();
+        return Category::query()->whereIn('id', $ids)->get();
+    }
+
+    protected function brandName(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->brand->name ?? null,
+            set: fn (string $value) => $value,
+        );
+    }
+
+    // protected function getCategoryNamesArrayAttribute() {
+    //   return $this->categories()->pluck('name')->toArray();
+    // }
+
+
+    /** Удобный алиас: главное изображение */
+    public function getImageAttribute(): ?array
+    {
+        return $this->images[0] ?? null;
+    }
+
+    /** Явный флаг "эта модификация прошла фильтр" — ставим из сервиса как атрибут */
+    public function getPassedFilterAttribute(): bool
+    {
+        // если не проставлен — считаем false
+        return (bool) ($this->attributes['passed_filter'] ?? false);
+    } 
+
+    public function getCurrencyAttribute() {
+      return $this->currency_code;
+    }
+
 }

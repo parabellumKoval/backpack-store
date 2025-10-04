@@ -2,10 +2,9 @@
 
 namespace Backpack\Store\app\Contracts;
 
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Query\Builder as Qb;
 
 interface SupplierFilter {
-    /** Навешивает условие "существует активный склад/позиция для указанного product_id" */
-    public function existsFor(EloquentBuilder|QueryBuilder $outer, string $productIdColumn, ?string $country = null): EloquentBuilder|QueryBuilder;
+    /** DISTINCT product_id, где есть активный supplier (в стране, если multi) */
+    public function spOk(?string $country = null): Qb;
 }

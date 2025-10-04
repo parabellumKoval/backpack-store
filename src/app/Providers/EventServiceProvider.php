@@ -28,6 +28,14 @@ use Backpack\Store\app\Listeners\PromocodeAppliedListener;
 use Backpack\Store\app\Events\SourceSaved;
 use Backpack\Store\app\Listeners\SourceSavedListener;
 
+use Backpack\Settings\Events\SettingsGroupChanged;
+use Backpack\Store\app\Listeners\SettingsGroupChangedListener;
+
+
+use Backpack\Store\app\Models\Order;
+use Backpack\Store\app\Models\Admin\Order as OrderAdmin;
+use Backpack\Store\app\Observers\OrderObserver;
+
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
@@ -54,6 +62,9 @@ class EventServiceProvider extends ServiceProvider
       ],
       SourceSaved::class => [
         SourceSavedListener::class,
+      ],
+      SettingsGroupChanged::class => [
+        SettingsGroupChangedListener::class
       ]
     ];
 
@@ -65,5 +76,8 @@ class EventServiceProvider extends ServiceProvider
     public function boot()
     {
         parent::boot();
+
+        Order::observe(OrderObserver::class);
+        OrderAdmin::observe(OrderObserver::class);
     }
 }

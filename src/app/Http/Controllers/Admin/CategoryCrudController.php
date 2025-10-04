@@ -21,7 +21,7 @@ class CategoryCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ReorderOperation;
+    use \Backpack\Helpers\app\Http\Controllers\Operations\ReorderDeepOperation;
     
     use \App\Http\Controllers\Admin\Traits\CategoryCrud;
 
@@ -30,10 +30,11 @@ class CategoryCrudController extends CrudController
 
     private $available_languages = null;
     private $langs_list = null;
-
+    
     public function setup()
     {
-        $this->category_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Category');
+        //
+        $this->category_class = \Settings::get('dress.category.model_admin', 'Backpack\Store\app\Models\Category');
 
         $this->crud->setModel($this->category_class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/category');
@@ -315,18 +316,15 @@ class CategoryCrudController extends CrudController
      */
     public function getCategories(Request $request) {
         $search_term = $request->input('q');
-        $id = $request->input('keys');
+        $ids = $request->input('keys');
 
         // langs
         $langs_list = $this->langs_list;
 
-        if($id) {
-            $categories = [];
-            $category = $this->category_class::find($id);
+        if($ids) {
+            $search_key_array = is_numeric($ids)? [$ids]: json_decode($ids, true);
+            $categories = $this->category_class::whereIn('id', $search_key_array)->get();
 
-            if($category) {
-                $categories[] = $category;
-            }
             return $categories;
         }
 

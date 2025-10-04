@@ -7,9 +7,11 @@ use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\SupplierProduct;
 
-use Backpack\Store\app\Job\UpdateProductModifications;
-use Backpack\Store\app\Job\RemoveAllProductModifications;
+use Backpack\Store\app\Job\UpdateProductModificationsHorizontall;
+use Backpack\Store\app\Job\RemoveAllProductModificationsHorizontall;
  
+use Backpack\Store\app\Services\Catalog\CatalogSyncTouch;
+
 class ProductSavedListener
 {
     /**
@@ -31,7 +33,7 @@ class ProductSavedListener
       $suppliers = $event->product->suppliers_data ?? $event->product->default_supplier ?? null;
 
       if(!empty($suppliers)) {
-        if(config('backpack.store.supplier.enable', false)) {
+        if(\Settings::get('dress.supplier.enable', false)) {
           $this->setMultipleSuppliers($event->product, $suppliers);
         }else {
           $this->setDefaultSupplier($event->product, $suppliers);
@@ -50,10 +52,18 @@ class ProductSavedListener
       }
 
 
-      if(!$event->product->props)
-        return;
-
       // Product properties
+      if($event->product->props) {
+        $this->handleAttributes($event);
+      }
+
+
+      CatalogSyncTouch::touch((int) $event->product->id);
+    }
+
+
+    private function handleAttributes($event) {
+
       foreach($event->product->props as $prop_id => $prop_value) {
         $attribute = Attribute::find($prop_id);
 
@@ -109,6 +119,7 @@ class ProductSavedListener
     }
 
 
+
     private function handleBrandAndCategory($product) {
       $parent = $product->parent;
 
@@ -127,9 +138,9 @@ class ProductSavedListener
         $old_modifications = $event->product->modifications;
 
         if(!empty($modifications) && is_array($modifications)) {
-          UpdateProductModifications::dispatch($modifications, $event->product);
+          UpdateProductModificationsHorizontall::dispatch($modifications, $event->product);
         }elseif(!empty($old_modifications) && empty($modifications)){
-          RemoveAllProductModifications::dispatch($event->product);
+          RemoveAllProductModificationsHorizontall::dispatch($event->product);
         }  
     }
     

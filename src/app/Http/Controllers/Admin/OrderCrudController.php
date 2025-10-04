@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\OrderRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
+use Backpack\CRUD\app\Library\Widget;
 
 use Carbon\Carbon;
 use Illuminate\Support\Arr;
@@ -37,6 +38,7 @@ class OrderCrudController extends CrudController
   use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
   use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
 
+  use \Backpack\Store\app\Http\Controllers\Admin\Traits\BaseCrudTrait;
   use \App\Http\Controllers\Admin\Traits\OrderCrud;
   
   private $status = [];
@@ -47,15 +49,18 @@ class OrderCrudController extends CrudController
 
   public function setup()
   {
-    $this->crud->setModel(config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order'));
+    $this->crud->setModel(\Settings::get('dress.order.model', 'Backpack\Store\app\Models\Admin\Order'));
     $this->crud->setRoute(config('backpack.base.route_prefix') . '/order');
     $this->crud->setEntityNameStrings(trans('backpack-store::order.single'), trans('backpack-store::order.title'));
     
-    $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Admin\Order');
-    $this->PRODUCT_MODEL = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+    $this->ORDER_MODEL = \Settings::get('dress.order.model', 'Backpack\Store\app\Models\Admin\Order');
+    $this->PRODUCT_MODEL = \Settings::get('dress.product.model', 'Backpack\Store\app\Models\Product');
     $this->current_status = \Request::input('status')? \Request::input('status') : null;
 
     $this->setStatusOptions();
+
+    // CURRENT MODEL
+    $this->setEntry();
 
     $this->ORDER_MODEL::created(function($entry) {
 
@@ -117,14 +122,14 @@ class OrderCrudController extends CrudController
 
   private function setStatusOptions() {
     $status_base = [
-      'order' => config('backpack.store.order.status.values', []),
-      'pay' => config('backpack.store.order.pay_status.values', []),
-      'delivery' => config('backpack.store.order.delivery_status.values', [])
+      'order' => \Settings::get('dress.order.status.values', []),
+      'pay' => \Settings::get('dress.order.pay_status.values', []),
+      'delivery' => \Settings::get('dress.order.delivery_status.values', [])
     ];
 
     foreach($status_base as $key => $status){
       $statuses = array_map(function($value) use ($key) {
-        return array($value => __('shop.' . $key . '_status.' . $value));
+        return array($value => __('backpack-store::shop.' . $key . '_status.' . $value));
       }, $status_base[$key]);
 
       $status_base[$key] = array_reduce($statuses, 'array_merge', array());
@@ -165,7 +170,38 @@ class OrderCrudController extends CrudController
         $this->crud->addClause('where', 'delivery_status', $value);
       });
       
-      
+
+      if(\Store::isMulti()) {
+        
+        CRUD::addFilter([
+            'name'  => 'country_code',
+            'type'  => 'dropdown',
+            'label' => 'Страна',
+        ], function () {
+            // Отрисуем словарь стран из настроек
+            $list = [];
+            $countries = \Store::countryOptions();
+            foreach ($countries as $code => $name) {
+                $list[$code] = strtoupper($name);
+            }
+            return $list;
+        }, function ($value) {
+            CRUD::addClause('where', 'country_code', $value);
+        });
+
+        // $this->setSimpleCountryWidget();
+        $this->setStatisticsWidget();
+
+
+        if ($tab = request()->get('country_code')) {
+            if ($tab !== 'all') {
+                CRUD::addClause('where', 'country_code', $tab);
+            }
+        }
+      }
+
+
+
       $this->crud->addColumn([
         'name' => 'code',
         'label' => '#️⃣'
@@ -176,6 +212,15 @@ class OrderCrudController extends CrudController
         'label' => '🗓',
       ]);
       
+      if(\Store::isMulti()) {
+        $this->crud->addColumn([
+          'name' => 'country_code',
+          'label' => 'Страна',
+          'type' => 'select_from_array',
+          'options' => \Store::countryOptions()
+        ]);
+      }
+
       $this->crud->addColumn([
         'name' => 'orderStatusHtml',
         'label' => 'Статус',
@@ -231,14 +276,79 @@ class OrderCrudController extends CrudController
       //   'type' => 'select_from_array',
       //   'options' => $this->status['delivery']
       // ]);
-      
-      // $this->crud->addColumn([
-      //   'name' => 'price',
-      //   'label' => '💵',
-      // ]);
 
       // TRAIT
       $this->listOperation();
+  }
+
+  protected function setSimpleCountryWidget() {
+
+        Widget::add([
+            'type'    => 'view',
+            'view'    => 'crud::widgets.country-tabs',
+            'wrapper' => ['class' => 'mb-2'], // отступ снизу
+            'content' => [
+                'active'    => request()->get('country_code', 'all'),
+                'countries' => \Store::countryOptions(),
+                'param'     => 'country_code', // имя query param
+                'filterKey' => 'country_code', // ключ реального фильтра
+            ],
+        ]);
+
+  }
+
+  protected function setStatisticsWidget() {
+     // соберём стату (кэшируем на 60 сек, чтобы не грузить БД каждый рефреш)
+    $stats = \Cache::remember('orders.country.stats', 60, function () {
+        return $this->ORDER_MODEL::query()
+        ->selectRaw("COALESCE(country_code,'') as country_code,
+                     COUNT(*) as total,
+                     SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_count")
+        ->groupBy('country_code')
+        ->get()
+        ->keyBy('country_code');
+    });
+
+    // хотим показать даже страны без заказов — подтащим список из настроек
+    $options = \Store::countryOptions();
+
+    // Собираем карточки в порядке, как вернул Store::countryOptions()
+    $cards = [];
+    foreach ($options as $code => $name) {
+        $row = $stats[$code] ?? (object)['country_code'=>$code,'total'=>0,'new_count'=>0];
+        $cards[] = [
+            'code' => $code,
+            'name' => $name,
+            'total'=> (int) $row->total,
+            'new'  => (int) $row->new_count,
+        ];
+    }
+
+    $totals = [
+        'total' => array_sum(array_column($cards,'total')),
+        'new'   => array_sum(array_column($cards,'new')),
+    ];
+
+    array_unshift($cards, [
+        'code'  => 'all',
+        'name'  => 'Все',
+        'total' => (int) $totals['total'],
+        'new'   => (int) $totals['new'],
+    ]);
+
+    // втыкаем виджет над таблицей
+    Widget::add([
+        'type'    => 'view',
+        'view'    => 'crud::widgets.orders-country-cards',
+        'wrapper' => ['class' => 'mb-2'],
+        'content' => [
+            'cards'       => $cards,
+            'listUrl'     => url(request()->path()),
+            'param'       => 'country_code',  // имя query-параметра
+            'filterKey'   => 'country_code', // ключ реального фильтра
+            'active'      => request('country_code', 'all'),
+        ],
+    ]);
   }
 
   protected function setupCreateOperation()
@@ -251,7 +361,7 @@ class OrderCrudController extends CrudController
       'type' => 'datetime_picker',
       'hint' => trans('backpack-store::order.fields.hints.price'),
       'wrapper' => [ 
-        'class' => 'form-group col-md-8'
+        'class' => 'form-group col-md-4'
       ]
     ]);
 
@@ -264,6 +374,18 @@ class OrderCrudController extends CrudController
         'class' => 'form-group col-md-4'
       ]
     ]);
+
+    if(\Store::isMulti()) {
+      $this->crud->addField([
+        'name' => 'country_code',
+        'label' => trans('backpack-store::order.fields.country'),
+        'type' => 'select2_from_array',
+        'options' => \Store::countryOptions(),
+        'wrapper' => [ 
+          'class' => 'form-group col-md-4'
+        ]
+      ]);
+    }
 
     $this->crud->addField([
       'name'  => 'separator_01',
@@ -312,10 +434,19 @@ class OrderCrudController extends CrudController
     $this->crud->addField([
       'name' => 'price',
       'label' => trans('backpack-store::order.fields.price'),
-      'prefix' => config('backpack.store.currency.symbol'),
       'hint' => trans('backpack-store::order.fields.hints.price'),
       'wrapper' => [ 
-        'class' => 'form-group col-md-4'
+        'class' => 'form-group col-md-2'
+      ]
+    ]);
+
+    $this->crud->addField([
+      'name' => 'currency_code',
+      'label' => trans('backpack-store::order.fields.currency'),
+      'type' => 'select2_from_array',
+      'options' => \Store::currencyOptions(),
+      'wrapper' => [ 
+        'class' => 'form-group col-md-2'
       ]
     ]);
     
@@ -521,7 +652,7 @@ class OrderCrudController extends CrudController
       $this->crud->addField([
         'name' => 'price',
         'label' => 'Сумма заказа',
-        'prefix' => config('backpack.store.currency.symbol'),
+        'prefix' => $this->entry->currency ?? \Settings::get('dress.store.currency.symbol'),
         'attributes' => [
           'readonly' => true
         ]
@@ -531,21 +662,24 @@ class OrderCrudController extends CrudController
         'name' => 'status',
         'label' => 'Статус заказа',
         'type' => 'select2_from_array',
-        'options' => $this->status['order']
+        'options' => $this->status['order'],
+        'allows_null' => false,
       ]);
       
       $this->crud->addField([
         'name' => 'pay_status',
         'label' => 'Статус оплаты',
         'type' => 'select2_from_array',
-        'options' => $this->status['pay']
+        'options' => $this->status['pay'],
+        'allows_null' => false,
       ]);
       
       $this->crud->addField([
         'name' => 'delivery_status',
         'label' => 'Статус доставки',
         'type' => 'select2_from_array',
-        'options' => $this->status['delivery']
+        'options' => $this->status['delivery'],
+        'allows_null' => false,
       ]);
   }
   
@@ -599,13 +733,6 @@ class OrderCrudController extends CrudController
       ]);
   }
 
-  // public static function mssql_escape($unsafe_str) 
-  // {
-  //     if (get_magic_quotes_gpc())
-  //     {
-  //         $unsafe_str = stripslashes($unsafe_str);
-  //     }
-  //     return $escaped_str = str_replace("'", "''", $unsafe_str);
-  // }
+
 
 }

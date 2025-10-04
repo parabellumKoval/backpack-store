@@ -23,7 +23,7 @@ use Backpack\Store\app\Events\ProductSaving;
 use Backpack\Store\app\Events\ProductSaved;
 use Backpack\Store\app\Events\ProductCreating;
 
-//
+// use App\Http\Controllers\Admin\Traits\ProductCrud;
 
 /**
  * Class ProductCrudController
@@ -36,7 +36,7 @@ class ProductCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\InlineCreateOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation { update as traitUpdate; }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
@@ -61,7 +61,7 @@ class ProductCrudController extends CrudController
     private $product_class = null;
 
     public function __construct() {
-      $this->product_class = config('backpack.store.product.class_admin', 'Backpack\Store\app\Models\Admin\Product');
+      $this->product_class = \Settings::get('dress.product.model_admin', 'Backpack\Store\app\Models\Admin\Product');
 
       // Set event listiner to Model
       $this->product_class::saved(function($entry) {
@@ -95,7 +95,7 @@ class ProductCrudController extends CrudController
           trans('backpack-store::product.entity_plural')
       );
 
-      if(config('backpack.store.supplier.enable', false)) {
+      if(\Settings::get('dress.supplier.enable', false)) {
         $this->crud->enableDetailsRow();
       }
 
@@ -127,6 +127,29 @@ class ProductCrudController extends CrudController
       $this->langs_list = array_keys($this->available_languages);
     }
     
+    public function update()
+    {
+        $response = $this->traitUpdate();
+
+        // Upsell
+        $links = request()->input('linksData', []);
+        $this->syncLinks($this->crud->entry->id, $links);
+
+        return $response;
+
+    }
+    public function store()
+    {  
+
+        $response = $this->traitStore();
+
+        // Upsell
+        $links = request()->input('linksData', []);
+        $this->syncLinks($this->crud->entry->id, $links);
+
+        return $response;
+    }
+
     /**
      * Method fetchOrder
      *
@@ -234,7 +257,7 @@ class ProductCrudController extends CrudController
     {
       // $this->setupCreateOperation();
 
-      $this->crud->setEditView('store-crud::edit_product');
+      $this->crud->setEditView('crud::edit_product');
 
       $entry = $this->crud->getCurrentEntry();
       $isVariant = (bool) $entry->parent_id;
@@ -280,6 +303,9 @@ class ProductCrudController extends CrudController
           'items'      => $siblings,
           'isBaseProduct'     => $isVariant? false: true,
       ]);
+
+
+      // \Backpack\Reviews\Facades\Reviews::attachToCrud($this->crud, 'Отзывы');
     }
 
     /**
@@ -296,11 +322,67 @@ class ProductCrudController extends CrudController
               ->orderBy('price')
               ->get();
 
-      $currency = config('backpack.store.currency.symbol');
+      $currency = \Settings::get('dress.store.currency.symbol');
 
       return view('store-crud::details.product_suppliers', compact('sps', 'currency'));
     }
 
+    // Upsell
+    protected function syncLinks($productId, string|array $payload): void
+    {
+        if (!is_array($payload)) {
+            $payload = json_decode($payload ?? '[]', true);
+        }
+
+        if (!is_array($payload)) {
+            $payload = [];
+        }
+
+        $entry = $this->crud->entry ?? null;
+        $linkableType = $entry ? $entry->getMorphClass() : $this->product_class;
+        $now = now();
+
+        $rows = collect($payload)
+            ->filter(fn($row) => is_array($row))
+            ->map(function (array $row) use ($productId, $linkableType, $now) {
+                $linkedProductId = (int) ($row['product_id'] ?? $row['links'] ?? $row['linked_product_id'] ?? 0);
+
+                if ($linkedProductId <= 0 || $linkedProductId === (int) $productId) {
+                    return null;
+                }
+
+                $kind = in_array($row['kind'] ?? null, ['cross', 'up'], true)
+                    ? $row['kind']
+                    : 'cross';
+
+                $priority = (int) ($row['priority'] ?? 0);
+                $priority = max(0, min(255, $priority));
+
+                return [
+                    'linkable_type' => $linkableType,
+                    'linkable_id'   => $productId,
+                    'product_id'    => $linkedProductId,
+                    'kind'          => $kind,
+                    'priority'      => $priority,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ];
+            })
+            ->filter()
+            ->unique(fn($row) => $row['product_id'].'_'.$row['kind'])
+            ->values();
+
+        \DB::transaction(function () use ($linkableType, $productId, $rows) {
+            \DB::table('ak_product_links')
+                ->where('linkable_type', $linkableType)
+                ->where('linkable_id', $productId)
+                ->delete();
+
+            if ($rows->isNotEmpty()) {
+                \DB::table('ak_product_links')->insert($rows->all());
+            }
+        });
+    }
     
     /**
      * setAttrsForCategories
@@ -421,6 +503,7 @@ class ProductCrudController extends CrudController
      */
     public function getProductsRouter(Request $request) {
       $search_term = $request->input('q');
+      $search_keys = $request->input('keys');
 
       // langs
       $langs_list = $this->langs_list;
@@ -444,9 +527,10 @@ class ProductCrudController extends CrudController
           ->orWhere('slug', 'LIKE', '%'.$search_term.'%')
           // ->orWhere("short_name->{$locale}", 'LIKE', '%'.$search_term.'%')
           ->paginate(20);
-      }
-      else
-      {
+      } elseif($search_keys) {
+        $search_key_array = is_numeric($search_keys)? [$search_keys]: json_decode($search_keys, true);
+        $results = $this->product_class::whereIn('id', $search_key_array)->get();
+      } else {
           $results = $this->product_class::paginate(20);
       }
 

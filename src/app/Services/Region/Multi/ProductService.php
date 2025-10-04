@@ -7,7 +7,8 @@ use Backpack\Store\app\Contracts\ProductService as Contract;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\SupplierProduct;
 
-use Backpack\Store\Services\Currency\CurrencyConverter;
+use Backpack\Store\app\Services\Currency\CurrencyConverter;
+use Backpack\Store\app\Services\Product\SupplierProductResolver;
 
 use Illuminate\Support\Facades\DB;
 
@@ -21,9 +22,9 @@ class ProductService implements Contract {
       return $this;
   }
 
-  public function supplierProducts()
+  public function supplierProducts(?string $country_code = null)
   {
-    $countryCode = \Store::country();
+    $countryCode = $country_code ?? \Store::context()->country;
 
     return $this->product->hasMany(SupplierProduct::class)
         ->whereHas('supplier', function($query) use ($countryCode) {
@@ -35,8 +36,8 @@ class ProductService implements Contract {
         });
   }
 
-  public function supplierProduct() {
-    return app(SupplierProductResolver::class)->current($this->product);
+  public function supplierProduct(?string $country_code = null) {
+    return app(SupplierProductResolver::class)->current($this->product, $country_code);
   }
 
   public function price(): ?float {
@@ -53,6 +54,14 @@ class ProductService implements Contract {
 
     $prices = $this->resolvePrice();
     return $prices['old_price'] ?? null;
+  }
+
+  public function currency(): ?string {
+    // Для абстрактных товаров или товаров без поставщика
+    if(!$this->product->supplierProduct) return null;
+
+    $prices = $this->resolvePrice();
+    return $prices['currency'] ?? null;
   }
 
   private function converter() {

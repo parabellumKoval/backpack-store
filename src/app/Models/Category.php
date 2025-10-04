@@ -291,7 +291,7 @@ class Category extends Model
      * @return void
      */
     public function getImageSrcAttribute() {
-      $base_path = config('backpack.store.category.image.base_path', '/');
+      $base_path = \Settings::get('dress.category.image.base_path', '/');
 
       if(isset($this->image['src'])) {
         return $base_path . $this->image['src'];

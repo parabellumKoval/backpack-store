@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\Route;
 use Backpack\Store\app\Models\Catalog;
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Category;
-use Backpack\Store\app\Services\ProductFilterService;
-use Backpack\Store\app\Services\ProductQueryService;
+
+use Backpack\Store\app\Services\Catalog\ProductFilterService;
+use Backpack\Store\app\Services\Catalog\ProductQueryService;
 
 class CatalogCache extends Command
 {

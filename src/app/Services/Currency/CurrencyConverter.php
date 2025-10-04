@@ -13,9 +13,12 @@ class CurrencyConverter
         $this->provider = $provider;
     }
 
-    public function convert(float $amount, string $fromCurrency, string $toCurrency): float
+    public function convert(float|null $amount, string $fromCurrency, string $toCurrency, int $fixTo = 2): float|null
     {
+        if($amount === null || !is_numeric($amount))
+            return $amount;
+
         $rate = $this->provider->getExchangeRate($fromCurrency, $toCurrency);
-        return round($amount * $rate, 2);
+        return round($amount * $rate, $fixTo);
     }
 }

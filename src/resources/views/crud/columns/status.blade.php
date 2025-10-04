@@ -31,4 +31,4 @@
 @endphp
 
 
-<span class="{{ $class }}">{{ __('shop.' . $context . '_status.' . $status) }}</span>
+<span class="{{ $class }}">{{ __('backpack-store::shop.' . $context . '_status.' . $status) }}</span>

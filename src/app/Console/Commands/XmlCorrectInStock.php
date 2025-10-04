@@ -42,7 +42,7 @@ class XmlCorrectInStock extends Command
     public function __construct()
     {
       parent::__construct();
-      $this->isSuppliersEnabled = config('backpack.store.supplier.enable', false);
+      $this->isSuppliersEnabled = \Settings::get('dress.supplier.enable', false);
     }
 
 

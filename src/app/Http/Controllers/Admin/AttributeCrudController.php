@@ -154,6 +154,12 @@ class AttributeCrudController extends CrudController
           'name' => 'si',
           'label' => 'Си'
         ]);
+
+        $this->crud->addColumn([
+          'name' => 'categories',
+          'label' => 'Кол-во категорий',
+          'type'  => 'relationship_count',
+        ]);
     }
     
     /**
@@ -227,19 +233,6 @@ class AttributeCrudController extends CrudController
           'default' => 1,
           'tab' => 'Основное'
         ]);
-
-        if(config('backpack.store.attribute.enable_icon')) {
-          $this->crud->addField([
-            'name' => 'icon',
-            'label' => 'Иконка',
-            'type' => 'textarea',
-            'attributes' => [
-              'rows' => '7'
-            ],
-            'hint' => 'html-код иконки',
-            'tab' => 'Основное'
-          ]);
-        }
 
         $this->crud->addField([
           'name' => 'content',
@@ -495,7 +488,9 @@ class AttributeCrudController extends CrudController
      *
      * @return void
      */
-    private function getAttributeValuesArray(){
+    private function getAttributeValuesArray(): array{
+      if(empty($this->entry)) return [];
+
       $values = $this->entry->values;
       return $values->map(function($item) {
         
@@ -581,6 +576,54 @@ class AttributeCrudController extends CrudController
       else
       {
           $results = AttributeValue::where('attribute_id', $attribute_id)->paginate(20);
+      }
+
+      return $results;
+    }
+
+    /**
+     * getAttribute
+     *
+     * @param  mixed $request
+     * @param  mixed $attribute_id
+     * @return void
+     */
+    public function getAttribute(Request $request, $category_id) {
+      if($category_id) {
+        return Attribute::whereRelation('categories', 'ak_attribute_category.category_id', $category_id)->get()->mapWithKeys(function (Attribute $item) {
+            return [$item->id => $item->name];
+        });
+      }
+
+      $search_term = $request->input('q');
+      $ids = $request->input('keys');
+
+      if($ids) {
+        $search_key_array = is_numeric($ids)? [$ids]: json_decode($ids, true);
+        $attributes = Attribute::whereIn('id', $search_key_array)->get();
+
+        return $attributes;
+      }
+
+      // langs
+      $langs_list = $this->langs_list;
+
+      if ($search_term)
+      {
+          $results = Attribute::
+            where(function($query) use ($search_term, $langs_list){
+              foreach($langs_list as $index => $lang_key) {
+                $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
+                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+              }
+            })
+            ->where('is_active', 1)
+            ->where('in_filters', 1)
+            ->paginate(20);
+      }
+      else
+      {
+          $results = Attribute::paginate(20);
       }
 
       return $results;

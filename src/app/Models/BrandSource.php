@@ -48,7 +48,7 @@ class BrandSource extends Model
     */
     public function source()
     {
-      $this->source_class = config('backpack.store.source.class', 'Backpack\Store\app\Models\Source');
+      $this->source_class = \Settings::get('dress.source.model', 'Backpack\Store\app\Models\Source');
       return $this->belongsTo($this->source_class);
     }
 
@@ -59,7 +59,7 @@ class BrandSource extends Model
      */
     public function brand()
     {
-      $this->brand_class = config('backpack.store.brands.class', 'Backpack\Store\app\Models\Brand');
+      $this->brand_class = \Settings::get('dress.brand.model', 'Backpack\Store\app\Models\Brand');
       return $this->belongsTo($this->brand_class);
     }
     /*

@@ -26,7 +26,7 @@ class UploadCrudController extends CrudController
 
     public function setup()
     {
-      $this->brand_class = config('backpack.store.source.upload_class', 'Backpack\Store\app\Models\Upload');
+      $this->brand_class = \Settings::get('dress.source.model_upload_history', 'Backpack\Store\app\Models\Upload');
 
         $this->crud->setModel($this->brand_class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/upload');

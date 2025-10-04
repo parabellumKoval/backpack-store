@@ -63,7 +63,7 @@ class SupplierFormStrategy implements Contract {
 
     private function getCountriesArray() {
         $countries = \Store::countries();
-        $localeToCountry = array_column($countries, 'country', 'locale');
+        $localeToCountry = array_column($countries, 'country', 'code');
         return $localeToCountry;
     }
 }

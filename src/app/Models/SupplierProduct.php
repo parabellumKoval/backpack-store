@@ -67,7 +67,7 @@ class SupplierProduct extends Model
     */
     public function product()
     {
-      $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+      $this->product_class = \Settings::get('dress.product.model', 'Backpack\Store\app\Models\Product');
       return $this->belongsTo($this->product_class);
     }
 

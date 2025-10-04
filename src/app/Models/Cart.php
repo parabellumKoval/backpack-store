@@ -41,12 +41,12 @@ class Cart extends Model
     */
     public function product()
     {
-      return $this->belongsTo('Backpack\Store\app\Models\Product', 'product_id');
+      return $this->belongsTo(\Settings::get('dress.product.model', 'Backpack\Store\app\Models\Product'), 'product_id');
     }
 
     public function user()
     {
-      return $this->belongsTo(config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'), 'user_id');
+      return $this->belongsTo(\Settings::get('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'), 'user_id');
     }
     
     // public function transactions() {

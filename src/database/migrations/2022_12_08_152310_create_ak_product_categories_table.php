@@ -24,8 +24,10 @@ class CreateAkProductCategoriesTable extends Migration
           
           $table->boolean('is_active')->default(1);
           
-          $table->foreignId('parent_id')->default(null)->nullable();
           $table->foreignId('merchant_id')->default(null)->nullable();
+
+          // Reorder
+          $table->foreignId('parent_id')->default(null)->nullable();
           $table->integer('lft')->default(0)->nullable();
           $table->integer('rgt')->default(0)->nullable();
           $table->integer('depth')->default(0)->nullable();

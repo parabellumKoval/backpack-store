@@ -34,11 +34,11 @@ class OrderController extends \App\Http\Controllers\Controller
   public function __construct() {
     self::resources_init();
 
-    $this->ORDER_MODEL = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
-    $this->USER_MODEL = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile');
+    $this->ORDER_MODEL = \Settings::get('dress.order.model', 'Backpack\Store\app\Models\Order');
+    $this->USER_MODEL = \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile');
 
     // Rd 
-    $this->rd_fields = config('backpack.store.order.fields');
+    $this->rd_fields = \Settings::get('dress.order.fields');
   }
   
   /**
@@ -49,7 +49,7 @@ class OrderController extends \App\Http\Controllers\Controller
    */
   public function index(Request $request) {
 
-    $profile = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
+    $profile = Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->user();
 
     $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
@@ -64,7 +64,7 @@ class OrderController extends \App\Http\Controllers\Controller
               })
               ->orderBy('created_at', 'desc');
     
-    $per_page = request('per_page', config('backpack.store.order.per_page', 12));
+    $per_page = request('per_page', \Settings::get('dress.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
     $orders = self::$resources['order']['large']::collection($orders);
@@ -117,7 +117,7 @@ class OrderController extends \App\Http\Controllers\Controller
               })
               ->orderBy('created_at', 'desc');
     
-    $per_page = request('per_page', config('backpack.store.order.per_page', 12));
+    $per_page = request('per_page', \Settings::get('dress.order.per_page', 12));
     
     $orders = $orders->paginate($per_page);
     $orders = self::$resources['order']['large']::collection($orders);
@@ -222,7 +222,13 @@ class OrderController extends \App\Http\Controllers\Controller
 
       // Try attach products to order after save()
       foreach($products as $product) {
-        $order->products()->attach($product, ['amount' => $data['products'][$product->id]]);
+        $order->products()->attach($product, [
+          'amount' => $data['products'][$product->id], 
+          'value' => $product->price,
+          'currency_code' => $order->currency_code,
+          'country_code' => $order->country_code,
+          'supplier_id' => $product->supplier->id
+        ]);
       }
 
       // Dispatch event to change product in_stock etc.
@@ -256,11 +262,11 @@ class OrderController extends \App\Http\Controllers\Controller
     // GET USER MODEL IF AUTHED
     if($data['provider'] === 'auth') {
 
-      if(!Auth::guard(config('backpack.store.auth_guard', 'profile'))->check()){
+      if(!Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->check()){
         throw new OrderException('User not authenticated', 401);
       }
 
-      $user_model = Auth::guard(config('backpack.store.auth_guard', 'profile'))->user();
+      $user_model = Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->user();
 
       // User Model have to implement toOrderArray() method that gives:
       //    array {first_name: string, last_name: string, phone: string, email: string}
@@ -272,7 +278,7 @@ class OrderController extends \App\Http\Controllers\Controller
       $order->info = $info;
 
       $order->orderable_id = isset($user_model)? $user_model->id: null;
-      $order->orderable_type = isset($user_model)? config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
+      $order->orderable_type = isset($user_model)? \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
     }
 
     return $order;
@@ -290,13 +296,13 @@ class OrderController extends \App\Http\Controllers\Controller
     $order->code = random_int(100000, 999999);
 
     // Generate order code
-    $order->status = config('backpack.store.order.status.default', 'new');
+    $order->status = \Settings::get('dress.order.status.default', 'new');
     
     // Generate order code
-    $order->pay_status = config('backpack.store.order.pay_status.default', 'waiting');
+    $order->pay_status = \Settings::get('dress.order.pay_status.default', 'waiting');
     
     // Generate order code
-    $order->delivery_status = config('backpack.store.order.delivery_status.default', 'waiting');
+    $order->delivery_status = \Settings::get('dress.order.delivery_status.default', 'waiting');
 
     return $order;
   }
@@ -310,10 +316,10 @@ class OrderController extends \App\Http\Controllers\Controller
    */
   protected function setProductsToOrder($order, array $data){
     // Get products collection
-    $products = Product::whereIn('id', array_keys($data['products']))->get();
+    $products = Product::whereIn('id', array_keys($data['products']))->available()->get();
 
     if(!$products || !$products->count()) {
-      throw new OrderException("There are no products found in cart or products does not exist in the database.", 404);
+      throw new OrderException("There are no products found in cart or products does not exist in the database or products don't available.", 404);
     }
 
     // Set products to info

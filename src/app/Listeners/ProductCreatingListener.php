@@ -25,7 +25,7 @@ class ProductCreatingListener
      */
     public function handle(ProductCreating $event)
     {
-      if(config('backpack.store.supplier.enable', false) && !empty($event->product->default_supplier)) {
+      if(\Settings::get('dress.supplier.enable', false) && !empty($event->product->default_supplier)) {
         $event->product->default_supplier['in_stock'] = 1000;
       }
     }

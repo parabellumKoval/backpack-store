@@ -29,7 +29,7 @@ class SupplierCrudController extends CrudController
 
     public function setup()
     {
-      $this->brand_class = config('backpack.store.supplier.class', 'Backpack\Store\app\Models\Supplier');
+      $this->brand_class = \Settings::get('dress.supplier.model', 'Backpack\Store\app\Models\Supplier');
 
       $this->crud->setModel($this->brand_class);
       $this->crud->setRoute(config('backpack.base.route_prefix') . '/supplier');

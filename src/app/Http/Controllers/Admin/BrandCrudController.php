@@ -33,7 +33,7 @@ class BrandCrudController extends CrudController
 
     public function setup()
     {
-      $this->brand_class = config('backpack.store.brands.class', 'Backpack\Store\app\Models\Brand');
+      $this->brand_class = \Settings::get('dress.brand.model', 'Backpack\Store\app\Models\Brand');
 
         $this->crud->setModel($this->brand_class);
         $this->crud->setRoute(config('backpack.base.route_prefix') . '/brand');
@@ -217,18 +217,15 @@ class BrandCrudController extends CrudController
 
     public function getBrands(Request $request) {
       $search_term = $request->input('q');
-      $id = $request->input('keys');
+      $ids = $request->input('keys');
 
       // langs
       $langs_list = $this->langs_list;
 
-      if($id) {
-        $brands = [];
-        $brand = $this->brand_class::find($id);
+      if($ids) {
+        $search_key_array = is_numeric($ids)? [$ids]: json_decode($ids, true);
+        $brands = $this->brand_class::whereIn('id', $search_key_array)->get();
 
-        if($brand) {
-          $brands[] = $brand;
-        }
         return $brands;
       }
 

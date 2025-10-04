@@ -18,6 +18,8 @@ class ProductTinyResource extends BaseResource
         'short_name' => $this->short_name,
         'slug' => $this->slug,
         'price' => $this->price,
+        'oldPrice' => $this->oldPrice,
+        'currency' => $this->currency,
       ];
     }
 }

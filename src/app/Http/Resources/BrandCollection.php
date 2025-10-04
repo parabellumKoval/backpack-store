@@ -16,7 +16,7 @@ class BrandCollection extends ResourceCollection
     $collection = [];
     
     // Patterns
-    $patterns = config('backpack.store.brands.alpha_groups.patterns', []);
+    $patterns = \Settings::get('dress.brand.alpha_groups.patterns', []);
 
     for($i = 0; $i < count($items); $i++){
       $symbol = mb_substr($items[$i]->name, 0, 1);

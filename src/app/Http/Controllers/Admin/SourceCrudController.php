@@ -35,7 +35,7 @@ class SourceCrudController extends CrudController
     const DEFAULT_TYPE = 'xml_link';
 
     public function __construct() {
-      $this->source_class = config('backpack.store.source.admin_class', 'Backpack\Store\app\Models\Admin\Source');
+      $this->source_class = \Settings::get('dress.source.model_admin', 'Backpack\Store\app\Models\Admin\Source');
 
       $this->source_class::saving(function($entry) {
         // Attach attributes here

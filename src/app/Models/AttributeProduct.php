@@ -37,19 +37,11 @@ class AttributeProduct extends Pivot
 
   protected $translatable = ['value_trans'];
 
-  // protected $guarded = ['id'];
   /*
   |--------------------------------------------------------------------------
   | FUNCTIONS
   |--------------------------------------------------------------------------
   */
-
-  // public function __construct () {
-  //   // If translatable value available
-  //   if(config('backpack.store.attribute.translatable_value', true)) {
-  //     $this->translatable = ['value'];
-  //   }
-  // }
 
   /**
    * Create a new factory instance for the model.

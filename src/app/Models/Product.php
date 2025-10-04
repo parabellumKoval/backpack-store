@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
+use Illuminate\Support\Facades\DB;
 
 // Stock events
 use Backpack\Store\app\Events\SupplierProductSynced;
@@ -20,9 +21,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\ProductFactory;
 
 // TRAITS
-use App\Models\Traits\ProductModel as ProductModelTrait;
 // use Backpack\Store\app\Models\Traits\EffectiveProductTrait;
+use Backpack\Store\app\Services\Variant\Vertical\EffectiveProduct;
 use Backpack\Store\app\Models\Traits\MultistoreProductTrait;
+use Backpack\Store\app\Models\Traits\TouchCatalogOnProductEvents;
+use Backpack\Store\app\Models\Traits\UpsellProductTrait;
 
 // MODELS
 use Backpack\Store\app\Models\Attribute;
@@ -36,13 +39,11 @@ use Backpack\Store\app\Models\SupplierProduct;
 // RESOURCES
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
 
-//
-use Laravel\Scout\Searchable;
-
 // CONTRACTS
 use \Backpack\Store\app\Contracts\ProductService;
-use \Backpack\Store\app\Services\Resolvers\SupplierProductResolver;
+use \Backpack\Store\app\Services\Product\SupplierProductResolver;
 
+// use Backpack\Store\app\Models\Traits\SearchProductTrait;
 class Product extends Model
 {
     use HasFactory;
@@ -51,11 +52,14 @@ class Product extends Model
     use SluggableScopeHelpers;
     use HasTranslations;
 
-    use ProductModelTrait;
     use MultistoreProductTrait;
+    // use SearchProductTrait;
+
+    use TouchCatalogOnProductEvents;
+    use UpsellProductTrait;
+
     use \Backpack\Store\app\Traits\Resources;
 
-    // use Searchable;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -124,21 +128,32 @@ class Product extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
-    public function toSearchableArray()
+
+    /**
+     * Get all category IDs including parent categories
+     *
+     * @return array Array of unique category IDs
+     */
+    public function getAllCategoryIds(): array
     {
-        return [
-            'id' => $this->id,
-            'name' => $this->getTranslation('name', app()->getLocale()),
-            'brand' => optional($this->brand)->name,
-            'category' => optional($this->category)->name,
-        ];
+        $categoryIds = [];
+        
+        // Get all directly assigned categories
+        $categories = $this->categories;
+        
+        foreach ($categories as $category) {
+            // Add current category ID
+            $categoryIds[] = $category->id;
+            
+            // Get all parent categories
+            $ancestors = $category->getParentNode()->pluck('id')->toArray();
+            $categoryIds = array_merge($categoryIds, $ancestors);
+        }
+        
+        // Remove duplicates and reindex array
+        return array_values(array_unique($categoryIds));
     }
 
-    public function searchableAs()
-    {
-        return 'products';
-    }
-    
     /**
      * Get product service instance
      */
@@ -331,9 +346,9 @@ class Product extends Model
      *
      * @return void
      */
-    public function sp()
+    public function sp(?string $country_code = null)
     {
-      return $this->productService()->supplierProducts();
+      return $this->productService()->supplierProducts($country_code);
     }
 
 
@@ -378,7 +393,7 @@ class Product extends Model
      */
     public function orders()
     {
-      $order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+      $order_model = \Settings::get('dress.order.model', 'Backpack\Store\app\Models\Order');
       return $this->belongsToMany($order_model, 'ak_order_product');
     }
         
@@ -401,13 +416,18 @@ class Product extends Model
     {
       return $this->hasManyThrough(AttributeValue::class, AttributeProduct::class);
     }
-
     /*
     |--------------------------------------------------------------------------
     | SCOPES
     |--------------------------------------------------------------------------
     */
-    
+    public function scopeLeafs($query)
+    {
+        return $query->where(function($q) {
+            $q->whereDoesntHave('children')  // products without modifications
+              ->orWhere('parent_id', '!=', null);  // modifications themselves
+        });
+    }
     /**
      * scopeInStock
      *
@@ -525,7 +545,7 @@ class Product extends Model
      * @return string|null string is image src url
      */
     public function getImageSrcAttribute() {
-      $base_path = config('backpack.store.product.image.base_path', '/');
+      $base_path = \Settings::get('dress.product.image.base_path', '/');
 
       if(isset($this->image['src'])) {
         return $base_path . $this->image['src'];
@@ -589,28 +609,6 @@ class Product extends Model
     //   }
     // }
 
-    /**
-     * getModificationsAttribute
-     *
-     * Return all product modifications includes self model
-     * 
-     * @return collection
-     */
-    public function getModificationsAttribute() {
-      if($this->children->count())
-      {
-        return $this->children;
-      }
-      else if($this->parent)
-      {
-        $parent_children = clone $this->parent->children()->where('id', '!=', $this->id)->get();
-        return $parent_children->prepend($this->parent);
-      }
-      // else 
-      // {
-      //   return collect([])->prepend($this);
-      // }
-    }
     
     /**
      * getSeoAttribute
@@ -822,28 +820,60 @@ class Product extends Model
 
     //   return $sp;
     // }
-    
+
+    // public function effective(): EffectiveProduct
+    // {
+    //     return app(EffectiveProduct::class, ['p' => $this]);
+    // }
+    public function effective(bool $raw = false): EffectiveProduct
+    {
+        return app(EffectiveProduct::class, [
+            'p' => $this,
+            'raw' => $raw,
+            'preferParent' => false,   // child-first
+        ]);
+    }
+
+    public function inherited(bool $raw = false): EffectiveProduct
+    {
+        return app(EffectiveProduct::class, [
+            'p' => $this,
+            'raw' => $raw,
+            'preferParent' => true,    // parent-first
+        ]);
+    }
+
+    public function getSupplierAttribute() {
+      return $this->supplierProduct->supplier;
+    }
 
     public function getSupplierProductAttribute() {
       return app(SupplierProductResolver::class)->current($this);
+    }
+
+    public function getModificationsAttribute() {
+      return app(\Backpack\Store\app\Contracts\Modification::class)->get($this);
     }
 
     public function getPriceAttribute() {
       return $this->productService()->price();
     }
 
+    public function getCurrencyAttribute() {
+      return $this->productService()->currency();
+    }
 
     public function getOldPriceAttribute() {
       return $this->productService()->oldPrice();
     }
 
     public function getInStockAttribute() {
-      return $this->supplierProduct->in_stock;
+      return $this->supplierProduct->in_stock ?? 0;
     }
 
     public function getCodeAttribute() {
-      if(!empty($this->code))
-        return $this->code;
+      if(!empty($this->attributes['code']))
+        return $this->attributes['code'];
 
       $sp = $this->supplierProduct;
 
@@ -858,6 +888,7 @@ class Product extends Model
       }
     }
 
+
     /*
     |--------------------------------------------------------------------------
     | MUTATORS
@@ -867,4 +898,48 @@ class Product extends Model
       $this->modificationsToSave = $value;
     }
     
+    /*
+    |--------------------------------------------------------------------------
+    | MUTATORS METHODS
+    |--------------------------------------------------------------------------
+    */  
+
+    /** Атомарно изменить остаток у актуального поставщика */
+    public function adjustStock(int $delta): ?SupplierProduct
+    {
+        if (! $sp = $this->supplierProduct) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($sp, $delta) {
+            // Обновляем прямо на уровне SQL, без гонок
+            $newValue = max(0, $sp->in_stock + $delta);
+
+            $sp->newQuery()
+               ->whereKey($sp->getKey())
+               ->update(['in_stock' => $newValue]);
+
+            return $sp->refresh();
+        });
+    }
+
+    /** Установить абсолютное значение остатка (>=0) */
+    public function setStock(int $new): ?SupplierProduct
+    {
+        if (! $sp = $this->supplierProduct) {
+            return null;
+        }
+
+        $new = max(0, $new);
+
+        $sp->newQuery()
+           ->whereKey($sp->getKey())
+           ->update(['in_stock' => $new]);
+
+        return $sp->refresh();
+    }
+
+    // public function setNameAttribute($v) {
+    //   dd($v, $this->attributes);
+    // }
 }

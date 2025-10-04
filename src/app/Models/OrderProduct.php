@@ -36,6 +36,15 @@ class OrderProduct extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+    protected static function booted(): void
+    {
+        static::creating(function (self $orderProduct) {
+            if (!$orderProduct->country_code) {
+                $orderProduct->country_code = \Store::country();
+            }
+        });
+    }
+
     protected static function boot()
     {
         parent::boot();

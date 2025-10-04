@@ -3,9 +3,11 @@
 return [
   'enabled' => true,
   
-  'default_country' => 'cz',
+  'support_global' => true,
   
-  'default_currency' => 'CZK',
+  'default_country' => 'zz',
+  
+  'default_currency' => 'USD',
 
   'currencies' => [
     [
@@ -31,6 +33,8 @@ return [
       'enabled' => true,
       'country' => 'Ukraine',
       'locale' => 'uk',
+      'code' => 'uk',
+      'currency' => 'UAH',
       'delivery' => [],
       'payment' => []
     ],
@@ -38,6 +42,8 @@ return [
       'enabled' => true,
       'country' => 'Spain',
       'locale' => 'es',
+      'code' => 'es',
+      'currency' => 'EUR',
       'delivery' => [],
       'payment' => []
     ],
@@ -45,6 +51,8 @@ return [
       'enabled' => true,
       'country' => 'Germany',
       'locale' => 'de',
+      'code' => 'de',
+      'currency' => 'EUR',
       'delivery' => [],
       'payment' => []
     ],
@@ -52,6 +60,8 @@ return [
       'enabled' => true,
       'country' => 'Czech',
       'locale' => 'cz',
+      'code' => 'cz',
+      'currency' => 'CZK',
       'delivery' => [],
       'payment' => []
     ]

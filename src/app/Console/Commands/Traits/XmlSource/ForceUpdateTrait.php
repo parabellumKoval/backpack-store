@@ -114,7 +114,7 @@ trait ForceUpdateTrait {
      * @return void
      */
     public function checkRemoteImage($url) {
-      $base_path = config('backpack.store.product.image.base_path', '/');
+      $base_path = \Settings::get('dress.product.image.base_path', '/');
       $image_url = $base_path . $url;
 
       $response = Http::get($image_url);

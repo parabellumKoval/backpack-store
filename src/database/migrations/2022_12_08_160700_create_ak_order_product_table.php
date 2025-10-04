@@ -15,13 +15,15 @@ class CreateAkOrderProductTable extends Migration
     {
         Schema::create('ak_order_product', function (Blueprint $table) {
             $table->id();
-            
+            $table->char('country_code', 2)->nullable()->index();
+            $table->char('currency_code', 3)->index();
+
             $table->foreignId('order_id');
             $table->foreignId('product_id');
+            $table->foreignId('supplier_id');
+
             $table->integer('amount')->default(1);
             $table->longtext('value')->nullable();
-            
-            $table->timestamps();
         });
     }
 

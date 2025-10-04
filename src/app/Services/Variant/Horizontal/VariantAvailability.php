@@ -1,15 +1,17 @@
 <?php
-
-// src/Services/Horizontal/VariantAvailability.php
 namespace Backpack\Store\app\Services\Variant\Horizontal;
 
-use Illuminate\Database\Eloquent\Builder;
-
 use Backpack\Store\app\Contracts\VariantAvailability as Contract;
+use Illuminate\Database\Query\Builder as Qb;
 
-class VariantAvailability implements Contract {
-    public function apply(Builder $q, \Closure $self, \Closure $children): Builder {
-        // Все записи равноправны — применяем только $self
-        return $self($q);
+class VariantAvailability implements VariantAvailability
+{
+    public function idsSubquery(Qb $base, \Closure $existsSelf, \Closure $existsChild, string $t): Qb
+    {
+        $H = (clone $base)
+            ->whereExists(function($s) use ($existsSelf){ $existsSelf($s); })
+            ->select('p.id');
+
+        return \DB::query()->fromSub($H, 'u')->select('u.id');
     }
 }

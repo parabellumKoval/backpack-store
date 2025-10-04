@@ -91,7 +91,7 @@ class Source extends Model
      */
     public function supplier()
     {
-      $this->supplier_class = config('backpack.store.supplier.class', 'Backpack\Store\app\Models\Supplier');
+      $this->supplier_class = \Settings::get('dress.supplier.model', 'Backpack\Store\app\Models\Supplier');
       return $this->belongsTo($this->supplier_class);
     }
     
@@ -102,7 +102,7 @@ class Source extends Model
      */
     public function history()
     {
-      $this->upload_class = config('backpack.store.source.upload_class', 'Backpack\Store\app\Models\UploadHistory');
+      $this->upload_class = \Settings::get('dress.source.model_upload_history', 'Backpack\Store\app\Models\UploadHistory');
       return $this->hasMany($this->upload_class);
     }
 
@@ -113,7 +113,7 @@ class Source extends Model
      */
     public function categories()
     {
-      $this->category_class = config('backpack.store.category.class', 'Backpack\Store\app\Models\Category');
+      $this->category_class = \Settings::get('dress.category.model', 'Backpack\Store\app\Models\Category');
       return $this->belongsToMany($this->category_class, 'ak_category_source')->withPivot('name');
     }
 
@@ -124,7 +124,7 @@ class Source extends Model
      */
     public function brands()
     {
-      $this->brand_class = config('backpack.store.brands.class', 'Backpack\Store\app\Models\Brand');
+      $this->brand_class = \Settings::get('dress.brand.model', 'Backpack\Store\app\Models\Brand');
       return $this->belongsToMany($this->brand_class, 'ak_brand_source')->withPivot('name');
     }
 

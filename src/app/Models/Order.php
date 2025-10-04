@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Models;
 
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 // FACTORY
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,8 +21,12 @@ use Backpack\Store\app\Events\PromocodeApplied;
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Models\Promocode;
 
+//
+use Backpack\Helpers\Traits\HasDisplayLabel;
+
 class Order extends Model
 {
+    use HasDisplayLabel;
     use CrudTrait;
     use HasFactory;
 
@@ -37,7 +42,8 @@ class Order extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status'];
+    protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status','country_code', 'currency_code', 'fx_rate',
+        'subtotal','discount_total','shipping_total','tax_total','grand_total',];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
@@ -58,7 +64,23 @@ class Order extends Model
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
-
+    protected static function booted(): void
+    {
+        static::creating(function (self $order) {
+            // Безопасно подставляем из текущего Store-контекста
+            if (!$order->country_code) {
+                $order->country_code = \Store::country();
+            }
+            if (!$order->currency_code) {
+                $order->currency_code = \Store::currency();
+            }
+            if (!$order->fx_rate) {
+                $order->fx_rate = app(\Backpack\Store\app\Contracts\ExchangeRateProvider::class)
+                    ->getExchangeRate(\Settings::get('dress.store.base_currency'), $order->currency_code);
+            }
+        });
+    }
+    
     /**
      * __construct
      *
@@ -80,7 +102,26 @@ class Order extends Model
       return OrderFactory::new();
     }
 
-    
+    protected function displayLabelConfig(): array
+    {
+        // Считаем всё заранее и просто возвращаем массив
+        $prefix = 'Заказ';
+        $code   = $this->code ?? $this->getKey();
+        $user = $this->orderable && $this->orderable->name? '👨‍💻 ' . $this->orderable->name: null; 
+        $time   = '🕒 ' . $this->created_at->format('Y-m-d H:i');
+        $sum    = $this->price !== null
+            ? number_format((float)$this->price, 2, '.', ' ').' '.(string)($this->currency_code ?? '')
+            : null;
+
+        return [
+            'prefix' => $prefix,
+            'parts'   => array_filter([$code, $user, $time, $sum]),
+            'join'    => ' / ',
+            'country' => $this->country_code ?? '',
+            'html_template' => 'crud::columns.order_display_label'
+        ];
+    }
+
     /**
      * resetCopy
      * 
@@ -105,9 +146,9 @@ class Order extends Model
       $this->price = $this->getProductsPrice();
 
       // Reset statuses
-      $this->status = config("backpack.store.order.status.default");
-      $this->pay_status = config("backpack.store.order.pay_status.default");
-      $this->delivery_status = config("backpack.store.order.delivery_status.default");
+      $this->status = \Settings::get("dress.order.status.default");
+      $this->pay_status = \Settings::get("dress.order.pay_status.default");
+      $this->delivery_status = \Settings::get("dress.order.delivery_status.default");
 
       // Write clear info
       $this->info = $info;
@@ -182,6 +223,7 @@ class Order extends Model
       // Refresh price (using promocode sale)
       $this->price = $this->getTotalPrice();
     }
+
     /*
     |--------------------------------------------------------------------------
     | RELATIONS
@@ -193,7 +235,7 @@ class Order extends Model
     }
 
     // Owner/User Model/ Profile Model etc.
-    public function orderable()
+    public function orderable(): MorphTo
     {
       return $this->morphTo();
     }
@@ -203,6 +245,11 @@ class Order extends Model
     | SCOPES
     |--------------------------------------------------------------------------
     */
+    public function scopeForCountry(Builder $q, ?string $code): Builder
+    {
+        return $code ? $q->where('country_code', $code) : $q;
+    }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -293,6 +340,9 @@ class Order extends Model
       return $this->info['promocode'];
     }
         
+    public function getCurrencyAttribute() {
+      return $this->currency_code ?? null;
+    }
     /**
      * getPromocodeSaleStringAttribute
      * 
@@ -306,8 +356,7 @@ class Order extends Model
       if(!$this->promocode)
         return '';
       
-      // Get currency symbol from config
-      $currency_symbol = config('backpack.store.currency.symbol', '$'); 
+      $currency_symbol = \Settings::get("dress.store.currency.symbol", '$'); 
 
       switch($this->promocode['type']) {
         // If regular return in currency
@@ -344,7 +393,7 @@ class Order extends Model
     }
 
     public function getPriceHtmlAttribute() {
-      return view('store-crud::columns.price', ['price' => $this->price, 'muted' => $this->isMuted]);
+      return view('crud::columns.price', ['price' => $this->price, 'currency' => $this->currency, 'muted' => $this->isMuted]);
     }
     /*
     |--------------------------------------------------------------------------

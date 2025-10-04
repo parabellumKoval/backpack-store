@@ -21,7 +21,7 @@ class CartController extends \App\Http\Controllers\Controller
    */
   public function index(Request $request) {
     $auth_user_id = 1;
-    $user = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile')::findOrFail($auth_user_id);
+    $user = \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile')::findOrFail($auth_user_id);
     return response()->json($user->cart);
   }
   
@@ -44,7 +44,7 @@ class CartController extends \App\Http\Controllers\Controller
     }
 
     $auth_user_id = 1;
-    $user = config('backpack.store.user_model', 'Backpack\Profile\app\Models\Profile')::findOrFail($auth_user_id);
+    $user = \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile')::findOrFail($auth_user_id);
 
     try {
       $product = Product::findOrFail($data['product_id']);

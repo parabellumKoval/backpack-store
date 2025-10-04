@@ -4,6 +4,7 @@
 Route::any('/admin/api/brand', 'Backpack\Store\app\Http\Controllers\Admin\BrandCrudController@getBrands');
 Route::any('/admin/api/category', 'Backpack\Store\app\Http\Controllers\Admin\CategoryCrudController@getCategories');
 Route::any('/admin/api/product', 'Backpack\Store\app\Http\Controllers\Admin\ProductCrudController@getProductsRouter');
+Route::any('/admin/api/attribute/{category?}', 'Backpack\Store\app\Http\Controllers\Admin\AttributeCrudController@getAttribute');
 Route::any('/admin/api/attribute_values/{attribute_id}', 'Backpack\Store\app\Http\Controllers\Admin\AttributeCrudController@getAttributeValues');
 
 Route::group([
@@ -19,20 +20,37 @@ Route::group([
     Route::crud('order', 'OrderCrudController');
     Route::crud('promocode', 'PromocodeCrudController');
     
-    if(config('backpack.store.attribute.enable')) {
+    Route::crud('search-queries', 'SearchQueryCrudController');
+    
+    // lists
+    Route::crud('product-list', ProductListCrudController::class);
+
+    // seo page
+    Route::crud('seo-page', SeoPageCrudController::class);
+
+    // Currency
+    // CRUD (index + show; create/update/delete отключены в контроллере)
+    Route::crud('currency-rates', 'CurrencyRateCrudController');
+
+    // Кнопка "Обновить сейчас"
+    Route::post('currency-rates/refresh', 'CurrencyRateCrudController@refreshNow')
+        ->name('backpack.store.currency-rates.refresh');
+
+    //
+    if(\Settings::get('dress.attribute.enable')) {
       Route::crud('attribute', 'AttributeCrudController');
       Route::crud('value', 'AttributeValueCrudController');
     }
 
-    if(config('backpack.store.brands.enable')) {
+    if(\Settings::get('dress.brand.enable')) {
       Route::crud('brand', 'BrandCrudController');
     }
 
-    if(config('backpack.store.supplier.enable')) {
+    if(\Settings::get('dress.supplier.enable')) {
       Route::crud('supplier', 'SupplierCrudController');
     }
 
-    if(config('backpack.store.source.enable')) {
+    if(\Settings::get('dress.source.enable')) {
       Route::crud('source', 'SourceCrudController');
       Route::crud('upload', 'UploadCrudController');
     }
@@ -59,6 +77,7 @@ Route::group([
         'uses' => 'ProductCrudController@handleBulkActionRouter',
         'operation' => 'list',
     ]); 
+
 
 }); // this should be the absolute last line of this file
 

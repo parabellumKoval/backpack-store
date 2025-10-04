@@ -4,14 +4,24 @@ namespace Backpack\Store\app\Services\Catalog;
 
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Backpack\Store\app\Services\Currency\CurrencyConverter;
 use Carbon\Carbon;
+
+// use Backpack\Store\app\Models\Product;
 
 class CatalogCacheBuilder
 {
-    public function __construct(
-        private CurrencyConverter $converter,
-    ) {}
+    private $processed_product_ids = [];
+    private $product_class = null;
+
+
+    protected string $tblCatalog = 'ak_catalog';            // country_code, group_id, product_id, is_visible...
+    protected string $tblAttr    = 'ak_catalog_attr';
+    protected string $tblAP      = 'ak_attribute_product';  // product_id, attribute_id, attribute_value_id?, value?
+
+
+    public function __construct() {
+        $this->product_class = \Settings::get('dress.product.model_admin', 'Backpack\Store\app\Models\Product');
+    }
 
     /**
      * Полная пересборка (батчами).
@@ -20,11 +30,13 @@ class CatalogCacheBuilder
      */
     public function rebuild(?array $countryCodes = null, int $chunk = 1000): void
     {
+        $this->processed_product_ids = [];
         $countryCodes = $countryCodes ?: $this->availableCountries();
 
         // Чистить таблицу целиком не обязательно; можно upsert'ить.
-        foreach ($countryCodes as $country) {
-            $this->rebuildCountry($country, $chunk);
+        foreach ($countryCodes as $country_code => $country) {
+            $this->rebuildCountry($country_code, $chunk);
+            $this->rebuildAttributesForCountry($country_code);
         }
     }
 
@@ -33,196 +45,181 @@ class CatalogCacheBuilder
      */
     public function rebuildCountry(string $countryCode, int $chunk = 1000): void
     {
-        // 1) Берем активные модификации (children). Родители абстрактны.
-        DB::table('ak_products')
-            ->where('is_active', 1)
-            ->whereNotNull('parent_id') // только дети
-            ->orderBy('id')
-            ->chunk($chunk, function (Collection $products) use ($countryCode) {
-                $rows = [];
+        $currency = $this->targetCurrency($countryCode);
 
-                foreach ($products as $p) {
-                    // 2) Определить обслуживающие склады для страны
-                    $suppliers = $this->activeSuppliersFor($p->id, $countryCode);
-                    if ($suppliers->isEmpty()) {
-                        // Нет склада — товар недоступен
-                        $rows[] = $this->rowUnavailable($p, $countryCode);
-                        continue;
+        \Store::withContext($countryCode, $currency, function () use ($countryCode, $chunk) {
+            $this->product_class::query()
+                ->leafs()
+                ->available()
+                ->chunk($chunk, function ($products) use ($countryCode) {
+                    $rows = [];
+
+                    foreach ($products as $p) { // $p — Eloquent-модель Product
+
+                        $category_ids_array = $p->getAllCategoryIds();
+                        $category_ids_json = $category_ids_array? json_encode($category_ids_array): null;
+
+                        $images_array = $p->effective()->images;
+                        $images_json = $images_array? json_encode($images_array): null;
+
+                        //
+                        if($p->price === null)
+                            continue;
+
+                        $rows[] = [
+                            'product_id'    => $p->id,
+                            'group_id'      => $p->parent_id ?: $p->id,
+                            'item_type'     => $p->parent_id? 'm': 's', // simple or modification
+                            'country_code'  => $countryCode,
+                            'currency_code' => \Store::context()->currency,
+                            'is_available'    => 1,
+                            'in_stock'      => $p->inStock,
+                            'price'         => $p->price,
+                            'old_price'     => $p->oldPrice,
+                            'brand_id'      => $p->brand_id,
+                            'category_ids'  => $category_ids_json,
+                            'short_name'    => $p->getRawOriginal('short_name'),
+                            
+                            // Effective
+                            'name'          => $p->inherited(true)->name,
+                            'excerpt'       => $p->effective(true)->excerpt,
+                            'slug'          => $p->inherited()->slug,
+                            'images'        => $images_json,
+                            'code'          => $p->effective()->code,
+
+                            // Reviews
+                            'rating'        => $p->base->rating ?? 0,
+                            'reviews'       => $p->base->reviewsCount ?? 0,
+                            'ratings'       => $p->base->reviewsWithRatingCount ?? 0,
+                        ];
+
+                        $this->processed_product_ids[] = $p->id;
                     }
 
-                    // 3) Базовая цена/валюта из склада (выбираем "лучший" склад; можно партиционировать по приоритету)
-                    $best = $this->chooseBestSupplier($suppliers);
-
-                    $baseCurrency = $best['currency_code'];
-                    $basePrice    = $best['price'];         // цена поставщика для модификации
-                    $inStock      = $best['in_stock_total']; // суммарный остаток по стране
-
-                    // 4) Override по стране?
-                    $override = $this->countryOverrideFor($p->id, $countryCode);
-                    if ($override) {
-                        $finalCurrency = $override['currency_code'] ?? $baseCurrency;
-                        $finalPrice    = $override['price'];          // Жёсткая цена
-                        $oldPrice      = $override['old_price'] ?? null;
-                    } else {
-                        // 5) Конвертация если нужно
-                        $finalCurrency = $this->targetCurrency($countryCode); // из конфигурации
-                        $rate = $this->converter->rate($baseCurrency, $finalCurrency);
-                        $finalPrice = $this->converter->convert($basePrice, $baseCurrency, $finalCurrency, $rate);
-                        $oldPrice   = null;
+                    if (!empty($rows)) {
+                        DB::table('ak_catalog')->upsert(
+                            $rows,
+                            ['product_id', 'country_code'], // уникальный ключ
+                            [
+                                'group_id', 'item_type', 'currency_code','is_available','in_stock',
+                                'price','old_price','brand_id','category_ids',
+                                'short_name','name','excerpt','slug','images','code','rating','reviews','ratings'
+                            ]
+                        );
                     }
+                });
+        });
 
-                    // 6) Эффективные витринные поля (наследование parent → child)
-                    $eff = $this->effectivePresentation($p);
+        $this->disableOthers();
+    }
 
-                    $rows[] = [
-                        'product_id'    => $p->id,
-                        'group_id'      => $p->parent_id ?: $p->id,
-                        'country_code'  => $countryCode,
-                        'currency_code' => $finalCurrency,
-                        'is_visible'    => $inStock > 0 && $p->is_active == 1, // можно расширить политиками витрины
-                        'in_stock'      => $inStock,
-                        'price'         => $finalPrice,
-                        'old_price'     => $oldPrice,
-                        'brand_id'      => $eff['brand_id'],
-                        'category_id'   => $eff['category_id'],
-                        'name'          => $eff['name'],
-                        'short_name'    => $eff['short_name'],
-                        'slug'          => $eff['slug'],
-                        'image'         => $eff['image'] ?? null,
-                        'images'        => empty($eff['images']) ? null : json_encode($eff['images']),
-                        'has_fast_delivery' => $best['has_fast_delivery'] ?? false,
-                        'popularity'        => $eff['popularity'] ?? 0,
-                    ];
-                }
-
-                // 7) Upsert батчем
-                if (!empty($rows)) {
-                    DB::table('ak_catalog')->upsert(
-                        $rows,
-                        ['product_id', 'country_code'], // уникальный ключ
-                        [
-                            'group_id','currency_code','is_visible','in_stock',
-                            'price','old_price','brand_id','category_id',
-                            'name','short_name','slug','image','images',
-                            'has_fast_delivery','popularity'
-                        ]
-                    );
-                }
-            });
+    private function disableOthers() {
+        DB::table('ak_catalog')->whereNotIn('product_id', $this->processed_product_ids)->update(['is_available' => 0]);
     }
 
     private function availableCountries(): array
     {
         // Из конфигурации Store: список стран, подключённых к витрине
-        return (array) config('backpack-store.countries', ['UA','CZ','DE','ES']);
+        return (array) \Store::countries();
     }
 
     private function targetCurrency(string $countryCode): string
     {
         // Маппинг страна → валюта витрины
-        $map = (array) config('backpack-store.country_currency', ['UA' => 'UAH','CZ' => 'CZK','DE' => 'EUR','ES' => 'EUR']);
-        return $map[$countryCode] ?? 'EUR';
+        $map = (array) $this->availableCountries();
+        return $map[$countryCode]['currency'] ?? 'EUR';
     }
 
-    private function activeSuppliersFor(int $productId, string $countryCode): Collection
+
+    // ATTRIBUTES
+    public function rebuildAttributesForCountry(string $country): void
     {
-        // Примерная агрегация: активные склады, обслуживающие страну
-        return DB::table('ak_supplier_product as sp')
-            ->join('ak_suppliers as s', 's.id', '=', 'sp.supplier_id')
-            ->join('ak_supplier_countries as sc', 'sc.supplier_id', '=', 's.id')
-            ->where('sp.product_id', $productId)
-            ->where('s.is_active', 1)
-            ->where('sc.country_code', $countryCode)
-            ->selectRaw('
-                sp.product_id,
-                s.id as supplier_id,
-                s.currency_code,
-                COALESCE(sp.price, 0) as price,
-                COALESCE(sp.in_stock, 0) as in_stock_total,
-                s.has_fast_delivery
-            ')
-            ->get();
+        DB::transaction(function () use ($country) {
+            // 0) очистка страны
+            DB::table($this->tblAttr)->where('country_code', $country)->delete();
+
+            // 1) дискретные (check/radio) — attribute_value_id IS NOT NULL
+            $this->insertDiscrete($country);
+
+            // 2) числовые (number) — value IS NOT NULL
+            $this->insertNumber($country);
+
+            // (строковые value_trans при желании можно тоже материализовать отдельно)
+        });
     }
 
-    private function chooseBestSupplier(Collection $suppliers): array
+    protected function insertDiscrete(string $country): void
     {
-        // Пример: выбираем по наличию, затем минимальную цену
-        return $suppliers
-            ->sortBy([
-                fn($x) => $x->in_stock_total > 0 ? 0 : 1,
-                fn($x) => $x->price,
-            ])
-            ->first()
-            ?->toArray() ?? [];
+        // 1) ГРУППОВЫЕ атрибуты (ap привязан к базовому продукту = c.group_id)
+        $subGroup = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap', 'ap.product_id', '=', 'c.group_id')
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->whereNotNull('ap.attribute_value_id')
+            ->distinct()
+            ->selectRaw(
+                '?, c.group_id, NULL as product_id, ap.attribute_id, ap.attribute_value_id, NULL as value',
+                [$country]
+            );
+
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subGroup
+        );
+
+        // 2) ВАРИАНТНЫЕ атрибуты (ap привязан к конкретной модификации = c.product_id)
+        $subVariant = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap', 'ap.product_id', '=', 'c.product_id')
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->whereNotNull('ap.attribute_value_id')
+            ->distinct()
+            ->selectRaw(
+                '?, c.group_id, ap.product_id, ap.attribute_id, ap.attribute_value_id, NULL as value',
+                [$country]
+            );
+
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subVariant
+        );
     }
 
-    private function countryOverrideFor(int $productId, string $countryCode): ?array
+
+    protected function insertNumber(string $country): void
     {
-        $ov = DB::table('ak_product_country_overrides')
-            ->where('product_id', $productId)
-            ->where('country_code', $countryCode)
-            ->first();
+        // 1) ГРУППОВЫЕ
+        $subGroup = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap', 'ap.product_id', '=', 'c.group_id')
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->whereNotNull('ap.value')
+            ->distinct()
+            ->selectRaw(
+                '?, c.group_id, NULL as product_id, ap.attribute_id, NULL as attribute_value_id, ap.value',
+                [$country]
+            );
 
-        if (!$ov) return null;
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subGroup
+        );
 
-        return [
-            'currency_code' => $ov->currency_code ?? null,
-            'price'         => $ov->price,       // фиксированная цена
-            'old_price'     => $ov->old_price,   // при необходимости
-        ];
-    }
+        // 2) ВАРИАНТНЫЕ
+        $subVariant = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap', 'ap.product_id', '=', 'c.product_id')
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->whereNotNull('ap.value')
+            ->distinct()
+            ->selectRaw(
+                '?, c.group_id, ap.product_id, ap.attribute_id, NULL as attribute_value_id, ap.value',
+                [$country]
+            );
 
-    private function effectivePresentation(object $p): array
-    {
-        // Здесь можно подтянуть parent и применить стратегию наследования
-        $parent = null;
-        if ($p->parent_id) {
-            $parent = DB::table('ak_products')->where('id', $p->parent_id)->first();
-        }
-
-        $coalesce = fn($child, $field) => $child->{$field} ?? ($parent->{$field} ?? null);
-
-        return [
-            'brand_id'    => $coalesce($p, 'brand_id'),
-            'category_id' => $coalesce($p, 'category_id'),
-            'name'        => $coalesce($p, 'name'),
-            'short_name'  => $p->short_name ?? null,       // модификация может задавать сама
-            'slug'        => $coalesce($p, 'slug'),
-            'image'       => $coalesce($p, 'image'),
-            'images'      => $this->decodeJson($coalesce($p, 'images')),
-            'popularity'  => (int) ($p->popularity ?? 0),
-        ];
-    }
-
-    private function decodeJson($val): ?array
-    {
-        if (!$val) return null;
-        if (is_array($val)) return $val;
-        try { return json_decode($val, true, 512, JSON_THROW_ON_ERROR); }
-        catch (\Throwable $e) { return null; }
-    }
-
-    private function rowUnavailable(object $p, string $country): array
-    {
-        $eff = $this->effectivePresentation($p);
-        return [
-            'product_id'    => $p->id,
-            'group_id'      => $p->parent_id ?: $p->id,
-            'country_code'  => $country,
-            'currency_code' => $this->targetCurrency($country),
-            'is_visible'    => false,
-            'in_stock'      => 0,
-            'price'         => 0,
-            'old_price'     => null,
-            'brand_id'      => $eff['brand_id'],
-            'category_id'   => $eff['category_id'],
-            'name'          => $eff['name'],
-            'short_name'    => $eff['short_name'],
-            'slug'          => $eff['slug'],
-            'image'         => $eff['image'] ?? null,
-            'images'        => empty($eff['images']) ? null : json_encode($eff['images']),
-            'has_fast_delivery' => false,
-            'popularity'        => (int) ($eff['popularity'] ?? 0),
-        ];
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subVariant
+        );
     }
 }

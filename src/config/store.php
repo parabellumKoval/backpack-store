@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'catalog_table_cache' => true,
+    'slug_map_ttl' => env('BP_STORE_SLUG_MAP_TTL', 3600),
+    
+    'global_region_code' => 'zz',
+
+    'base_currency' => 'USD',
+    
     'currency' => [
       'value' => 'usd',
       'symbol' => '$',
@@ -29,249 +36,250 @@ return [
     'order_model' => 'Backpack\Store\app\Models\Order',
     'enable_orders_in_product_crud' => true,
     
-    'order' => [
+    // 'order' => [
 
-      'enable_bonus' => false,
+    //   'enable_bonus' => false,
 
-      'per_page' => 12,
+    //   'per_page' => 12,
 
-      'resource' => [
-        'large' => 'Backpack\Store\app\Http\Resources\OrderLargeResource',
-      ],
+    //   'resource' => [
+    //     'large' => 'Backpack\Store\app\Http\Resources\OrderLargeResource',
+    //   ],
 
-      // Common order statuses
-      'status' => [
-        'default' => 'new',
-        'values' => ['new', 'canceled', 'failed', 'completed']
-      ],
-      // Payment statuses
-      'pay_status' => [
-        'default' => 'waiting',
-        'values' => ['waiting', 'failed', 'paied']
-      ],
-      // Delivery statuses 
-      'delivery_status' => [
-        'default' => 'waiting',
-        'values' => ['waiting', 'sent', 'failed', 'delivered', 'pickedup']
-      ],
-      // Validation fields
-      'fields' => [
-        'orderable_id' => [
-          'rules' => 'nullable|uuid',
-        ],
+    //   // Common order statuses
+    //   'status' => [
+    //     'default' => 'new',
+    //     'values' => ['new', 'canceled', 'failed', 'completed']
+    //   ],
+    //   // Payment statuses
+    //   'pay_status' => [
+    //     'default' => 'waiting',
+    //     'values' => ['waiting', 'failed', 'paied']
+    //   ],
+    //   // Delivery statuses 
+    //   'delivery_status' => [
+    //     'default' => 'waiting',
+    //     'values' => ['waiting', 'sent', 'failed', 'delivered', 'pickedup']
+    //   ],
+    //   // Validation fields
+    //   'fields' => [
+    //     'orderable_id' => [
+    //       'rules' => 'nullable|uuid',
+    //     ],
 
-        'orderable_type' => [
-          'rules' => 'nullable|max:255',
-        ],
+    //     'orderable_type' => [
+    //       'rules' => 'nullable|max:255',
+    //     ],
 
-        'provider' => [
-          'rules' => 'required|in:auth,data,outer',
-          'store_in' => 'info'
-        ],
+    //     'provider' => [
+    //       'rules' => 'required|in:auth,data,outer',
+    //       'store_in' => 'info'
+    //     ],
   
-        'payment' => [
-          'rules' => 'array:method,status',
-          'store_in' => 'info',
-          'method' => [
-            'rules' => 'required|in:liqpay,cash'
-          ]
-        ],
+    //     'payment' => [
+    //       'rules' => 'array:method,status',
+    //       'store_in' => 'info',
+    //       'method' => [
+    //         'rules' => 'required|in:liqpay,cash'
+    //       ]
+    //     ],
         
-        'delivery' => [
-          'rules' => 'array:city,address,zip,method,warehouse',
-          'store_in' => 'info',
-          'method' => [
-            'rules' => 'required|in:address,warehouse,pickup'
-          ],
-          'warehouse' => [
-            'rules' => 'required_if:delivery.method,warehouse|string|min:1|max:500'
-          ],
-          'city' => [
-            'rules' => 'required_if:delivery.method,address,warehouse|string|min:2|max:255'
-          ],
-          'address' => [
-            'rules' => 'required_if:delivery.method,address|string|min:2|max:255'
-          ],
-          'zip' => [
-            'rules' => 'required_if:delivery.method,address|string|min:5|max:255'
-          ],
-        ],
+    //     'delivery' => [
+    //       'rules' => 'array:city,address,zip,method,warehouse',
+    //       'store_in' => 'info',
+    //       'method' => [
+    //         'rules' => 'required|in:address,warehouse,pickup'
+    //       ],
+    //       'warehouse' => [
+    //         'rules' => 'required_if:delivery.method,warehouse|string|min:1|max:500'
+    //       ],
+    //       'city' => [
+    //         'rules' => 'required_if:delivery.method,address,warehouse|string|min:2|max:255'
+    //       ],
+    //       'address' => [
+    //         'rules' => 'required_if:delivery.method,address|string|min:2|max:255'
+    //       ],
+    //       'zip' => [
+    //         'rules' => 'required_if:delivery.method,address|string|min:5|max:255'
+    //       ],
+    //     ],
         
-        'products' => [
-          'rules' => 'required|array',
-          'hidden' => true,
-        ],
+    //     'products' => [
+    //       'rules' => 'required|array',
+    //       'hidden' => true,
+    //     ],
         
-        'bonusesUsed' => [
-          'rules' => 'nullable|numeric',
-          'store_in' => 'info'
-        ],
+    //     'bonusesUsed' => [
+    //       'rules' => 'nullable|numeric',
+    //       'store_in' => 'info'
+    //     ],
         
-        'promocode' => [
-          'rules' => 'nullable',
-          'store_in' => 'info'
-        ],
+    //     'promocode' => [
+    //       'rules' => 'nullable',
+    //       'store_in' => 'info'
+    //     ],
   
-        'user' => [
-          'rules' => 'array:firstname,lastname,phone,email',
-          'store_in' => 'info',
-          'firstname' => [
-            'rules' => 'required_if:provider,data|string|min:2|max:150'
-          ],
-          'lastname' => [
-            'rules' => 'nullable|string|min:2|max:150'
-          ],
-          'phone' => [
-            'rules' => 'required_if:provider,data|string|min:2|max:80'
-          ],
-          'email' => [
-            'rules' => 'required_if:provider,data|email|min:2|max:150'
-          ],
-        ]
-      ]
-    ],
+    //     'user' => [
+    //       'rules' => 'array:firstname,lastname,phone,email',
+    //       'store_in' => 'info',
+    //       'firstname' => [
+    //         'rules' => 'required_if:provider,data|string|min:2|max:150'
+    //       ],
+    //       'lastname' => [
+    //         'rules' => 'nullable|string|min:2|max:150'
+    //       ],
+    //       'phone' => [
+    //         'rules' => 'required_if:provider,data|string|min:2|max:80'
+    //       ],
+    //       'email' => [
+    //         'rules' => 'required_if:provider,data|email|min:2|max:150'
+    //       ],
+    //     ]
+    //   ]
+    // ],
 
     // CATEGORIES
-    'category' => [
-      'depth_level' => 3,
+    // 'category' => [
+    //   'depth_level' => 3,
 
-      'per_page' => 12,
+    //   'per_page' => 12,
 
-      'image' => [
-        'base_path' => '/public/images/categories/'
-      ],
+    //   'image' => [
+    //     'base_path' => '/public/images/categories/'
+    //   ],
 
-      'resource' => [
-        'tiny' => 'Backpack\Store\app\Http\Resources\CategoryTinyResource',
-        'small' => 'Backpack\Store\app\Http\Resources\CategorySmallResource',
-        'large' => 'Backpack\Store\app\Http\Resources\CategoryLargeResource',
-      ]
-    ],
+    //   'resource' => [
+    //     'tiny' => 'Backpack\Store\app\Http\Resources\CategoryTinyResource',
+    //     'small' => 'Backpack\Store\app\Http\Resources\CategorySmallResource',
+    //     'large' => 'Backpack\Store\app\Http\Resources\CategoryLargeResource',
+    //   ]
+    // ],
 
     // PROPUCT
-    'product' => [
-      'class' => 'Backpack\Store\app\Models\Product',
-      'class_admin' => 'Backpack\Store\app\Models\Admin\Product',
+    // 'product' => [
+    //   'class' => 'Backpack\Store\app\Models\Product',
+    //   'class_admin' => 'Backpack\Store\app\Models\Admin\Product',
 
-      'seo' => [
-        'enable' => true
-      ],
+    //   'seo' => [
+    //     'enable' => true
+    //   ],
 
-      'image' => [
-        'enable' => true,
-        'base_path' => '/public/images/products'
-      ],
+    //   'image' => [
+    //     'enable' => true,
+    //     'base_path' => '/public/images/products'
+    //   ],
 
-      'code' => [
-        'enable' => true
-      ],
+    //   'code' => [
+    //     'enable' => true
+    //   ],
 
-      'price' => [
-        'enable' => true
-      ],
+    //   'price' => [
+    //     'enable' => true
+    //   ],
       
-      'old_price' => [
-        'enable' => true
-      ],
+    //   'old_price' => [
+    //     'enable' => true
+    //   ],
       
-      'modifications' => [
-        'enable' => false
-      ],
+    //   'modifications' => [
+    //     'enable' => false
+    //   ],
 
-      'in_stock' => [
-        'enable' => true,
-      ],
+    //   'in_stock' => [
+    //     'enable' => true,
+    //   ],
 
 
-      'resource' => [
-        // PRODUCT -> resources
-        'tiny' => 'Backpack\Store\app\Http\Resources\ProductTinyResource',
+    //   'resource' => [
+    //     // PRODUCT -> resources
+    //     'tiny' => 'Backpack\Store\app\Http\Resources\ProductTinyResource',
         
-        // Small product resource used for catalog pages (index route)
-        'small' => 'Backpack\Store\app\Http\Resources\ProductSmallResource',
-        'medium' => 'Backpack\Store\app\Http\Resources\ProductMediumResource',
+    //     // Small product resource used for catalog pages (index route)
+    //     'small' => 'Backpack\Store\app\Http\Resources\ProductSmallResource',
+    //     'medium' => 'Backpack\Store\app\Http\Resources\ProductMediumResource',
         
-        // Large product resource used for product page (show route)
-        'large' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
+    //     // Large product resource used for product page (show route)
+    //     'large' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
     
-        // Cart product resource used for order
-        'cart' => 'Backpack\Store\app\Http\Resources\ProductCartResource',
-      ]
-    ],
+    //     // Cart product resource used for order
+    //     'cart' => 'Backpack\Store\app\Http\Resources\ProductCartResource',
+    //   ]
+    // ],
 
     // ATTRIBUTES
-    'attribute' => [
-      'enable' => true,
+    // 'attribute' => [
+    //   'enable' => true,
 
-      // Is pivot values translatable
-      'translatable_value' => false,
+    //   // Is pivot values translatable
+    //   'translatable_value' => false,
 
-      'enable_icon' => false,
+    //   'enable_icon' => false,
 
-      'resource' => [
-        'product' => 'Backpack\Store\app\Http\Resources\AttributeProductResource',
-        'large' => 'Backpack\Store\app\Http\Resources\AttributeLargeResource',
-        'small' => 'Backpack\Store\app\Http\Resources\AttributeSmallResource'
-      ]
-    ],
+    //   'resource' => [
+    //     'product' => 'Backpack\Store\app\Http\Resources\AttributeProductResource',
+    //     'large' => 'Backpack\Store\app\Http\Resources\AttributeLargeResource',
+    //     'small' => 'Backpack\Store\app\Http\Resources\AttributeSmallResource'
+    //   ]
+    // ],
 
     // PROMOCODE
-    'promocodes' => [
-      'enable' => true,
+    // 'promocodes' => [
+    //   'enable' => true,
 
-      'resource' => [
-        'large' => 'Backpack\Store\app\Http\Resources\PromocodeLargeResource',
-        'small' => 'Backpack\Store\app\Http\Resources\PromocodeSmallResource'
-      ],
+    //   'resource' => [
+    //     'large' => 'Backpack\Store\app\Http\Resources\PromocodeLargeResource',
+    //     'small' => 'Backpack\Store\app\Http\Resources\PromocodeSmallResource'
+    //   ],
 
-    ],
+    // ],
 
     // BRAND
-    'brands' => [
-      'enable' => true,
+    // 'brands' => [
+    //   'enable' => true,
 
-      'image' => [
-        'base_path' => '/public/images/brands'
-      ],
+    //   'image' => [
+    //     'base_path' => '/public/images/brands'
+    //   ],
 
-      'resource' => [
-        'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',
-        'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource',
-        'product' => 'Backpack\Store\app\Http\Resources\BrandProductResource',
-        'filter' => 'Backpack\Store\app\Http\Resources\BrandFilterResource',
-        'filter_tiny' => 'Backpack\Store\app\Http\Resources\BrandFilterTinyResource'
-      ],
+    //   'resource' => [
+    //     'large' => 'Backpack\Store\app\Http\Resources\BrandLargeResource',
+    //     'small' => 'Backpack\Store\app\Http\Resources\BrandSmallResource',
+    //     'product' => 'Backpack\Store\app\Http\Resources\BrandProductResource',
+    //     'filter' => 'Backpack\Store\app\Http\Resources\BrandFilterResource',
+    //     'filter_tiny' => 'Backpack\Store\app\Http\Resources\BrandFilterTinyResource'
+    //   ],
 
-      'alpha_groups' => [
-        'patterns' => [
-          '/[А-Яа-яЁё]/u',
-          '/[0-9]/u',
-          '/[A-Za-z]/u',
-        ]
-      ]
-    ],
+    //   'alpha_groups' => [
+    //     'patterns' => [
+    //       '/[А-Яа-яЁё]/u',
+    //       '/[0-9]/u',
+    //       '/[A-Za-z]/u',
+    //     ]
+    //   ]
+    // ],
 
     // SUPPLIER
-    'supplier' => [
-      'enable' => true,
-      'class' => 'Backpack\Store\app\Models\Supplier',
-      'sp_class' => 'Backpack\Store\app\Models\SupplierProduct',
-    ],
+    // 'supplier' => [
+    //   'enable' => true,
+    //   'class' => 'Backpack\Store\app\Models\Supplier',
+    //   'sp_class' => 'Backpack\Store\app\Models\SupplierProduct',
+    // ],
 
     // XML SOURCE
-    'source' => [
-      'enable' => true,
-      'class' => 'Backpack\Store\app\Models\Source',
-      'admin_class' => 'Backpack\Store\app\Models\Admin\Source',
-      'upload_class' => 'Backpack\Store\app\Models\UploadHistory',
-      'test' => [
-        'enable' => env('STORE_SOURCE_TEST', false),
-        'items' => env('STORE_SOURCE_TEST_ITEMS', 1)
-      ]
-    ],
+    // 'source' => [
+    //   'enable' => true,
+    //   'class' => 'Backpack\Store\app\Models\Source',
+    //   'admin_class' => 'Backpack\Store\app\Models\Admin\Source',
+    //   'upload_class' => 'Backpack\Store\app\Models\UploadHistory',
+    //   'test' => [
+    //     'enable' => env('STORE_SOURCE_TEST', false),
+    //     'items' => env('STORE_SOURCE_TEST_ITEMS', 1)
+    //   ]
+    // ],
 
     // CACHE
     'cache' => [
-      'enable' => true
+      'enable' => true,
+      'cases' => []
     ],
 ];

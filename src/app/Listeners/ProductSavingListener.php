@@ -6,7 +6,9 @@ use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\SupplierProduct;
- 
+
+use Backpack\Store\app\Job\UpdateProductModificationsVertical;
+
 class ProductSavingListener
 {
     /**
@@ -42,17 +44,7 @@ class ProductSavingListener
       
 
       if(\Store::isModVertical()) {
-        // Если у родительского базового товара меняются бренд или категории, у всех детей должны быть установленны значения заново 
-        if($product->children()->exists()) {
-          // brand
-          $product->children()->update(['brand_id' => $product->brand_id]);
-
-          // categories
-          $categoryIds = $product->categories()->pluck('ak_product_categories.id')->toArray();
-          $product->children()->each(function ($child) use ($categoryIds) {
-              $child->categories()->sync($categoryIds);
-          });
-        }
+        UpdateProductModificationsVertical::dispatch($product);
       }
 
     }

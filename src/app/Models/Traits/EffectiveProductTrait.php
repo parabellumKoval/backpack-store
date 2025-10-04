@@ -16,7 +16,7 @@ trait EffectiveProductTrait {
      * @return void
      */
     public function getSimpleInStockAttribute() {
-      if(config('backpack.store.supplier.enable', false)) {
+      if(\Settings::get('dress.supplier.enable', false)) {
         return $this->currentSp->in_stock ?? 0;
       }else {
         return $this->in_stock;
@@ -30,7 +30,7 @@ trait EffectiveProductTrait {
      * @return void
      */
     public function getSimplePriceAttribute() {
-      if(config('backpack.store.supplier.enable', false)) {
+      if(\Settings::get('dress.supplier.enable', false)) {
         return $this->currentSp->price ?? 0;
       }else {
         return $this->price;
@@ -43,7 +43,7 @@ trait EffectiveProductTrait {
      * @return void
      */
     public function getSimpleOldPriceAttribute() {
-      if(config('backpack.store.supplier.enable', false)) {
+      if(\Settings::get('dress.supplier.enable', false)) {
         return $this->currentSp->old_price ?? 0;
       }else {
         return $this->old_price;

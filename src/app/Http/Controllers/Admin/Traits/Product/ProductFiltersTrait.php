@@ -207,7 +207,7 @@ trait ProductFiltersTrait
       includes an option for selecting records without a supplier ('🔴 Без поставщика') and a list
       of suppliers to choose from. Depending on the selected supplier, the query is modified to
       filter records accordingly. If 'empty' is */
-      if(config('backpack.store.supplier.enable')) {
+      if(\Settings::get('dress.supplier.enable')) {
         $this->crud->addFilter([
           'name' => 'supplier',
           'label' => 'Поставщик',

@@ -104,20 +104,18 @@ trait ProductFieldsTrait
         $this->setIsActiveField(trans('backpack-store::product-field.tabs.main'));
   
         // CODE
-        if(config('backpack.store.product.code.enable', true)) {
-            $this->crud->addField([
-                'name' => 'code',
-                'label' => trans('backpack-store::product-field.fields.code.label'),
-                'wrapper'   => [ 
-                'class' => 'form-group col-md-6'
-                ],
-                'hint' => trans('backpack-store::product-field.fields.code.hint'),
-                'tab' => trans('backpack-store::product-field.tabs.main')
-            ]);
-        }
+        $this->crud->addField([
+            'name' => 'code',
+            'label' => trans('backpack-store::product-field.fields.code.label'),
+            'wrapper'   => [ 
+            'class' => 'form-group col-md-6'
+            ],
+            'hint' => trans('backpack-store::product-field.fields.code.hint'),
+            'tab' => trans('backpack-store::product-field.tabs.main')
+        ]);
 
         // BARCODE
-        if(!config('backpack.store.supplier.enable', false)) {
+        if(!\Settings::get('dress.supplier.enable', false)) {
             $this->crud->addField([
                 'name' => 'defaultSupplier[barcode]',
                 'label' => trans('backpack-store::product-field.fields.barcode'),
@@ -151,7 +149,7 @@ trait ProductFieldsTrait
             ]);
         }
 
-        if(!config('backpack.store.supplier.enable', false)) {
+        if(!\Settings::get('dress.supplier.enable', false)) {
             $this->crud->addField([
                 'name' => 'defaultSupplierVirtual',
                 'type' => 'hidden',
@@ -160,13 +158,12 @@ trait ProductFieldsTrait
             ]);
 
             // PRICE
-            if(config('backpack.store.product.price.enable', true)) {
-                $this->crud->addField([
+            $this->crud->addField([
                 'name' => 'defaultSupplier[price]',
                 'label' => trans('backpack-store::product-field.fields.price'),
                 'type' => 'number',
                 'value' => $this->entry->defaultSupplier['price'] ?? null,
-                'prefix' => config('backpack.store.currency.symbol'),
+                'prefix' => \Settings::get('dress.store.currency.symbol'),
                 'wrapper'   => [ 
                     'class' => 'form-group col-md-4'
                 ],
@@ -175,17 +172,15 @@ trait ProductFieldsTrait
                     'min' => 0
                 ],
                 'tab' => trans('backpack-store::product-field.tabs.main')
-                ]);
-            }
+            ]);
 
             // OLD PRICE
-            if(config('backpack.store.product.old_price.enable', true)) {
-                $this->crud->addField([
+            $this->crud->addField([
                 'name' => 'defaultSupplier[old_price]',
                 'label' => trans('backpack-store::product-field.fields.old_price'),
                 'type' => 'number',
                 'value' => $this->entry->defaultSupplier['old_price'] ?? null,
-                'prefix' => config('backpack.store.currency.symbol'),
+                'prefix' => \Settings::get('dress.store.currency.symbol'),
                 'wrapper'   => [ 
                     'class' => 'form-group col-md-4'
                 ],
@@ -194,8 +189,7 @@ trait ProductFieldsTrait
                     'min' => 0
                 ],
                 'tab' => trans('backpack-store::product-field.tabs.main')
-                ]);
-            }
+            ]);
 
             // IN STOCK
             $this->crud->addField([
@@ -227,7 +221,7 @@ trait ProductFieldsTrait
 
 
         // BRAND
-        if(config('backpack.store.brands.enable')) {
+        if(\Settings::get('dress.brand.enable')) {
             $this->crud->addField([
                 'name' => 'brand',
                 'label' => trans('backpack-store::product-field.fields.brand'),
@@ -256,12 +250,12 @@ trait ProductFieldsTrait
         $this->setCustomPropertiesFields();
 
         // ATTRIBUTES
-        if(config('backpack.store.attributes.enable', true)){
+        if(\Settings::get('dress.attribute.enable', true)){
             $this->setAttributesFields();
         }
 
         // SUPPLIERS
-        if(config('backpack.store.supplier.enable')) {
+        if(\Settings::get('dress.supplier.enable')) {
             $this->setSuppliersFields(trans('backpack-store::product-field.tabs.warehouse'));
         }
 
@@ -282,7 +276,7 @@ trait ProductFieldsTrait
 
 
         // IMAGES
-        if(config('backpack.store.product.images.enable', true)) {
+        if(\Settings::get('dress.product.images.enable', true)) {
             $this->crud->addField([
                 'name'  => 'images',
                 'label' => trans('backpack-store::product-field.fields.images.label'),
@@ -321,9 +315,7 @@ trait ProductFieldsTrait
 
 
         // SEO FIELDS
-        if(config('backpack.store.product.seo.enable', true)){
-            $this->setSeoFields();
-        }
+        $this->setSeoFields();
 
         // Google Merchant
         $this->crud->addField([
@@ -335,7 +327,58 @@ trait ProductFieldsTrait
             ],
             'tab' => 'Google Merchants'
         ]);
+
+        // Upsale
+        if(\Settings::get('dress.upsell.enabled', true)) {
+            $this->setUpsaleFields();
+        }
     }
+
+
+    private function setUpsaleFields()
+    {
+        $this->crud->addField([
+            'name'   => 'linksData',
+            'label'  => 'Связи',
+            'type'   => 'repeatable',
+            'tab'    => 'Cross-sell товары',
+            'new_item_label' => 'Добавить связь',
+            'fields' => [
+                [
+                    'name'    => 'product_id',
+                    'type'    => 'select2_from_ajax',
+                    'label'   => 'Товар',
+                    'model'   => "Backpack\Store\app\Models\Product",
+                    'attribute' => 'name',
+                    'data_source' => url('/admin/api/product'),
+                    'wrapper'   => ['class' => 'form-group col-md-12'],
+                    'placeholder' => 'Выберите товар',
+                    'minimum_input_length' => 2,
+                ],
+                [
+                    'name'  => 'kind',
+                    'label' => 'Тип',
+                    'type'  => 'select_from_array',
+                    'options' => ['cross' => 'Cross-sell', 'up' => 'Up-sell'],
+                    'wrapper' => ['class' => 'col-md-6'],
+                    'default' => 'cross',
+                ],
+                [
+                    'name'  => 'priority',
+                    'label' => 'Приоритет (0..255)',
+                    'type'  => 'number',
+                    'default' => 0,
+                    'wrapper' => ['class' => 'col-md-6'],
+                    'attributes' => ['min' => 0, 'max' => 255],
+                ],
+            ],
+            'init_rows' => 0,
+            'min_rows'  => 0,
+        ]);
+    }
+
+
+
 
     /**
      * Method setCustomPropertiesFields

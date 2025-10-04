@@ -1,13 +1,15 @@
 <?php
-
 namespace Backpack\Store\app\Contracts;
 
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as Qb;
 
 interface VariantAvailability {
     /**
-     * Применяет правило наличия для товаров:
-     * $self — как проверить сам товар; $children — как проверить детей.
+     * @param Qb     $base        FROM ak_products p WHERE p.is_active=1
+     * @param \Closure $existsSelf   fn(Qb $b): Qb   — EXISTS(sp_ok WHERE product_id = p.id)
+     * @param \Closure $existsChild  fn(Qb $b): Qb   — EXISTS( child c … AND EXISTS(sp_ok WHERE c.id) )
+     * @param string  $t          имя таблицы продуктов
+     * @return Qb     подзапрос SELECT id (u.id)
      */
-    public function apply(Builder $q, \Closure $self, \Closure $children): Builder;
+    public function idsSubquery(Qb $base, \Closure $existsSelf, \Closure $existsChild, string $t): Qb;
 }

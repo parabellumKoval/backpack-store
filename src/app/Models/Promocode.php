@@ -92,7 +92,7 @@ class Promocode extends Model
      */
     public function orders()
     {
-      $order_model = config('backpack.store.order_model', 'Backpack\Store\app\Models\Order');
+      $order_model = \Settings::get('dress.order.model', 'Backpack\Store\app\Models\Order');
       return $this->belongsToMany($order_model, 'ak_order_product');
     }
         

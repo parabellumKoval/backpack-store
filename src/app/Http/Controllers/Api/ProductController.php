@@ -12,8 +12,8 @@ use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Http\Resources\ProductCollection;
 
-use Backpack\Store\app\Services\ProductFilterService;
-use Backpack\Store\app\Services\ProductQueryService;
+use Backpack\Store\app\Services\Catalog\ProductFilterService;
+use Backpack\Store\app\Services\Catalog\ProductQueryService;
 
 class ProductController extends \App\Http\Controllers\Controller
 {
@@ -46,7 +46,7 @@ class ProductController extends \App\Http\Controllers\Controller
     //  - create own Product Model,
     //  - extends it from Backpack\Store\app\Models\Product
     //  - set path to your Product Model in config "backpack.store.product.class"
-    $this->product_class = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
+    $this->product_class = \Settings::get('dress.product.model', 'Backpack\Store\app\Models\Product');
   }
   
 

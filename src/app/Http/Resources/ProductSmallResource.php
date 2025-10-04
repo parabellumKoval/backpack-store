@@ -12,6 +12,12 @@ class ProductSmallResource extends BaseResource
      */
     public function toArray($request)
     {
+      // $variants = $this->modifications()->available()->exists()? $this->modifications()->available(): null;
+      // $variants_resource = $variants? self::$resources['product']['tiny']::collection($variants): null;
+
+      // $variants_resource = $this->modifications()->available()->get();
+      // dd( $variants_resource);
+      // $variants_resource = null;
       return [
         'id' => $this->id,
         'name' => $this->name,
@@ -22,9 +28,7 @@ class ProductSmallResource extends BaseResource
         'in_stock' => $this->simpleInStock,
         'image' => $this->image,
         'excerpt' => substr(strip_tags($this->content), 0, 500).'...',
-        'modifications' => $this->modifications && $this->modifications->count()? 
-          self::$resources['product']['tiny']::collection($this->modifications): 
-            null
+        'modifications' => $this->resource_modifications
       ];
     }
 }

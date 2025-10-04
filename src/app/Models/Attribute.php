@@ -54,7 +54,6 @@ class Attribute extends Model
       'default_value',
       'categories',
       'values_array',
-      // 'attribute_values'
     ];
     // protected $hidden = [];
     // protected $dates = [];
@@ -77,7 +76,6 @@ class Attribute extends Model
     // public $values_array;
     public $attribute_values;
 
-    // protected $attributes = ['values_array' => []];
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
@@ -88,13 +86,13 @@ class Attribute extends Model
       parent::__construct($attributes);
 
       self::$SELECT_TYPES = [
-        'checkbox' => __('shop.fieldType.checkbox'),
-        'radio' => __('shop.fieldType.radio')
+        'checkbox' => __('backpack-store::shop.fieldType.checkbox'),
+        'radio' => __('backpack-store::shop.fieldType.radio')
       ];
 
       self::$TYPES = self::$SELECT_TYPES + [
-        'number' => __('shop.fieldType.number'),
-        'string' => __('shop.fieldType.string')
+        'number' => __('backpack-store::shop.fieldType.number'),
+        'string' => __('backpack-store::shop.fieldType.string')
       ];
     }
 
@@ -163,8 +161,6 @@ class Attribute extends Model
     public function getCurrentLang() {
       $lang = request()->query('locale');
 
-      //dd($lang);
-
       if(!$lang) {
         $lang = config('app.locale', 'en');
       }
@@ -191,9 +187,6 @@ class Attribute extends Model
     | SCOPES
     |--------------------------------------------------------------------------
     */
-    // public function scopeNoEmpty($query){
-    //   return $query->has('modifications');
-    // }
         
     /**
      * scopeAllFromCategory
@@ -400,54 +393,6 @@ class Attribute extends Model
         ];
       });
     }
-
-    /**
-     * getPivotValueAttribute
-     * 
-     * Pivot field contains:
-     * -- indexes of available values from Attribute if type: radio / checkbox
-     * -- value itself if Attribute type is: number / string
-     *
-     * @return void
-     */
-    // public function getPivotValueAttribute(){
-    //   // If empty return null
-    //   if(!$this->pivot || $this->pivot->value === null)
-    //     return null;
-      
-    //   // Get values from attribute
-    //   $this_values = json_decode($this->values);
-
-    //   if($this->type === 'checkbox') 
-    //   {
-    //     // Get indexes
-    //     $indexes = json_decode($this->pivot->value);
-        
-    //     if($indexes && !empty($indexes)) {
-    //       // Get values 
-    //       $human_value = array_map(function($index) {
-    //         return isset($this_values[$index])? $this_values[$index]: null;
-    //       }, $indexes);
-    //     } else {
-    //       $human_value = null;
-    //     }
-    //   }
-    //   elseif($this->type === 'radio')
-    //   {
-    //     // Correct value is - one index
-    //     $index = $this->pivot->value;
-
-    //     // Try find value from values-list using index
-    //     $human_value = isset($this_values[$index])? $this_values[$index]: null;
-    //   }
-    //   else 
-    //   {
-    //     $human_value = $this->pivot->value;
-    //   }
-        
-    //   return $human_value;
-    // }
-    
     
     public function getCatsAttribute($value) {
       return $this->categories;
@@ -462,7 +407,6 @@ class Attribute extends Model
     public function setValuesArrayAttribute($value) {
       $value_decoded = json_decode($value, true);
       $this->attribute_values = !empty($value_decoded)? $value_decoded: null;
-      // dd($this->attribute_values);
     }
 
 }
