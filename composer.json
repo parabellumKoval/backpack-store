@@ -18,11 +18,9 @@
     ],
     "require": {
         "php": "^8.2",
-        "backpack/crud": "dev-store",
         "laravel/framework": "^12.0",
         
         "parabellumkoval/request-data": "0.1.x-dev",
-        "parabellumkoval/backpack-settings": "2.x-dev",
 
         "cviebrock/eloquent-sluggable": "^12.0",
         "spatie/laravel-translatable": "^6.0.0",
