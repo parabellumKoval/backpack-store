@@ -10,9 +10,13 @@ class CatalogSyncTouch
 {
     public static function touch(int $productId, int $delaySeconds = 5): void
     {
-        DB::afterCommit(function () use ($productId, $delaySeconds) {
-            // один уникальный job с небольшой задержкой (дебаунс)
-            SyncCatalogProductJob::dispatch($productId)->delay(now()->addSeconds($delaySeconds));
-        });
+        $useCachedTables = (bool) \Settings::get('dress.store.catalog_table_cache', false);
+
+        if($useCachedTables) {
+            DB::afterCommit(function () use ($productId, $delaySeconds) {
+                // один уникальный job с небольшой задержкой (дебаунс)
+                SyncCatalogProductJob::dispatch($productId)->delay(now()->addSeconds($delaySeconds));
+            });
+        }
     }
 }
