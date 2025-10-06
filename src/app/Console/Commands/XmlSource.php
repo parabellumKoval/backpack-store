@@ -93,7 +93,7 @@ class XmlSource extends Command
     public function handle()
     {
 
-      $this->searchInArray('ФУТБОЛКА !!!) Creatine Monohydrate AMIX 500 g unflavored', ['%пошкоджена%', '^футболка']);
+      // $this->searchInArray('ФУТБОЛКА !!!) Creatine Monohydrate AMIX 500 g unflavored', ['%пошкоджена%', '^футболка']);
 
       $sources = Source::active()->get();
 
@@ -629,6 +629,7 @@ class XmlSource extends Command
         $rule['brands'] = $this->simplify_values($rule['brands']);
         $rule['codes'] = $this->simplify_values($rule['codes']);
         $rule['names'] = $this->simplify_values($rule['names']);
+        $rule['categories'] = $this->simplify_values($rule['categories']);
 
         // Create empty array for this rule type
         if(!isset($rules[$rule['type']]) || empty($rules[$rule['type']])) {
@@ -690,6 +691,12 @@ class XmlSource extends Command
     private function isRuleForProduct($rule, $product){
       if($rule['target'] === 'all') {
         return true;
+      }
+
+      if($rule['target'] === 'category' && !empty($rule['categories']) && is_array($rule['categories'])) {
+        if($this->searchInArray($product['category'], $rule['categories'])) {
+          return true;
+        }
       }
 
       // IF BANNED BY BRANDS LIST
