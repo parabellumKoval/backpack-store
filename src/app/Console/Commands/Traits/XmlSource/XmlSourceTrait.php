@@ -4,6 +4,75 @@ namespace Backpack\Store\app\Console\Commands\Traits\XmlSource;
 
 trait XmlSourceTrait {
 
+  private function getNodeValuesBySpec(\SimpleXMLElement $ctx, string $spec): array
+  {
+      if (!preg_match('/^([A-Za-z0-9_:\-]+)(?:\[(.+)\])?$/u', $spec, $m)) {
+          return [];
+      }
+      $tag = $m[1];
+
+      // Без условия: могут быть несколько одноимённых тегов
+      if (empty($m[2])) {
+          if (!isset($ctx->{$tag})) return [];
+          $out = [];
+          foreach ($ctx->{$tag} as $node) {
+              $out[] = trim((string)$node);
+          }
+          return $out;
+      }
+
+      // С условием attr=value
+      $cond = $m[2];
+      if (!preg_match('/^@?([A-Za-z0-9_:\-]+)\s*=\s*(.+)$/u', $cond, $cm)) {
+          return [];
+      }
+      $attr  = $cm[1];
+      $value = trim($cm[2], " \t\n\r\0\x0B'\"");
+      $quoted = $this->quoteForXPath($value);
+      $xpath  = $tag . '[@' . $attr . '=' . $quoted . ']';
+
+      $found = $ctx->xpath($xpath) ?: [];
+      $out = [];
+      foreach ($found as $n) {
+          $out[] = trim((string)$n);
+      }
+      return $out;
+  }
+
+  // Множественный резолвер для путей вида "pictures->picture"
+  private function resolveFieldPathAll(\SimpleXMLElement $ctx, ?string $path): array
+  {
+      if ($path === null || trim($path) === '') return [];
+      $parts = array_map('trim', explode('->', $path));
+      $node  = $ctx;
+
+      // спускаемся по промежуточным узлам (берём первый матч)
+      for ($i = 0; $i < count($parts) - 1; $i++) {
+          $part = $parts[$i];
+          if ($part === '') return [];
+          if (str_contains($part, '[')) {
+              $cond  = preg_replace('/^[^\[]+\[|\]$/', '', $part);
+              if (preg_match('/^@?([A-Za-z0-9_:\-]+)\s*=\s*(.+)$/u', $cond, $cm)) {
+                  $attr   = $cm[1];
+                  $v      = trim($cm[2], " \t\n\r\0\x0B'\"");
+                  $quoted = $this->quoteForXPath($v);
+                  $tag    = preg_replace('/\[(.+)\]/', '', $part);
+                  $found  = $node->xpath($tag . '[@' . $attr . '=' . $quoted . ']');
+                  if (!$found || !isset($found[0])) return [];
+                  $node = $found[0];
+              } else {
+                  return [];
+              }
+          } else {
+              if (!isset($node->{$part})) return [];
+              $node = $node->{$part};
+          }
+      }
+
+      // последний шаг — вернуть ВСЕ значения
+      return $this->getNodeValuesBySpec($node, end($parts));
+  }
+
     // --- NEW: безопасно квотим литералы для XPath
     private function quoteForXPath(string $value): string
     {
@@ -155,9 +224,9 @@ trait XmlSourceTrait {
             ];
 
             if(isset($this->settings['fieldImage']) && !empty($this->settings['fieldImage'])) {
-                // если картинок много, можно вернуть массив строк через xpath
-                $img = $this->resolveFieldPath($item[$i], $this->settings['fieldImage']);
-                $xml_product['images'] = $img;
+                // если картинок много, вернуть массив строк через xpath
+                $imgs = $this->resolveFieldPathAll($item[$i], $this->settings['fieldImage']);
+                $xml_product['images'] = $imgs;
             }
 
             if($this->validateData($xml_product)) {
