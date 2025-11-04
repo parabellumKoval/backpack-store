@@ -16,31 +16,31 @@ use Backpack\Store\app\Http\Controllers\Api\OrderController;
 |
 */
 
-$guard = \Settings::get('dress.store.auth_guard', 'profile');
+// $guard = \Settings::get('dress.store.auth_guard', 'profile');
+$guard = 'sanctum';
 
-Route::prefix('api/order')->middleware([\Backpack\Store\app\Http\Middleware\ForceJsonResponse::class])->controller(OrderController::class)->group(function () use($guard) {
-  
+Route::prefix('api/order')
+  ->middleware([Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class, \Backpack\Store\app\Http\Middleware\ForceJsonResponse::class])
+  ->controller(OrderController::class)->group(function () use($guard) {
+    // GET orders list with pagination for authed user
+    Route::post('/get', 'index')->middleware(['api', "auth:${guard}"]);
+    Route::get('', 'index')->middleware(['api', "auth:${guard}"]);
+    
+    // Clone exists order
+    Route::post('/copy', 'copy')->middleware(['api', "auth:${guard}"]);
 
-  // GET orders list with pagination for authed user
-  Route::post('/get', 'index')->middleware(['api', "auth:${guard}"]);
-  Route::get('', 'index')->middleware(['api', "auth:${guard}"]);
-  
-  // Clone exists order
-  Route::post('/copy', 'copy')->middleware(['api', "auth:${guard}"]);
+    // GET orders list with pagination by params
+    Route::get('/all', 'all');
 
-  // GET orders list with pagination by params
-  Route::get('/all', 'all');
+    // Validate order without creation
+    Route::get('/rules', 'getRequestRules')->middleware('api');
 
-  // Validate order without creation
-  Route::get('/rules', 'getRequestRules')->middleware('api');
+    // Get One order by code
+    Route::get('/{code}', 'show');
 
-  // Get One order by code
-  Route::get('/{code}', 'show');
+    // Create new order
+    Route::post('', 'create')->middleware('api');
 
-  // Create new order
-  Route::post('', 'create')->middleware('api');
-
-  // Validate order without creation
-  Route::post('/validate', 'validateOrder')->middleware('api');
-
-});
+    // Validate order without creation
+    Route::post('/validate', 'validateOrder')->middleware('api');
+  });

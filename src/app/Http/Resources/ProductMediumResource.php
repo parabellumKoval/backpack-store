@@ -13,15 +13,17 @@ class ProductMediumResource extends BaseResource
     public function toArray($request)
     {
       return [
-        'id' => $this->id,
+        'id' => $this->product_id ?? $this->id,
         'name' => $this->name,
+        'shortName' => $this->short_name,
         'slug' => $this->slug,
         'price' => $this->price,
-        'old_price' => $this->old_price,
-        'images' => $this->images,
-        'content' => $this->content,
-        'category' => $this->category,
-        'modifications' => $this->modifications
+        'oldPrice' => $this->old_price,
+        'currency' => $this->currency,
+        'rating' => $this->rating,
+        'image' => $this->getFirstImageForApi(),
+        'inStock' => $this->in_stock,
+        // 'modifications' => $this->resource_modifications
       ];
     }
 }

@@ -20,9 +20,18 @@ class CategoryLargeResource extends BaseResource
         'excerpt' => $this->excerpt,
         // 'extras' => $this->extrasToArray,
         'extras' => $this->extras,
-        'images' => $this->images,
-        'children' => $this->children,
-        'seo' => $this->seoToArray
+        'images' => $this->getImageSourcesForApi(),
+        'children' => $this->resource->childrenForCountry($request->input('country') ?? \Store::country(), true),
+        'seo' => $this->seoToArray,
+        'tags' => $this->resource->relationLoaded('tags')
+          ? $this->tags->map(function ($tag) {
+              return [
+                'id' => $tag->id,
+                'text' => $tag->text,
+                'color' => $tag->color,
+              ];
+            })->values()
+          : [],
       ];
     }
 }

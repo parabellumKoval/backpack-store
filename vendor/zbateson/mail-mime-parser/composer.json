@@ -19,17 +19,18 @@
         "docs": "https://mail-mime-parser.org/#usage-guide"
     },
     "require": {
-        "php": ">=7.1",
-        "guzzlehttp/psr7": "^1.7.0|^2.0",
-        "zbateson/mb-wrapper": "^1.0.1",
-        "zbateson/stream-decorators": "^1.0.6",
-        "pimple/pimple": "^3.0"
+        "php": ">=8.0",
+        "guzzlehttp/psr7": "^2.5",
+        "zbateson/mb-wrapper": "^2.0",
+        "zbateson/stream-decorators": "^2.1",
+        "php-di/php-di": "^6.0|^7.0",
+        "psr/log": "^1|^2|^3"
     },
     "require-dev": {
-        "mikey179/vfsstream": "^1.6.0",
-        "phpunit/phpunit": "<10",
+        "phpunit/phpunit": "^9.6",
         "friendsofphp/php-cs-fixer": "*",
-        "phpstan/phpstan": "*"
+        "phpstan/phpstan": "*",
+        "monolog/monolog": "^2|^3"
     },
     "suggest": {
         "ext-mbstring": "For best support/performance",

@@ -7,11 +7,14 @@ use \Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 // MODELS
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Promocode;
+use Backpack\Store\app\DTO\ShippingQuoteRequest;
+use Backpack\Store\app\Services\Shipping\ShippingCalculator;
 
 // EVENTS
 use Backpack\Store\app\Events\ProductAttachedToOrder;
@@ -20,6 +23,7 @@ use Backpack\Store\app\Events\PromocodeApplied;
 // EXCEPTIONS
 use Backpack\Store\app\Exceptions\OrderException;
 use Rd\app\Exceptions\DetailedException;
+use Backpack\Store\app\Contracts\BonusService;
 
 class OrderController extends \App\Http\Controllers\Controller
 { 
@@ -30,6 +34,7 @@ class OrderController extends \App\Http\Controllers\Controller
   private $USER_MODEL = '';
 
   public $rd_fields = null;
+  protected BonusService $bonusService;
 
   public function __construct() {
     self::resources_init();
@@ -39,6 +44,8 @@ class OrderController extends \App\Http\Controllers\Controller
 
     // Rd 
     $this->rd_fields = \Settings::get('dress.order.fields');
+
+    $this->bonusService = app(BonusService::class);
   }
   
   /**
@@ -49,12 +56,12 @@ class OrderController extends \App\Http\Controllers\Controller
    */
   public function index(Request $request) {
 
-    $profile = Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->user();
+    $user = Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->user();
 
     $orders = $this->ORDER_MODEL::query()
               ->select('ak_orders.*')
               ->distinct('ak_orders.id')
-              ->where('ak_orders.orderable_id', $profile->id)
+              ->where('ak_orders.orderable_id', $user->id)
               ->where('ak_orders.orderable_type', $this->USER_MODEL)
               ->when(request('status'), function($query) {
                 $query->where('ak_orders.category_id', request('status'));
@@ -155,6 +162,8 @@ class OrderController extends \App\Http\Controllers\Controller
     try{
       // Get only allowed fields
       $data = $this->validateData($request);
+      $user = $this->resolveOrderUser($data);
+      $this->verifyBonusRequest($data, $user);
       return true;
     }
     catch(DetailedException $e) {
@@ -193,48 +202,14 @@ class OrderController extends \App\Http\Controllers\Controller
     try {
       // Get only allowed fields
       $data = $this->validateData($request);
-      
-      // Create new empty Order 
-      $order = new $this->ORDER_MODEL;
+      $user = $this->resolveOrderUser($data);
+      $this->verifyBonusRequest($data, $user);
 
-      // Set base data that independent from external sources (data from request)
-      $order = $this->prepareOrder($order);
+      [$order, $products] = DB::transaction(function () use ($data, $user) {
+        return $this->persistOrder($data, $user);
+      });
 
-      // Set common fields
-      $order = $this->setRequestFields($order, $data);
-
-      // Set user data
-      $order = $this->setUserData($order, $data);
-
-      // Attach product to order and calculate order total price
-      [$order, $products] = $this->setProductsToOrder($order, $data);
-
-      // Try validate and apply promocode to order
-      if(isset($data['promocode']) && !empty($data['promocode'])) {
-        $order->promocode = $data['promocode'];
-      }
-
-      // Get price with products, promocodes etc.
-      $order->price = $order->getTotalPrice();
-
-      // Save order
-      $order->save();
-
-      // Try attach products to order after save()
-      foreach($products as $product) {
-        $order->products()->attach($product, [
-          'amount' => $data['products'][$product->id], 
-          'value' => $product->price,
-          'currency_code' => $order->currency_code,
-          'country_code' => $order->country_code,
-          'supplier_id' => $product->supplier->id
-        ]);
-      }
-
-      // Dispatch event to change product in_stock etc.
       ProductAttachedToOrder::dispatch($order);
-      
-      // Dispatch promocode usage event
       if($order->promocode) {
         PromocodeApplied::dispatch($order);
       }
@@ -249,6 +224,356 @@ class OrderController extends \App\Http\Controllers\Controller
     return response()->json(new self::$resources['order']['large']($order));
   }
 
+  protected function persistOrder(array $data, $user = null): array
+  {
+    $order = new $this->ORDER_MODEL;
+
+    $order = $this->prepareOrder($order);
+    $order = $this->setRequestFields($order, $data);
+    $order = $this->setUserData($order, $data, $user);
+
+    [$order, $products] = $this->setProductsToOrder($order, $data);
+
+    if(!empty($data['promocode'])) {
+      $order->promocode = $data['promocode'];
+    }
+
+    $this->applyPersonalDiscount($order, $user);
+
+    $shippingQuote = $this->calculateShippingQuote($order, $data);
+
+    $totals = $this->calculateBaseTotals($order);
+
+    $order->subtotal = $totals['subtotal'];
+    $order->shipping_total = $totals['shipping_total'];
+    $order->tax_total = $totals['tax_total'];
+    $order->promocode_discount_total = $totals['promocode_discount'];
+    $order->personal_discount_total = $totals['personal_discount'];
+    $order->grand_total = $totals['grand_total'];
+
+    $orderCurrency = $order->currency_code ?? \Store::countryCurrency($order->country_code);
+    $info = $order->info ?? [];
+    $existingBonuses = $info['bonuses'] ?? [];
+    $info['bonusesUsed'] = $info['bonusesUsed'] ?? 0;
+    $info['bonuses'] = array_merge([
+      'points' => 0,
+      'fiat_amount' => 0,
+      'fiat_currency' => $orderCurrency,
+      'order_currency' => $orderCurrency,
+      'wallet_currency' => $existingBonuses['wallet_currency'] ?? null,
+      'refunded' => $existingBonuses['refunded'] ?? false,
+      'reference_id' => $existingBonuses['reference_id'] ?? null,
+    ], $existingBonuses);
+    $order->info = $info;
+    $order->bonus_discount_total = 0;
+    $order->discount_total = round($order->promocode_discount_total + $order->personal_discount_total, 2);
+    $order->price = $order->grand_total;
+
+    $bonusResult = $this->handleBonusSpending(
+      $order,
+      $data,
+      $user,
+      $totals['promocode_discount'],
+      $totals['personal_discount'],
+      $totals['grand_total']
+    );
+    $order->bonus_discount_total = $bonusResult['bonus_discount'];
+    $order->discount_total = $bonusResult['total_discount'];
+    $order->grand_total = $bonusResult['grand_total'];
+    $order->price = $order->grand_total;
+    $order->info = $bonusResult['info'];
+
+    $order->save();
+
+    $this->attachProductsToOrder($order, $products, $data);
+
+    return [$order, $products];
+  }
+
+  protected function calculateShippingQuote(Order $order, array $data): ?\Backpack\Store\app\DTO\ShippingQuoteResult
+  {
+    $methodKey = data_get($data, 'delivery.method');
+    $destination = data_get($data, 'destinationCountry')
+      ?? data_get($data, 'shipping_country_code')
+      ?? \Store::country();
+
+    if(!$methodKey || !$destination) {
+      return null;
+    }
+
+    /** @var ShippingCalculator $calculator */
+    $calculator = app(ShippingCalculator::class);
+    $quoteRequest = new ShippingQuoteRequest([
+      'methodKey' => $methodKey,
+      'destinationCountry' => $destination,
+      'weightG' => $this->resolveShipmentWeight($order, $data),
+      'meta' => $this->buildShippingMeta($order, $data),
+    ]);
+
+    $quote = $calculator->calculate($quoteRequest);
+
+    $order->shipping_total = round($quote->amount, 2);
+
+    $info = $order->info ?? [];
+    $info['shippingQuote'] = [
+      'provider' => $quote->provider,
+      'methodKey' => $quote->methodKey,
+      'currency' => $quote->currency,
+      'amount' => $quote->amount,
+      'breakdown' => $quote->breakdown,
+    ];
+    $order->info = $info;
+
+    return $quote;
+  }
+
+  protected function buildShippingMeta(Order $order, array $data): array
+  {
+    $subtotal = round($order->getProductsPrice(), 2);
+
+    $meta = [
+      'order_code' => $order->code,
+      'subtotal' => $subtotal,
+      'promocode_discount' => $this->calculatePromocodeDiscount($order),
+      'bonus_discount' => $this->resolveBonusDiscountPreview($data, $order),
+      'personal_discount' => round((float)($order->personal_discount_total ?? 0), 2),
+      'currency' => $order->currency_code ?? \Store::countryCurrency($order->country_code),
+    ];
+
+    if(isset($data['bonus'])) {
+      $meta['bonus_points'] = (float)$data['bonus'];
+    }
+
+    return $meta;
+  }
+
+  protected function resolveBonusDiscountPreview(array $data, Order $order): float
+  {
+    if(isset($data['bonusInFiat'])) {
+      $requested = max(0.0, round((float)$data['bonusInFiat'], 2));
+
+      $availableBase = round($order->getProductsPrice(), 2)
+        - $this->calculatePromocodeDiscount($order)
+        - round((float)($order->personal_discount_total ?? 0), 2);
+
+      $availableBase = max(0.0, $availableBase);
+
+      return min($requested, round($availableBase, 2));
+    }
+
+    return 0.0;
+  }
+
+  protected function calculatePromocodeDiscount(Order $order): float
+  {
+    $subtotal = round($order->getProductsPrice(), 2);
+    $priceWithPromocode = round($order->getTotalPrice(), 2);
+    $discount = round($subtotal - $priceWithPromocode, 2);
+
+    if($discount < 0) {
+      $discount = 0.0;
+    }
+
+    if($discount > $subtotal) {
+      $discount = $subtotal;
+    }
+
+    return $discount;
+  }
+
+  protected function applyPersonalDiscount(Order $order, $user = null): float
+  {
+    $info = $order->info ?? [];
+    $allowed = \Settings::get('profile.users.allow_personal_discount');
+
+    if(!$allowed || !$user) {
+      $info['personalDiscount'] = [
+        'percent' => 0.0,
+        'amount' => 0.0,
+        'applied' => false,
+        'currency' => $order->currency_code ?? \Store::countryCurrency($order->country_code),
+      ];
+      $order->info = $info;
+      $order->personal_discount_total = 0.0;
+      return 0.0;
+    }
+
+    $percent = $this->resolvePersonalDiscountPercent($user);
+    $percent = max(0.0, min(100.0, (float)$percent));
+
+    $subtotal = round($order->getProductsPrice(), 2);
+
+    if($percent <= 0 || $subtotal <= 0) {
+      $info['personalDiscount'] = [
+        'percent' => round($percent, 2),
+        'amount' => 0.0,
+        'applied' => false,
+        'currency' => $order->currency_code ?? \Store::countryCurrency($order->country_code),
+      ];
+      $order->info = $info;
+      $order->personal_discount_total = 0.0;
+      return 0.0;
+    }
+
+    $amount = round($subtotal * ($percent / 100), 2);
+    $amount = min($amount, $subtotal);
+
+    $info['personalDiscount'] = [
+      'percent' => round($percent, 2),
+      'amount' => $amount,
+      'applied' => $amount > 0,
+      'currency' => $order->currency_code ?? \Store::countryCurrency($order->country_code),
+    ];
+
+    $order->info = $info;
+    $order->personal_discount_total = $amount;
+
+    return $amount;
+  }
+
+  protected function resolvePersonalDiscountPercent($user): float
+  {
+    if(!$user) {
+      return 0.0;
+    }
+
+    $percent = null;
+
+    try {
+      $percent = data_get($user, 'personal_discount_percent');
+    } catch (\Throwable $e) {
+      $percent = null;
+    }
+
+    if($percent === null) {
+      try {
+        $percent = data_get($user, 'discount_percent');
+      } catch (\Throwable $e) {
+        $percent = null;
+      }
+    }
+
+    if($percent === null && method_exists($user, 'relationLoaded') && method_exists($user, 'loadMissing') && method_exists($user, 'profile')) {
+      $user->loadMissing('profile');
+      $percent = data_get($user->profile, 'discount_percent');
+    }
+
+    return $percent !== null ? (float)$percent : 0.0;
+  }
+
+  protected function resolveShipmentWeight(Order $order, array $data): int
+  {
+    return 1000;
+  }
+
+  protected function attachProductsToOrder($order, $products, array $data): void
+  {
+    foreach($products as $product) {
+      $order->products()->attach($product, [
+        'amount' => $data['products'][$product->id], 
+        'value' => $product->price,
+        'currency_code' => $order->currency_code,
+        'country_code' => $order->country_code,
+        'supplier_id' => $product->supplier->id
+      ]);
+    }
+  }
+
+  protected function calculateBaseTotals(Order $order): array
+  {
+    $subtotal = round($order->getProductsPrice(), 2);
+    $shipping = round((float)($order->shipping_total ?? 0), 2);
+    $tax = round((float)($order->tax_total ?? 0), 2);
+
+    $promocodeDiscount = $this->calculatePromocodeDiscount($order);
+    $personalDiscount = round((float)($order->personal_discount_total ?? 0), 2);
+    $personalDiscount = min($personalDiscount, $subtotal);
+
+    $grandTotal = max(
+      0,
+      round($subtotal - $promocodeDiscount - $personalDiscount + $shipping + $tax, 2)
+    );
+
+    return [
+      'subtotal' => $subtotal,
+      'shipping_total' => $shipping,
+      'tax_total' => $tax,
+      'promocode_discount' => $promocodeDiscount,
+      'personal_discount' => $personalDiscount,
+      'grand_total' => $grandTotal,
+    ];
+  }
+
+  protected function handleBonusSpending(Order $order, array $data, $user, float $promocodeDiscount, float $personalDiscount, float $baseGrandTotal): array
+  {
+    $bonusPoints = isset($data['bonus']) ? (float)$data['bonus'] : 0.0;
+    $info = $order->info ?? [];
+
+    if(!$this->bonusFeatureEnabled() || $bonusPoints <= 0 || !$user) {
+      return [
+        'bonus_discount' => 0.0,
+        'total_discount' => round($promocodeDiscount + $personalDiscount, 2),
+        'grand_total' => $baseGrandTotal,
+        'info' => $info,
+      ];
+    }
+
+    $orderCurrency = $order->currency_code ?? \Store::countryCurrency($order->country_code);
+
+    try {
+      $redemption = $this->bonusService->spend(
+        $user->id,
+        $bonusPoints,
+        (string)$order->code,
+        $orderCurrency,
+        [
+          'reference_type' => 'order',
+          'reference_id' => (string)$order->code,
+          'order_code' => $order->code,
+        ]
+      );
+    } catch (\Throwable $exception) {
+      throw new DetailedException('Не удалось списать бонусы. Попробуйте ещё раз.', 422, $exception);
+    }
+
+    $availableToDiscount = max(0, $order->subtotal - $promocodeDiscount - $personalDiscount);
+    $bonusFiat = min(round($redemption->fiatAmount, 2), round($availableToDiscount, 2));
+
+    $totalDiscount = round($promocodeDiscount + $personalDiscount + $bonusFiat, 2);
+    $grandTotal = max(0, round(
+      $order->subtotal
+      - $promocodeDiscount
+      - $personalDiscount
+      - $bonusFiat
+      + (float)$order->shipping_total
+      + (float)$order->tax_total,
+      2
+    ));
+
+    $walletCurrency = $redemption->meta['wallet_currency'] ?? null;
+
+    $info['bonusesUsed'] = $bonusFiat;
+    $info['bonuses'] = array_merge($info['bonuses'] ?? [], [
+      'points' => round($redemption->points, 2),
+      'fiat_amount' => $bonusFiat,
+      'fiat_currency' => $redemption->fiatCurrency,
+      'order_currency' => $orderCurrency,
+      'wallet_currency' => $walletCurrency,
+      'requested_points' => isset($data['bonus']) ? (float)$data['bonus'] : null,
+      'requested_fiat' => isset($data['bonusInFiat']) ? (float)$data['bonusInFiat'] : null,
+      'meta' => $redemption->meta,
+      'refunded' => false,
+      'reference_id' => (string)$order->code,
+    ]);
+
+    return [
+      'bonus_discount' => $bonusFiat,
+      'total_discount' => $totalDiscount,
+      'grand_total' => $grandTotal,
+      'info' => $info,
+    ];
+  }
+
   /**
    * setUserData
    * 
@@ -258,23 +583,28 @@ class OrderController extends \App\Http\Controllers\Controller
    * @param  array $data - Order request data
    * @return Backpack\Store\app\Models\Order $order
    */
-  protected function setUserData($order, array $data){
+  protected function setUserData($order, array $data, $user_model = null){
     // GET USER MODEL IF AUTHED
-    if($data['provider'] === 'auth') {
+    if(($data['provider'] ?? null) === 'auth') {
+      $guard = \Settings::get('dress.store.auth_guard', 'profile');
 
-      if(!Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->check()){
-        throw new OrderException('User not authenticated', 401);
+      if(!$user_model) {
+        if(!Auth::guard($guard)->check()){
+          throw new OrderException('User not authenticated', 401);
+        }
+
+        $user_model = Auth::guard($guard)->user();
       }
-
-      $user_model = Auth::guard(\Settings::get('dress.store.auth_guard', 'profile'))->user();
 
       // User Model have to implement toOrderArray() method that gives:
       //    array {first_name: string, last_name: string, phone: string, email: string}
       $user_data = $user_model->toOrderArray();
 
+      $resolved_user_data = $this->resolveUserData($user_data, $data);
+
       // add user data to info field (json)
       $info = $order->info;
-      $info['user'] = $user_data;
+      $info['user'] = $resolved_user_data;
       $order->info = $info;
 
       $order->orderable_id = isset($user_model)? $user_model->id: null;
@@ -282,6 +612,73 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     return $order;
+  }
+
+  protected function resolveUserData($authData, $requestData) {
+    if(!empty($requestData['user']['phone'])) {
+      $authData['phone'] = $requestData['user']['phone'];
+    }
+
+    if(!empty($requestData['user']['email'])) {
+      $authData['email'] = $requestData['user']['email'];
+    }
+
+    if(!empty($requestData['user']['first_name'])) {
+      $authData['first_name'] = $requestData['user']['first_name'];
+    }
+
+    if(!empty($requestData['user']['last_name'])) {
+      $authData['last_name'] = $requestData['user']['last_name'];
+    }
+
+    return $authData;
+  }
+
+  protected function resolveOrderUser(array $data)
+  {
+    if(($data['provider'] ?? null) !== 'auth') {
+      return null;
+    }
+
+    $guard = \Settings::get('dress.store.auth_guard', 'profile');
+
+    if(!Auth::guard($guard)->check()){
+      throw new OrderException('User not authenticated', 401);
+    }
+
+    return Auth::guard($guard)->user();
+  }
+
+  protected function verifyBonusRequest(array $data, $user = null): void
+  {
+    $bonusPoints = isset($data['bonus']) ? (float)$data['bonus'] : 0.0;
+
+    if($bonusPoints <= 0) {
+      return;
+    }
+
+    if(!$this->bonusFeatureEnabled()) {
+      throw new DetailedException('Использование бонусов недоступно для этого заказа.', 422);
+    }
+
+    if(!$user) {
+      throw new DetailedException('Использование бонусов доступно только авторизованным пользователям.', 401);
+    }
+
+    if(!$this->bonusService->canSpend($user->id, $bonusPoints)) {
+      throw new DetailedException('Недостаточно бонусов на счёте.', 422);
+    }
+  }
+
+  protected function bonusFeatureEnabled(): bool
+  {
+    $enabledFlag = \Settings::get('profile.pay_for_order.enabled');
+
+    // if ($enabledFlag === null) {
+    //   $enabledFlag = \Settings::get('dress.order.enable_bonus', false);
+    // }
+
+    return (bool)$enabledFlag;
   }
 
 
@@ -325,6 +722,7 @@ class OrderController extends \App\Http\Controllers\Controller
     // Set products to info
     foreach($products as $key => $product) {
       $product->amount = $data['products'][$product->id];
+      $product->currency = \Store::countryCurrency();
       $info = $order->info;
       $info['products'][$key] = new self::$resources['product']['cart']($product);
       $order->info = $info;

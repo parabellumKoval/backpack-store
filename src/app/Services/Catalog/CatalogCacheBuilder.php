@@ -76,6 +76,7 @@ class CatalogCacheBuilder
                             'in_stock'      => $p->inStock,
                             'price'         => $p->price,
                             'old_price'     => $p->oldPrice,
+                            'sale'          => $p->getModificationSale(),
                             'brand_id'      => $p->brand_id,
                             'category_ids'  => $category_ids_json,
                             'short_name'    => $p->getRawOriginal('short_name'),
@@ -83,7 +84,7 @@ class CatalogCacheBuilder
                             // Effective
                             'name'          => $p->inherited(true)->name,
                             'excerpt'       => $p->effective(true)->excerpt,
-                            'slug'          => $p->inherited()->slug,
+                            'slug'          => $p->slug,
                             'images'        => $images_json,
                             'code'          => $p->effective()->code,
 
@@ -102,7 +103,7 @@ class CatalogCacheBuilder
                             ['product_id', 'country_code'], // уникальный ключ
                             [
                                 'group_id', 'item_type', 'currency_code','is_available','in_stock',
-                                'price','old_price','brand_id','category_ids',
+                                'price','old_price', 'sale', 'brand_id','category_ids',
                                 'short_name','name','excerpt','slug','images','code','rating','reviews','ratings'
                             ]
                         );

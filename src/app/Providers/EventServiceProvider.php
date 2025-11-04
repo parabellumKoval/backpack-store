@@ -30,6 +30,9 @@ use Backpack\Store\app\Listeners\SourceSavedListener;
 
 use Backpack\Settings\Events\SettingsGroupChanged;
 use Backpack\Store\app\Listeners\SettingsGroupChangedListener;
+use Backpack\Store\app\Events\OrderRejected;
+use Backpack\Store\app\Events\OrderDeleted;
+use Backpack\Store\app\Listeners\RefundOrderBonuses;
 
 
 use Backpack\Store\app\Models\Order;
@@ -65,6 +68,12 @@ class EventServiceProvider extends ServiceProvider
       ],
       SettingsGroupChanged::class => [
         SettingsGroupChangedListener::class
+      ],
+      OrderRejected::class => [
+        RefundOrderBonuses::class,
+      ],
+      OrderDeleted::class => [
+        RefundOrderBonuses::class,
       ]
     ];
 

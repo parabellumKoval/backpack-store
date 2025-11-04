@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\BrandRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use ParabellumKoval\BackpackImages\Traits\HasImagesCrudComponents;
 use Backpack\LangFileManager\app\Models\Language;
 
 /**
@@ -22,6 +22,7 @@ class BrandCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
+    use HasImagesCrudComponents;
 
     use \App\Http\Controllers\Admin\Traits\BrandCrud;
     
@@ -48,12 +49,8 @@ class BrandCrudController extends CrudController
     {
         $langs_list = $this->langs_list;
         
-        $this->crud->addColumn([
-          'name' => 'imageSrc',
-          'label' => '📷',
-          'type' => 'image',
-          'height' => '40px',
-          'width'  => '40px',
+        $this->addImagesColumn([
+            'label' => '📷',
         ]);
 
 
@@ -142,40 +139,10 @@ class BrandCrudController extends CrudController
           'tab' => 'Основное'
         ]);
 
-        $this->crud->addField([
-          'name'  => 'images',
-          'label' => 'Изображения',
-          'type'  => 'repeatable',
-          'fields' => [
-            [
-              'name' => 'src',
-              'label' => 'Изображение',
-              'type' => 'browse',
-              'hint' => 'Названия файлов загруженных через файловый менеджен должны быть на латинице и без пробелов.'
-            ],
-            [
-              'name' => 'alt',
-              'label' => 'alt'
-            ],
-            [
-              'name' => 'title',
-              'label' => 'title'
-            ],
-            [
-              'name' => 'size',
-              'type' => 'radio',
-              'label' => 'Размер',
-              'options' => [
-                'cover' => 'Cover',
-                'contain' => 'Contain'
-              ],
-              'inline' => true
-            ]
-          ],
-          'new_item_label'  => 'Добавить изобрежение',
-          'init_rows' => 1,
-          'default' => [],
-          'tab' => 'Изображения'
+        $this->addImagesField([
+            'label' => 'Изображения',
+            'tab' => 'Изображения',
+            'new_item_label' => 'Добавить изображение',
         ]);
 
 

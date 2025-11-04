@@ -16,8 +16,19 @@ class CategorySmallResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'image' => $this->image,
-        'children' => $this->children()->orderBy('lft')->get()
+        'image' => $this->getFirstImageForApi(),
+        'children' => $this->resource->childrenForCountry($request->input('country') ?? \Store::country(), true),
+        'extras' => $this->extras,
+        'extras_trans' => $this->extrasTransDecoded,
+        'tags' => $this->resource->relationLoaded('tags')
+          ? $this->tags->map(function ($tag) {
+              return [
+                'id' => $tag->id,
+                'text' => $tag->text,
+                'color' => $tag->color,
+              ];
+            })->values()
+          : [],
       ];
     }
 }

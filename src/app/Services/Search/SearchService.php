@@ -8,6 +8,12 @@ use Backpack\Store\app\Job\LogSearchQueryJob;
 
 class SearchService
 {
+    use \Backpack\Store\app\Traits\Resources;
+
+    public function __construct() {
+      self::resources_init();
+    }
+
     public function searchProducts(string $q, string $countryCode, int $perPage = 20): array
     {
         $driver = \Settings::get('dress.search.driver', 'meilisearch');
@@ -23,8 +29,8 @@ class SearchService
 
         $builder = Catalog::search($norm[0]);
 
-        // фильтр по стране (если используешь суффикс индекса — можно не фильтровать)
-        $builder->where('country_code', $countryCode);
+        // $indexName = $builder->model->searchableAs();
+        // dd($indexName);
 
         // мультиязычие на стороне индекса:
         // searchableAttributes уже включают name_*, categories_*, attrs_text_*
@@ -47,9 +53,10 @@ class SearchService
         // если первый вариант не дал результатов — пробуем варианты
         /** @var LengthAwarePaginator $page */
         $page = $builder->paginate($perPage);
+
         if ($page->total() === 0 && count($norm) > 1) {
             foreach (array_slice($norm, 1) as $alt) {
-                $altBuilder = Catalog::search($alt)->where('country_code', $countryCode);
+                $altBuilder = Catalog::search($alt);
                 
                 if (\Settings::get('dress.search.multilang.default_per_country', false)) {
                     $altBuilder->options(['attributesToSearchOn' => ["name_{$locale}","brand_{$locale}","categories_{$locale}","attrs_text_{$locale}"]]);
@@ -69,7 +76,7 @@ class SearchService
                         driver: 'meilisearch'
                     );
 
-                    return ['meta' => $this->meta($page), 'data' => $page->items(), 'suggestion' => $alt];
+                    return ['meta' => $this->meta($page), 'data' => self::$resources['product']['medium']::collection($page), 'suggestion' => $alt];
                 }
             }
         }
@@ -86,7 +93,7 @@ class SearchService
             driver: 'meilisearch'
         );
 
-        return ['meta' => $this->meta($page), 'data' => $page->items()];
+        return ['meta' => $this->meta($page), 'data' => self::$resources['product']['medium']::collection($page)];
     }
 
 
@@ -114,7 +121,9 @@ class SearchService
     protected function countryToLocale(string $country): string
     {
         // твоя мапа страна -> дефолтная локаль
-        $map = \Settings::get('dress.country.default_locale', ['UA'=>'uk','CZ'=>'cs']);
+        // $map = \Settings::get('dress.country.default_locale', ['UA'=>'uk','CZ'=>'cs']);
+        $map = \Store::defaultCountryLocales();
+
         return $map[$country] ?? app()->getLocale();
     }
 

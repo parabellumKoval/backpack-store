@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\MailManager;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Testing\Fakes\MailFake;
@@ -25,14 +26,20 @@ use Spatie\LaravelRay\Payloads\ModelPayload;
 use Spatie\LaravelRay\Payloads\ResponsePayload;
 use Spatie\LaravelRay\Payloads\ViewPayload;
 use Spatie\LaravelRay\Watchers\CacheWatcher;
+use Spatie\LaravelRay\Watchers\ConditionalQueryWatcher;
+use Spatie\LaravelRay\Watchers\DeleteQueryWatcher;
 use Spatie\LaravelRay\Watchers\DuplicateQueryWatcher;
 use Spatie\LaravelRay\Watchers\EventWatcher;
 use Spatie\LaravelRay\Watchers\ExceptionWatcher;
 use Spatie\LaravelRay\Watchers\HttpClientWatcher;
+use Spatie\LaravelRay\Watchers\InsertQueryWatcher;
 use Spatie\LaravelRay\Watchers\JobWatcher;
+use Spatie\LaravelRay\Watchers\MailWatcher;
 use Spatie\LaravelRay\Watchers\QueryWatcher;
 use Spatie\LaravelRay\Watchers\RequestWatcher;
+use Spatie\LaravelRay\Watchers\SelectQueryWatcher;
 use Spatie\LaravelRay\Watchers\SlowQueryWatcher;
+use Spatie\LaravelRay\Watchers\UpdateQueryWatcher;
 use Spatie\LaravelRay\Watchers\ViewWatcher;
 use Spatie\LaravelRay\Watchers\Watcher;
 use Spatie\Ray\Client;
@@ -43,7 +50,7 @@ use Throwable;
 
 class Ray extends BaseRay
 {
-    public function __construct(Settings $settings, Client $client = null, string $uuid = null)
+    public function __construct(Settings $settings, ?Client $client = null, ?string $uuid = null)
     {
         // persist the enabled setting across multiple instantiations
         $enabled = static::$enabled;
@@ -81,6 +88,79 @@ class Ray extends BaseRay
         }, $mailables);
 
         $this->sendRequest($payloads);
+
+        return $this;
+    }
+
+    /**
+     * @param null $callable
+     *
+     * @return \Spatie\LaravelRay\Ray
+     */
+    public function showMails($callable = null)
+    {
+        $watcher = app(MailWatcher::class);
+
+        $watcher->enable();
+
+        return $this->handleWatcherCallable($watcher, $callable);
+    }
+
+    public function stopShowingMails(): self
+    {
+        app(MailWatcher::class)->disable();
+
+        return $this;
+    }
+
+    /**
+     * @param array|string ...$keys
+     *
+     * @return $this
+     */
+    public function context(...$keys): self
+    {
+        if (! class_exists(Context::class)) {
+            return $this;
+        }
+
+        if (isset($keys[0]) && is_array($keys[0])) {
+            $keys = $keys[0];
+        }
+
+        $context = count($keys)
+            ? Context::only($keys)
+            : Context::all();
+
+        $this
+            ->send($context)
+            ->label('Context');
+
+        return $this;
+    }
+
+    /**
+     * @param array|string ...$keys
+     *
+     * @return $this
+     */
+    public function hiddenContext(...$keys): self
+    {
+        if (! class_exists(Context::class)) {
+            return $this;
+        }
+
+        if (isset($keys[0]) && is_array($keys[0])) {
+            $keys = $keys[0];
+        }
+
+        $hiddenContext = count($keys)
+            ? Context::onlyHidden($keys)
+            : Context::allHidden();
+
+        $this
+            ->send($hiddenContext)
+            ->label('Hidden Context');
 
         return $this;
     }
@@ -380,6 +460,76 @@ class Ray extends BaseRay
         return $this;
     }
 
+    public function showConditionalQueries(Closure $condition, $callable = null, $name = 'default')
+    {
+        $watcher = ConditionalQueryWatcher::buildWatcherForName($condition, $name);
+
+        return $this->handleWatcherCallable($watcher, $callable);
+    }
+
+    public function stopShowingConditionalQueries($name = 'default'): self
+    {
+        app(ConditionalQueryWatcher::abstractName($name))->disable();
+
+        return $this;
+    }
+
+    public function showUpdateQueries($callable = null)
+    {
+        $watcher = app(UpdateQueryWatcher::class);
+
+        return $this->handleWatcherCallable($watcher, $callable);
+    }
+
+    public function stopShowingUpdateQueries(): self
+    {
+        app(UpdateQueryWatcher::class)->disable();
+
+        return $this;
+    }
+
+    public function showDeleteQueries($callable = null)
+    {
+        $watcher = app(DeleteQueryWatcher::class);
+
+        return $this->handleWatcherCallable($watcher, $callable);
+    }
+
+    public function stopShowingDeleteQueries(): self
+    {
+        app(DeleteQueryWatcher::class)->disable();
+
+        return $this;
+    }
+
+    public function showInsertQueries($callable = null)
+    {
+        $watcher = app(InsertQueryWatcher::class);
+
+        return $this->handleWatcherCallable($watcher, $callable);
+    }
+
+    public function stopShowingInsertQueries(): self
+    {
+        app(InsertQueryWatcher::class)->disable();
+
+        return $this;
+    }
+
+    public function showSelectQueries($callable = null)
+    {
+        $watcher = app(SelectQueryWatcher::class);
+
+        return $this->handleWatcherCallable($watcher, $callable);
+    }
+
+    public function stopShowingSelectQueries(): self
+    {
+        app(SelectQueryWatcher::class)->disable();
+
+        return $this;
+    }
+
     /**
      * @param null $callable
      *
@@ -434,7 +584,7 @@ class Ray extends BaseRay
         return $this;
     }
 
-    protected function handleWatcherCallable(Watcher $watcher, Closure $callable = null)
+    protected function handleWatcherCallable(Watcher $watcher, ?Closure $callable = null)
     {
         $rayProxy = new RayProxy();
 

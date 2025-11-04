@@ -20,8 +20,12 @@ use Backpack\Store\app\Contracts\QueryService;
 use Backpack\Store\app\Services\Catalog\CatalogFilterService as CachedFilterService;
 use Backpack\Store\app\Services\Catalog\CatalogQueryService  as CachedQueryService;
 
+//
+use Backpack\Store\app\Models\Catalog;
+
 class CatalogController
 {
+
     use \Backpack\Store\app\Traits\Resources;
 
     /** Ключи, которые НЕ относятся к фильтрам (для cache-keys) */
@@ -159,6 +163,14 @@ class CatalogController
         return response()->json($response);
     }
 
+
+    public function catalogProducts(Request $request) {
+        $queryService = app(QueryService::class)->setRequest($request);
+        $response = $queryService->getProducts(true);
+        $p = \Backpack\Store\app\Http\Resources\ProductSimpleResource::collection($response);
+        return $p;
+    }
+
     /* ===== helpers ===== */
 
     /** Ключ кэша (тот же вход → тот же ключ). */
@@ -175,5 +187,24 @@ class CatalogController
         $query = $request->query();
         $map   = array_flip($this->nonFiltersExclude);
         return array_diff_key($query, $map);
+    }
+
+     
+    /**
+     * show
+     * 
+     * Get one product using it's slug 
+     *
+     * @param  mixed $request
+     * @param  mixed $slug - Product slug
+     * @return string JSON
+     */
+    public function show(Request $request, $slug) {
+
+        $region = $request->input('country');
+
+        $product = Catalog::where('slug', $slug)->where('country_code', $region)->available()->firstOrFail();
+        $product_resource = new self::$resources['product']['large']($product);
+        return response()->json($product_resource);
     }
 }

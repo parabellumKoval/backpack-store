@@ -2,27 +2,31 @@
  namespace Backpack\Store\app\Listeners;
  
 use Backpack\Store\app\Events\OrderCreated;
+use Backpack\Store\app\Services\Invoice\InvoiceService;
+use Illuminate\Support\Facades\Log;
  
 class OrderCreatedListener
 {
-    /**
-     * Create the event listener.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-
+    public function __construct(
+        protected InvoiceService $invoiceService
+    ) {
     }
  
-    /**
-     * Handle the event.
-     *
-     * @param  \App\Events\OrderShipped  $event
-     * @return void
-     */
-    public function handle(OrderCreated $event)
+    public function handle(OrderCreated $event): void
     {
-      // Access the order using $event->order...
+        $order = $event->order;
+
+        if (!$order->requiresInvoice()) {
+            return;
+        }
+
+        try {
+            $this->invoiceService->generate($order);
+        } catch (\Throwable $exception) {
+            Log::error('Failed to generate invoice for order', [
+                'order_id' => $order->getKey(),
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 }

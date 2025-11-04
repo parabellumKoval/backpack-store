@@ -20,9 +20,13 @@ use Illuminate\Support\Arr;
 use Backpack\Store\app\Events\PromocodeApplied;
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Models\Promocode;
+use Backpack\Store\app\Models\OrderInvoice;
 
 //
 use Backpack\Helpers\Traits\HasDisplayLabel;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -43,7 +47,7 @@ class Order extends Model
     // public $timestamps = false;
     protected $guarded = ['id'];
     protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status','country_code', 'currency_code', 'fx_rate',
-        'subtotal','discount_total','shipping_total','tax_total','grand_total',];
+        'subtotal','discount_total','promocode_discount_total','bonus_discount_total','personal_discount_total','shipping_total','tax_total','grand_total',];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
@@ -72,7 +76,7 @@ class Order extends Model
                 $order->country_code = \Store::country();
             }
             if (!$order->currency_code) {
-                $order->currency_code = \Store::currency();
+                $order->currency_code = \Store::countryCurrency($order->country_code);
             }
             if (!$order->fx_rate) {
                 $order->fx_rate = app(\Backpack\Store\app\Contracts\ExchangeRateProvider::class)
@@ -135,6 +139,20 @@ class Order extends Model
 
       // Remove used bonuses data
       $info['bonusesUsed'] = 0;
+      if(isset($info['bonuses'])) {
+        $info['bonuses']['points'] = 0;
+        $info['bonuses']['fiat_amount'] = 0;
+        $info['bonuses']['refunded'] = false;
+        $info['bonuses']['order_currency'] = $this->currency_code ?? \Store::countryCurrency($this->country_code);
+      } else {
+        $info['bonuses'] = [
+          'points' => 0,
+          'fiat_amount' => 0,
+          'fiat_currency' => $this->currency_code ?? \Store::countryCurrency($this->country_code),
+          'order_currency' => $this->currency_code ?? \Store::countryCurrency($this->country_code),
+          'refunded' => false,
+        ];
+      }
 
       // Reset promocode
       $info['promocode'] = null;
@@ -142,8 +160,17 @@ class Order extends Model
       // Generate new order code 
       $this->code = random_int(100000, 999999);
 
-      // Reset total order price (without promocodes and bonuses)
-      $this->price = $this->getProductsPrice();
+      // Reset totals (without promocodes and bonuses)
+      $base = $this->getProductsPrice();
+      $this->subtotal = $base;
+      $this->promocode_discount_total = 0;
+      $this->bonus_discount_total = 0;
+      $this->personal_discount_total = 0;
+      $this->discount_total = 0;
+      $this->shipping_total = 0;
+      $this->tax_total = 0;
+      $this->grand_total = $base;
+      $this->price = $base;
 
       // Reset statuses
       $this->status = \Settings::get("dress.order.status.default");
@@ -203,6 +230,11 @@ class Order extends Model
         $price = $price - ($price * $promocode['value'] / 100);
 
       return round($price, 2);
+    }
+
+    public function invoices()
+    {
+      return $this->hasMany(OrderInvoice::class);
     }
     
     /**
@@ -368,6 +400,103 @@ class Order extends Model
         default:
           return $this->promocode['value'];
       }
+    }
+
+    public function getInvoiceDownloadUrlAttribute(): ?string
+    {
+        $invoice = $this->resolveInvoiceForLinks();
+
+        if (!$invoice) {
+            return null;
+        }
+
+        return app(\Backpack\Store\app\Services\Invoice\InvoiceService::class)->signedUrl($invoice);
+    }
+
+    public function getInvoiceQrUrlAttribute(): ?string
+    {
+        $invoice = $this->resolveInvoiceForLinks();
+
+        if (!$invoice || !$invoice->qr_path) {
+            return null;
+        }
+
+        $disk = (string) ($this->invoiceConfig('qr.cache_disk') ?: $this->invoiceConfig('storage.disk', 'public') ?: 'public');
+
+        $url = Storage::disk($disk)->url($invoice->qr_path);
+
+        if (!$url) {
+            return null;
+        }
+
+        $normalizedPublicPath = rtrim(str_replace('\\', '/', public_path()), '/');
+        $normalizedUrl = str_replace('\\', '/', $url);
+
+        if (Str::startsWith($normalizedUrl, $normalizedPublicPath)) {
+            $relative = ltrim(Str::after($normalizedUrl, $normalizedPublicPath), '/');
+            return URL::to($relative ? '/' . $relative : '/');
+        }
+
+        if (!Str::startsWith($normalizedUrl, ['http://', 'https://'])) {
+            return URL::to(Str::start($normalizedUrl, '/'));
+        }
+
+        return $normalizedUrl;
+    }
+
+    public function requiresInvoice(): bool
+    {
+        $method = $this->invoicePaymentMethod();
+
+        if (!$method) {
+            return false;
+        }
+
+        return in_array($method, $this->invoiceTriggerMethods(), true);
+    }
+
+    protected function resolveInvoiceForLinks(): ?OrderInvoice
+    {
+        if (!$this->requiresInvoice()) {
+            return null;
+        }
+
+        return $this->invoices()
+            ->whereNotNull('path')
+            ->latest('generated_at')
+            ->latest('id')
+            ->first();
+    }
+
+    protected function invoicePaymentMethod(): ?string
+    {
+        $method = data_get($this->info, 'payment.method');
+
+        return $method !== null ? strtolower((string) $method) : null;
+    }
+
+    protected function invoiceTriggerMethods(): array
+    {
+        $configured = $this->invoiceConfig('auto_generate_payment_methods', []);
+
+        if (is_string($configured)) {
+            $configured = array_filter(array_map('trim', explode(',', $configured)));
+        }
+
+        return array_map(static function ($value) {
+            return strtolower((string) $value);
+        }, (array) $configured);
+    }
+
+    protected function invoiceConfig(string $key, $default = null)
+    {
+        $value = \Settings::get("dress.invoice.$key");
+
+        if ($value === null) {
+            $value = config("dress.invoice.$key", $default);
+        }
+
+        return $value ?? $default;
     }
 
 

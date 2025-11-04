@@ -16,6 +16,7 @@ use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 // FACTORY
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\BrandFactory;
+use ParabellumKoval\BackpackImages\Traits\HasImages;
 
 // MODEL
 use Backpack\Store\app\Model\Product;
@@ -24,9 +25,10 @@ class Brand extends Model
 {
     use HasFactory;
     use CrudTrait;
-    use Sluggable;
-    use SluggableScopeHelpers;
-    use HasTranslations;
+   use Sluggable;
+   use SluggableScopeHelpers;
+   use HasTranslations;
+    use HasImages;
 
     /*
     |--------------------------------------------------------------------------
@@ -95,6 +97,44 @@ class Brand extends Model
         ],
       ];
     }
+
+    public static function imageStorageFolder(?string $attribute = null): string
+    {
+        return 'brands';
+    }
+
+    public static function imageFieldLabel(?string $attribute = null): string
+    {
+        return 'Изображения';
+    }
+
+    public static function imageFieldTabLabel(?string $attribute = null): string
+    {
+        return 'Изображения';
+    }
+
+    public static function imageFieldNewItemLabel(?string $attribute = null): string
+    {
+        return 'Добавить изображение';
+    }
+
+    // public static function imageFieldPrefix(): string
+    // {
+    //     $basePath = (string) \Settings::get('dress.brand.image.base_path', '');
+
+    //     if ($basePath !== '') {
+    //         return $basePath;
+    //     }
+
+    //     $provider = static::imageProviderName();
+    //     $prefix = config("backpack-images.providers.$provider.url_prefix");
+
+    //     if (is_string($prefix) && $prefix !== '') {
+    //         return $prefix;
+    //     }
+
+    //     return config('backpack-images.default_url_prefix', '/');
+    // }
     
     /**
      * toArray
@@ -138,10 +178,9 @@ class Brand extends Model
      * 
      * @return Array|null Image is array(src, alt, title, size) 
      */
-    public function getImageAttribute() {
-      $image = $this->images[0] ?? null;
-
-      return $image;
+    public function getImageAttribute()
+    {
+        return $this->getFirstImage();
     }
     
     /**
@@ -151,14 +190,9 @@ class Brand extends Model
      * 
      * @return string|null string is image src url
      */
-    public function getImageSrcAttribute() {
-      $base_path = \Settings::get('dress.brand.image.base_path', '/');
-
-      if(isset($this->image['src'])) {
-        return $base_path . $this->image['src'];
-      }else {
-        return null;
-      }
+    public function getImageSrcAttribute()
+    {
+        return $this->getFirstImageUrl();
     }
         
     /**

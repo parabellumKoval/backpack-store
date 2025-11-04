@@ -180,6 +180,10 @@ class Product extends BaseProduct
     |--------------------------------------------------------------------------
     */
     
+    public function getAdminPriceAttribute() {
+      return view('crud::columns.price', ['price' => $this->price, 'currency' => $this->currency]);
+    }
+
     public function getFillAdminAttribute() {
       $data = $this->extras['fill_quality'] ?? [];
       return view('store-crud::columns.product_quality', $data);

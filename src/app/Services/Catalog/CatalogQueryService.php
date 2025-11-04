@@ -27,6 +27,11 @@ class CatalogQueryService extends AbstractQueryService
         $this->country = \Store::context()->country;
     }
 
+    public function setRequest(Request $request): static {
+        $this->request = $request;
+        return $this;
+    }
+
     /** Базовый запрос к ak_catalog */
     public function startQuery(): self
     {
@@ -260,12 +265,12 @@ class CatalogQueryService extends AbstractQueryService
         $activeDir = strtolower($this->request->input('order_dir','desc')) === 'asc' ? 'asc' : 'desc';
 
         $list = [
-            ['id'=>'default', 'name'=>__('backpack-store::sort.default'), 'by'=>null,        'dir'=>null],
-            ['id'=>'price_asc','name'=>__('backpack-store::sort.price_asc'),'by'=>'price', 'dir'=>'asc'],
-            ['id'=>'price_desc','name'=>__('backpack-store::sort.price_desc'),'by'=>'price','dir'=>'desc'],
-            ['id'=>'sale_desc','name'=>__('backpack-store::sort.sale_desc'),'by'=>'sale',  'dir'=>'desc'],
-            ['id'=>'stock_desc','name'=>__('backpack-store::sort.stock_desc'),'by'=>'in_stock','dir'=>'desc'],
-            ['id'=>'sales_desc','name'=>__('backpack-store::sort.sales_desc'),'by'=>'sales','dir'=>'desc'],
+            ['id'=>'default', 'name'=>__('backpack-store::filter.sorting.default'), 'by'=>null,        'dir'=>null],
+            ['id'=>'price_asc','name'=>__('backpack-store::filter.sorting.price_asc'),'by'=>'price', 'dir'=>'asc'],
+            ['id'=>'price_desc','name'=>__('backpack-store::filter.sorting.price_desc'),'by'=>'price','dir'=>'desc'],
+            ['id'=>'sale_desc','name'=>__('backpack-store::filter.sorting.sale_desc'),'by'=>'sale',  'dir'=>'desc'],
+            ['id'=>'stock_desc','name'=>__('backpack-store::filter.sorting.stock_desc'),'by'=>'in_stock','dir'=>'desc'],
+            ['id'=>'sales_desc','name'=>__('backpack-store::filter.sorting.sales_desc'),'by'=>'sales','dir'=>'desc'],
         ];
 
         foreach ($list as &$opt) {
@@ -340,8 +345,8 @@ class CatalogQueryService extends AbstractQueryService
             $base->setRelation('modifications', $mods);
 
             // (опционально) можно проставить «активную модификацию» = первая прошедшая фильтр, если нужна
-            // $active = $mods->firstWhere('passed_filter', true) ?? $mods->first();
-            // $base->setRelation('active_modification', $active);
+            $active = $mods->firstWhere('passed_filter', true) ?? $mods->first();
+            $base->setRelation('active_modification', $active);
 
             $items->push($base);
         }
@@ -357,7 +362,6 @@ class CatalogQueryService extends AbstractQueryService
             'query'=> request()->query(),
         ]);
 
-        // dd($items[0]->modifications);
         return [$paginator, $items];
     }
 
@@ -470,9 +474,14 @@ class CatalogQueryService extends AbstractQueryService
 
 
 
-    public function getProducts()
+    public function getProducts($clear = false)
     {
       [$paginator, $items] = $this->getPaginated();
-      return new ProductCollection($paginator->setCollection($items));
+
+      if($clear) {
+        return $paginator->setCollection($items);
+      }else {
+        return new ProductCollection($paginator->setCollection($items));
+      }
     }
 }

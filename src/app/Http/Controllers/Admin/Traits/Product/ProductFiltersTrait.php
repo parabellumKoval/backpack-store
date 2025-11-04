@@ -225,5 +225,15 @@ trait ProductFiltersTrait
           }
         });
       }
+
+
+      $this->crud->addFilter([
+          'type'  => 'simple',
+          'name'  => 'with_mods',
+          'label' => 'Показать модификации',
+      ],
+      false,
+      function () {
+      });
   }
 }

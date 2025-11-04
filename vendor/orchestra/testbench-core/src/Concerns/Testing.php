@@ -4,7 +4,6 @@ namespace Orchestra\Testbench\Concerns;
 
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
-use Illuminate\Console\Application as Artisan;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -12,10 +11,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\WithoutEvents;
 use Illuminate\Foundation\Testing\WithoutMiddleware;
-use Illuminate\Queue\Queue;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\ParallelTesting;
 use Mockery;
+use Orchestra\Testbench\Foundation\Application as Testbench;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 
@@ -26,6 +25,7 @@ trait Testing
 {
     use CreatesApplication;
     use HandlesAnnotations;
+    use HandlesAssertions;
     use HandlesAttributes;
     use HandlesDatabases;
     use HandlesRoutes;
@@ -146,9 +146,7 @@ trait Testing
         $this->afterApplicationCreatedCallbacks = [];
         $this->beforeApplicationDestroyedCallbacks = [];
 
-        Artisan::forgetBootstrappers();
-
-        Queue::createPayloadUsing(null);
+        Testbench::flushState();
 
         if ($this->callbackException) {
             throw $this->callbackException;
@@ -164,40 +162,33 @@ trait Testing
     final protected function setUpTheTestEnvironmentTraits(array $uses): array
     {
         if (isset($uses[WithWorkbench::class])) {
-            /** @phpstan-ignore-next-line */
-            $this->setUpWithWorkbench();
+            $this->setUpWithWorkbench();  /** @phpstan-ignore method.notFound */
         }
 
         $this->setUpDatabaseRequirements(function () use ($uses) {
             if (isset($uses[RefreshDatabase::class])) {
-                /** @phpstan-ignore-next-line */
-                $this->refreshDatabase();
+                $this->refreshDatabase();  /** @phpstan-ignore method.notFound */
             }
 
             if (isset($uses[DatabaseMigrations::class])) {
-                /** @phpstan-ignore-next-line */
-                $this->runDatabaseMigrations();
+                $this->runDatabaseMigrations(); /** @phpstan-ignore method.notFound */
             }
         });
 
         if (isset($uses[DatabaseTransactions::class])) {
-            /** @phpstan-ignore-next-line */
-            $this->beginDatabaseTransaction();
+            $this->beginDatabaseTransaction(); /** @phpstan-ignore method.notFound */
         }
 
         if (isset($uses[WithoutMiddleware::class])) {
-            /** @phpstan-ignore-next-line */
-            $this->disableMiddlewareForAllTests();
+            $this->disableMiddlewareForAllTests(); /** @phpstan-ignore method.notFound */
         }
 
         if (isset($uses[WithoutEvents::class])) {
-            /** @phpstan-ignore-next-line */
-            $this->disableEventsForAllTests();
+            $this->disableEventsForAllTests(); /** @phpstan-ignore method.notFound */
         }
 
         if (isset($uses[WithFaker::class])) {
-            /** @phpstan-ignore-next-line */
-            $this->setUpFaker();
+            $this->setUpFaker(); /** @phpstan-ignore method.notFound */
         }
 
         Collection::make($uses)
@@ -238,7 +229,7 @@ trait Testing
     protected function setUpParallelTestingCallbacks(): void
     {
         if (class_exists(ParallelTesting::class) && $this instanceof TestCase) {
-            ParallelTesting::callSetUpTestCaseCallbacks($this);
+            ParallelTesting::callSetUpTestCaseCallbacks($this); /** @phpstan-ignore staticMethod.notFound */
         }
     }
 
@@ -248,7 +239,7 @@ trait Testing
     protected function tearDownParallelTestingCallbacks(): void
     {
         if (class_exists(ParallelTesting::class) && $this instanceof TestCase) {
-            ParallelTesting::callTearDownTestCaseCallbacks($this);
+            ParallelTesting::callTearDownTestCaseCallbacks($this); /** @phpstan-ignore staticMethod.notFound */
         }
     }
 
@@ -258,7 +249,7 @@ trait Testing
      * @param  callable():void  $callback
      * @return void
      */
-    protected function afterApplicationRefreshed(callable $callback): void
+    public function afterApplicationRefreshed(callable $callback): void
     {
         $this->afterApplicationRefreshedCallbacks[] = $callback;
 
@@ -273,7 +264,7 @@ trait Testing
      * @param  callable():void  $callback
      * @return void
      */
-    protected function afterApplicationCreated(callable $callback): void
+    public function afterApplicationCreated(callable $callback): void
     {
         $this->afterApplicationCreatedCallbacks[] = $callback;
 
@@ -288,7 +279,7 @@ trait Testing
      * @param  callable():void  $callback
      * @return void
      */
-    protected function beforeApplicationDestroyed(callable $callback): void
+    public function beforeApplicationDestroyed(callable $callback): void
     {
         array_unshift($this->beforeApplicationDestroyedCallbacks, $callback);
     }

@@ -6,8 +6,9 @@ use Illuminate\Http\Request;
 use Backpack\Store\app\Http\Requests\CategoryRequest;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
-
+use ParabellumKoval\BackpackImages\Traits\HasImagesCrudComponents;
 use Backpack\LangFileManager\app\Models\Language;
+use Backpack\Tag\app\Traits\TagFields;
 
 /**
  * Class CategoryCrudController
@@ -23,7 +24,10 @@ class CategoryCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
     use \Backpack\Helpers\app\Http\Controllers\Operations\ReorderDeepOperation;
     
+    use HasImagesCrudComponents;
+    
     use \App\Http\Controllers\Admin\Traits\CategoryCrud;
+    use TagFields;
 
     private $category_class = null;
     private $filter_categories = [];
@@ -134,12 +138,10 @@ class CategoryCrudController extends CrudController
             }
         });
 
-        $this->crud->addColumn([
-            'name' => 'imageSrc',
+        $this->setupFilers();
+
+        $this->addImagesColumn([
             'label' => '📷',
-            'type' => 'image',
-            'height' => '50px',
-            'width'  => '50px',
         ]);
 
         // IS ACTIVE
@@ -188,6 +190,16 @@ class CategoryCrudController extends CrudController
             'label' => 'Уровень',
         ]);
 
+        $this->crud->addColumn([
+            'name' => 'admin_countries_label',
+            'label' => 'Страны',
+            'type' => 'model_function',
+            'function_name' => 'getAdminCountriesLabel',
+            'limit' => 255,
+        ]);
+
+        $this->setupTagColumns();
+
         $this->listOperation();
     }
 
@@ -222,33 +234,20 @@ class CategoryCrudController extends CrudController
                 'tab' => trans('backpack-store::category.tabs.main')
             ],
             [
+                'name' => 'countries',
+                'label' => 'Страны',
+                'type' => 'select2_from_array',
+                'allows_multiple' => true,
+                'options' => $this->countryOptions(),
+                'allows_null' => true,
+                'hint' => 'Пусто — категория доступна во всех странах',
+                'tab' => trans('backpack-store::category.tabs.main')
+            ],
+            [
                 'name' => 'content',
                 'label' => 'Описание',
                 'type' => 'ckeditor',
                 'tab' => trans('backpack-store::category.tabs.main')
-            ],
-            [
-                'name'  => 'images',
-                'label' => 'Изображения',
-                'type'  => 'repeatable',
-                'fields' => [
-                    [
-                        'name' => 'src',
-                        'label' => 'Изображение',
-                        'type' => 'browse'
-                    ],
-                    [
-                        'name' => 'alt',
-                        'label' => 'alt'
-                    ],
-                    [
-                        'name' => 'title',
-                        'label' => 'title'
-                    ]
-                ],
-                'new_item_label'  => 'Добавить изобрежение',
-                'init_rows' => 1,
-                'tab' => 'Изображения'
             ],
             [
                 'name' => 'h1',
@@ -286,6 +285,17 @@ class CategoryCrudController extends CrudController
             ],
         ]);
 
+        $this->addImagesField([
+            'label' => 'Изображения',
+            'tab' => 'Изображения',
+            'new_item_label' => 'Добавить изображение',
+        ]);
+
+        $this->setupTagFields();
+        $this->crud->modifyField('tags', [
+            'tab' => 'Дополнительно'
+        ]);
+
 
 
          // MERCHNTS CATEGORY
@@ -306,6 +316,11 @@ class CategoryCrudController extends CrudController
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
+    }
+
+    protected function countryOptions(): array
+    {
+        return \Store::countryOptions();
     }
     
     /**

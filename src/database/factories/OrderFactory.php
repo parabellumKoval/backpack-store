@@ -25,6 +25,14 @@ class OrderFactory extends Factory
       return [
         'code' => $this->faker->regexify('[A-Z]{3}[0-4]{3}'),
         'price' => $this->faker->randomFloat(2, 0, 100000),
+        'subtotal' => $this->faker->randomFloat(2, 0, 100000),
+        'promocode_discount_total' => 0,
+        'bonus_discount_total' => 0,
+        'personal_discount_total' => 0,
+        'discount_total' => 0,
+        'shipping_total' => 0,
+        'tax_total' => 0,
+        'grand_total' => $this->faker->randomFloat(2, 0, 100000),
         'status' => $this->faker->randomElement([
           'new',
           'pending',

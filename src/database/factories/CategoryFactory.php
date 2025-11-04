@@ -42,6 +42,9 @@ class CategoryFactory extends Factory
             'title' => 'title'
           ]
         ],
+        'countries' => $this->faker->boolean(50)
+          ? $this->faker->randomElements(['UA', 'US', 'PL', 'DE', 'CZ'], $this->faker->numberBetween(1, 3))
+          : null,
       ];
     }
 }

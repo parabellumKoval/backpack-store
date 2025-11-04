@@ -16,11 +16,19 @@ use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Traits\SearchCatalogTrait;
 use Backpack\Store\app\Services\Search\SearchConfigurableAbstract;
 
+// Images
+use ParabellumKoval\BackpackImages\Traits\HasImages;
+
+use Backpack\Store\app\Models\Traits\HasModification;
+
 class Catalog extends SearchConfigurableAbstract
 {
 
     use HasTranslations;
     use SearchCatalogTrait;
+    use HasModification;
+
+    use HasImages;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -54,7 +62,7 @@ class Catalog extends SearchConfigurableAbstract
         'ratings'      => 'integer',
     ];
 
-    protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray'];
+    protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray', 'content', 'merchant_content', 'seo', 'attrs'];
 
     const DEFAULT_BY = 'created_at';
     const DEFAULT_DIR = 'desc';
@@ -130,16 +138,18 @@ class Catalog extends SearchConfigurableAbstract
     {
         return $this->hasMany(self::class, 'group_id', 'group_id')
             ->where('country_code', $this->country_code)
-            ->where('is_available', 1)
-            ->where('product_id', '!=', $this->product_id);
+            ->where('is_available', 1);
     }
 
     /** Коллекция модификаций БЕЗ SQL — только если их пришили через setRelation. */
     public function getModificationsLoadedAttribute(): ?\Illuminate\Support\Collection
     {
         if ($this->relationLoaded('modifications')) {
-            return $this->getRelation('modifications');
+          return $this->getRelation('modifications');
+        }else {
+          return $this->modifications;
         }
+
         return null;
     }
 
@@ -155,15 +165,13 @@ class Catalog extends SearchConfigurableAbstract
             return null;
         }
 
-        $resourceClass = \Settings::get('dress.product.resource.mod');
-        if (!$resourceClass || !class_exists($resourceClass)) {
-            return null;
-        }
+        return $this->buildResourceModifications($mods);
+    }
 
-        // на всякий случай оставим только доступные
-        $mods = $mods->filter(fn($m) => (int)$m->is_available === 1);
-
-        return $resourceClass::collection($mods->values());
+    public function getActiveModificationAttribute()
+    {
+        $mod = $this->relationLoaded('active_modification')? $this->getRelation('active_modification'): null;
+        return $mod;
     }
 
     /** Бренд */
@@ -197,9 +205,20 @@ class Catalog extends SearchConfigurableAbstract
 
 
     /** Удобный алиас: главное изображение */
-    public function getImageAttribute(): ?array
+    // public function getImageAttribute(): ?array
+    // {
+    //     return $this->images[0] ?? null;
+    // }
+
+
+    public static function imageProviderName(?string $attribute = null): string
     {
-        return $this->images[0] ?? null;
+        return 'local';
+    }
+
+    public static function imageStorageFolder(?string $attribute = null): string
+    {
+        return 'products';
     }
 
     /** Явный флаг "эта модификация прошла фильтр" — ставим из сервиса как атрибут */

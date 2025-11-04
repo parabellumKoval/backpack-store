@@ -17,6 +17,13 @@ use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Promocode;
+use Backpack\Store\app\Models\OrderInvoice;
+use Backpack\Store\app\Contracts\BonusService;
+use Backpack\Store\app\DTO\BonusRedemption;
+use Backpack\Store\app\Services\Bonus\NullBonusService;
+use Backpack\Store\app\Services\Invoice\InvoiceService;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class OrderApiTest extends TestCase
 {
@@ -33,6 +40,7 @@ class OrderApiTest extends TestCase
         'zip' => '61000',
       ]
     ];
+    protected ?object $invoiceServiceFake = null;
     
     /**
      * getOrderData
@@ -58,6 +66,83 @@ class OrderApiTest extends TestCase
       Auth::guard('profile')->login($this->user);
 
       // $this->actingAs($this->user);
+    }
+
+    protected function tearDown(): void
+    {
+        app()->forgetInstance(InvoiceService::class);
+        $this->invoiceServiceFake = null;
+
+        parent::tearDown();
+    }
+
+    protected function bindFakeInvoiceService(): void
+    {
+        $this->invoiceServiceFake = new class {
+            public array $generatedOrders = [];
+
+            public function generate(Order $order, array $options = []): array
+            {
+                $pdfPath = sprintf('invoices/%s.pdf', $order->getKey());
+                Storage::disk('public')->put($pdfPath, 'fake-pdf');
+
+                $invoice = $order->invoices()->create([
+                    'template' => 'cz_default',
+                    'locale' => 'cs_CZ',
+                    'currency' => $order->currency_code ?? 'CZK',
+                    'payload_hash' => 'fake-hash-' . $order->getKey(),
+                    'path' => $pdfPath,
+                    'filesize' => 123,
+                    'generated_at' => now(),
+                    'meta' => [
+                        'invoice_number' => 'F' . ($order->code ?? $order->getKey()),
+                        'order_number' => $order->code ?? (string) $order->getKey(),
+                        'buyer' => [],
+                        'issued_at' => now()->toIso8601String(),
+                    ],
+                ]);
+
+                $qrPath = sprintf('invoices/qr/%s.svg', $order->getKey());
+                Storage::disk('public')->put($qrPath, '<svg></svg>');
+
+                $invoice->update([
+                    'qr_format' => 'svg',
+                    'qr_path' => $qrPath,
+                    'qr_payload_hash' => 'qr-hash-' . $order->getKey(),
+                    'qr_generated_at' => now(),
+                ]);
+
+                $this->generatedOrders[] = $order->getKey();
+
+                return [
+                    'invoice' => $invoice,
+                    'binary' => 'fake-pdf',
+                    'qr' => [
+                        'payload' => 'fake',
+                        'format' => 'svg',
+                        'disk' => 'public',
+                        'path' => $qrPath,
+                        'hash' => 'qr-hash-' . $order->getKey(),
+                        'binary' => '<svg></svg>',
+                        'mime' => 'image/svg+xml',
+                    ],
+                ];
+            }
+
+            public function signedUrl(OrderInvoice $invoice, ?string $ttl = null): string
+            {
+                return URL::temporarySignedRoute(
+                    'backpack.store.invoices.download-signed',
+                    now()->addMinutes(15),
+                    [
+                        'invoice' => $invoice->getKey(),
+                        'order' => $invoice->order_id,
+                    ]
+                );
+            }
+        };
+
+        app()->instance(InvoiceService::class, $this->invoiceServiceFake);
     }
 
      /**
@@ -110,6 +195,12 @@ class OrderApiTest extends TestCase
             'id',
             'code',
             'price',
+            'subtotal',
+            'discountTotal',
+            'shippingTotal',
+            'taxTotal',
+            'grandTotal',
+            'currencyCode',
             'status',
             'payStatus',
             'deliveryStatus',
@@ -132,6 +223,8 @@ class OrderApiTest extends TestCase
             "payment" => [
               "method"
             ],
+            'invoiceDownloadUrl',
+            'invoiceQrUrl',
             "products" => [
               "*" => [
                 "name",
@@ -141,6 +234,19 @@ class OrderApiTest extends TestCase
                 "old_price",
                 "image"
               ]
+            ],
+            'bonuses' => [
+              'points',
+              'fiatAmount',
+              'fiatCurrency',
+              'walletCurrency',
+              'refunded'
+            ],
+            'personalDiscount' => [
+              'amount',
+              'percent',
+              'currency',
+              'applied'
             ],
             "created_at"
           ]
@@ -168,7 +274,159 @@ class OrderApiTest extends TestCase
    */
   public function test_create_ok () {
     $response = $this->post('/api/order', $this->getOrderData());
+   $response->assertStatus(200);
+  }
+
+  public function test_bank_transfer_order_returns_invoice_links(): void
+  {
+    Storage::fake('public');
+
+    config([
+      'dress.invoice.auto_generate_payment_methods' => ['bank_transfer'],
+      'app.url' => 'https://example.test',
+    ]);
+
+    $this->bindFakeInvoiceService();
+
+    $data = $this->getOrderData();
+    $data['payment'] = array_merge($data['payment'], [
+      'method' => 'bank_transfer',
+      'settlement' => 'Prague',
+      'street' => 'Main street',
+      'house' => '10A',
+      'room' => '5',
+      'zip' => '11000',
+    ]);
+    $data['delivery'] = array_merge($data['delivery'], [
+      'settlement' => 'Prague',
+      'street' => 'Main street',
+      'house' => '10A',
+      'room' => '5',
+      'zip' => '11000',
+    ]);
+
+    $response = $this->postJson('/api/order', $data);
     $response->assertStatus(200);
+
+    $payload = $response->json();
+
+    $this->assertNotEmpty($payload['invoiceDownloadUrl'] ?? null);
+    $this->assertNotEmpty($payload['invoiceQrUrl'] ?? null);
+
+    $invoiceExists = OrderInvoice::where('order_id', $payload['id'] ?? 0)->exists();
+    $this->assertTrue($invoiceExists, 'Invoice record should be created for bank transfer payment.');
+
+    $this->assertContains($payload['id'], $this->invoiceServiceFake->generatedOrders);
+  }
+
+  public function test_non_invoice_payment_method_does_not_generate_invoice(): void
+  {
+    Storage::fake('public');
+
+    config([
+      'dress.invoice.auto_generate_payment_methods' => ['bank_transfer'],
+      'app.url' => 'https://example.test',
+    ]);
+
+    $this->bindFakeInvoiceService();
+
+    $data = $this->getOrderData();
+    $data['payment']['method'] = 'cash';
+
+    $response = $this->postJson('/api/order', $data);
+    $response->assertStatus(200);
+
+    $payload = $response->json();
+
+    $this->assertNull($payload['invoiceDownloadUrl']);
+    $this->assertNull($payload['invoiceQrUrl']);
+    $this->assertEmpty($this->invoiceServiceFake->generatedOrders);
+    $this->assertDatabaseCount('ak_order_invoices', 0);
+  }
+
+  public function test_create_with_bonus_applies_discount(): void
+  {
+    $product = Product::first();
+    $this->assertNotNull($product, 'Product seed required for bonus test');
+
+    $orderCurrency = \Store::countryCurrency();
+    $bonusPoints = 5.0;
+    $bonusFiat = 5.0;
+
+    $price = max(1.0, (float) $product->price);
+    $quantity = max(1, (int) ceil(($bonusFiat / $price)) + 1);
+
+    $data = $this->getOrderData();
+    $data['products'] = [$product->id => $quantity];
+    $data['bonus'] = $bonusPoints;
+
+    $redemption = new BonusRedemption($bonusPoints, $bonusFiat, $orderCurrency, ['wallet_currency' => 'point']);
+
+    $fakeService = new class($redemption) implements BonusService {
+      public bool $spendCalled = false;
+
+      public function __construct(private BonusRedemption $redemption)
+      {
+      }
+
+      public function canSpend(int $userId, float $points): bool
+      {
+        return true;
+      }
+
+      public function spend(int $userId, float $points, string $orderReference, string $orderCurrency, array $context = []): BonusRedemption
+      {
+        $this->spendCalled = true;
+        return $this->redemption;
+      }
+
+      public function refund(int $userId, float $points, string $orderReference, string $orderCurrency, array $context = []): void
+      {
+      }
+    };
+
+    $this->app->instance(BonusService::class, $fakeService);
+    config(['dress.order.bonus.enabled' => true]);
+
+    $response = $this->postJson('/api/order', $data);
+    $response->assertStatus(200);
+
+    $order = Order::latest('id')->first();
+
+    $expectedSubtotal = round($price * $quantity, 2);
+
+    $this->assertTrue($fakeService->spendCalled, 'Bonus service spend should be called');
+    $this->assertEquals($expectedSubtotal, (float) $order->subtotal);
+    $this->assertEquals($bonusFiat, (float) $order->discount_total);
+    $this->assertEquals(round($expectedSubtotal - $bonusFiat, 2), (float) $order->grand_total);
+    $this->assertSame($bonusPoints, (float) ($order->info['bonuses']['points'] ?? 0));
+    $this->assertFalse((bool) ($order->info['bonuses']['refunded'] ?? true));
+
+    $this->app->instance(BonusService::class, new NullBonusService());
+    config(['dress.order.bonus.enabled' => false]);
+  }
+
+  public function test_create_sets_totals_correctly(): void
+  {
+    $data = $this->getOrderData();
+
+    $response = $this->postJson('/api/order', $data);
+    $response->assertStatus(200);
+
+    $order = Order::latest('id')->first();
+
+    $expectedSubtotal = 0;
+    foreach ($data['products'] as $productId => $qty) {
+      $product = Product::find($productId);
+      $expectedSubtotal += $product->price * $qty;
+    }
+
+    $expectedSubtotal = round($expectedSubtotal, 2);
+
+    $this->assertEquals($expectedSubtotal, (float) $order->subtotal);
+    $this->assertEquals(0.0, (float) $order->discount_total);
+    $this->assertEquals($expectedSubtotal, (float) $order->grand_total);
+    $this->assertEquals($order->grand_total, (float) $order->price);
   }
     
   /**
@@ -201,6 +459,37 @@ class OrderApiTest extends TestCase
 
     $response = $this->post('/api/order', $this->order_data);
     $response->assertStatus(404);
+  }
+
+  public function test_validate_order_checks_bonus_balance(): void
+  {
+    $fakeService = new class implements BonusService {
+      public function canSpend(int $userId, float $points): bool
+      {
+        return false;
+      }
+
+      public function spend(int $userId, float $points, string $orderReference, string $orderCurrency, array $context = []): BonusRedemption
+      {
+        throw new \RuntimeException('Should not spend when canSpend returns false');
+      }
+
+      public function refund(int $userId, float $points, string $orderReference, string $orderCurrency, array $context = []): void
+      {
+      }
+    };
+
+    $this->app->instance(BonusService::class, $fakeService);
+    config(['dress.order.bonus.enabled' => true]);
+
+    $payload = array_merge($this->getOrderData(), ['bonus' => 5]);
+    $response = $this->postJson('/api/order/validate', $payload);
+
+    $response->assertStatus(422);
+    $response->assertJson(['message' => 'Недостаточно бонусов на счёте.']);
+
+    $this->app->instance(BonusService::class, new NullBonusService());
+    config(['dress.order.bonus.enabled' => false]);
   }
   
   /**

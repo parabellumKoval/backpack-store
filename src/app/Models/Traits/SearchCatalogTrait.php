@@ -18,6 +18,10 @@ trait SearchCatalogTrait {
     public function searchableAs(): string
     {
         $base = self::searchIndexBase();
+
+        // $loc  = app()->getLocale();
+        $this->country_code = \Store::context()->country;
+
         return $base . '_' . $this->country_code;
     }
 

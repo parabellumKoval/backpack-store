@@ -110,15 +110,14 @@ class OriginFactory
         }
 
         try {
-            if (Str::startsWith($originFrame->file, storage_path('framework/views'))) {
+            if (Str::startsWith($originFrame->file, config('view.compiled'))) {
                 return $this->replaceCompiledViewPathWithOriginalViewPath($originFrame);
             }
         } catch (BindingResolutionException $exception) {
             // ignore errors caused by using `storage_path`
         }
 
-        if ($originFrame->class === Invador::class);
-        {
+        if ($originFrame->class === Invador::class) {
             return $frames[$indexOfRay + 2];
         }
 

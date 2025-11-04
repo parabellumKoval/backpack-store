@@ -99,8 +99,15 @@ class OrderCrudController extends CrudController
         $total_sum = $products->reduce(function($carry, $item) use($plucked_products) {
           return $carry + $item->price * $plucked_products[$item->id];
         }, 0);
-        
-        $entry->price = $total_sum;
+
+        $entry->subtotal = $total_sum;
+        $entry->promocode_discount_total = $entry->promocode_discount_total ?? 0;
+        $entry->bonus_discount_total = $entry->bonus_discount_total ?? 0;
+        $entry->discount_total = round(($entry->promocode_discount_total ?? 0) + ($entry->bonus_discount_total ?? 0), 2);
+        $entry->shipping_total = $entry->shipping_total ?? 0;
+        $entry->tax_total = $entry->tax_total ?? 0;
+        $entry->grand_total = max(0, ($entry->subtotal - $entry->discount_total) + $entry->shipping_total + $entry->tax_total);
+        $entry->price = $entry->grand_total;
 
 
         // Save products to info field (json)
@@ -108,6 +115,20 @@ class OrderCrudController extends CrudController
           $product->amount = $plucked_products[$product->id];
           $info = $entry->info;
           $info['products'][$key] = new ProductCartResource($product);
+          $info['bonusesUsed'] = $info['bonusesUsed'] ?? 0;
+          $existingBonuses = $info['bonuses'] ?? [];
+          $currencyCode = $entry->currency_code ?? \Store::countryCurrency($entry->country_code);
+          $bonusFiat = $entry->bonus_discount_total ?? $info['bonusesUsed'];
+          $info['bonuses'] = array_merge([
+            'points' => 0,
+            'fiat_amount' => $bonusFiat,
+            'fiat_currency' => $currencyCode,
+            'order_currency' => $currencyCode,
+            'wallet_currency' => $existingBonuses['wallet_currency'] ?? null,
+            'refunded' => $existingBonuses['refunded'] ?? false,
+            'reference_id' => $existingBonuses['reference_id'] ?? null,
+          ], $existingBonuses);
+          $info['bonusesUsed'] = $bonusFiat;
           $entry->info = $info;
         }
       }
@@ -255,6 +276,10 @@ class OrderCrudController extends CrudController
         'escaped' => false,
         'limit' => 5500,
       ]);
+
+      $this->crud->addButtonFromView('line', 'invoice_preview', 'invoice_preview', 'end');
+      $this->crud->addButtonFromView('line', 'invoice_download', 'invoice_download', 'end');
+      $this->crud->addButtonFromView('line', 'invoice_qr', 'invoice_qr', 'end');
 
       // $this->crud->addColumn([
       //   'name' => 'status',
@@ -685,6 +710,10 @@ class OrderCrudController extends CrudController
   
   protected function setupShowOperation()
   {
+      CRUD::addButtonFromView('top', 'invoice_preview', 'invoice_preview', 'beginning');
+      CRUD::addButtonFromView('top', 'invoice_download', 'invoice_download', 'beginning');
+      CRUD::addButtonFromView('top', 'invoice_qr', 'invoice_qr', 'beginning');
+
       $this->crud->addColumn([
         'name' => 'code',
         'label' => trans('backpack-store::order.fields.code')

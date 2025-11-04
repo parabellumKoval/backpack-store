@@ -16,7 +16,7 @@ class BrandLargeResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'images' => $this->images,
+        'images' => $this->getImageSourcesForApi(),
         'content' => $this->content,
         'extras' => $this->extras,
         'seo' => $this->seoArray

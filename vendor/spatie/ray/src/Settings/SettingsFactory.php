@@ -11,7 +11,7 @@ class SettingsFactory
         return new Settings($settings);
     }
 
-    public static function createFromConfigFile(string $configDirectory = null): Settings
+    public static function createFromConfigFile(?string $configDirectory = null): Settings
     {
         $settingValues = (new static())->getSettingsFromConfigFile($configDirectory);
 
@@ -24,7 +24,7 @@ class SettingsFactory
         return $settings;
     }
 
-    public function getSettingsFromConfigFile(string $configDirectory = null): array
+    public function getSettingsFromConfigFile(?string $configDirectory = null): array
     {
         $configFilePath = $this->searchConfigFiles($configDirectory);
 
@@ -37,8 +37,9 @@ class SettingsFactory
         return $options ?? [];
     }
 
-    protected function searchConfigFiles(string $configDirectory = null): string
+    protected function searchConfigFiles(?string $configDirectory = null): string
     {
+        $configDirectory ??= '';
         if (! isset(self::$cache[$configDirectory])) {
             self::$cache[$configDirectory] = $this->searchConfigFilesOnDisk($configDirectory);
         }
@@ -46,7 +47,7 @@ class SettingsFactory
         return self::$cache[$configDirectory];
     }
 
-    protected function searchConfigFilesOnDisk(string $configDirectory = null): string
+    protected function searchConfigFilesOnDisk(?string $configDirectory = null): string
     {
         $configNames = [
             'ray.php',

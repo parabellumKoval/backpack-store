@@ -276,42 +276,44 @@ trait ProductFieldsTrait
 
 
         // IMAGES
-        if(\Settings::get('dress.product.images.enable', true)) {
-            $this->crud->addField([
-                'name'  => 'images',
-                'label' => trans('backpack-store::product-field.fields.images.label'),
-                'type'  => 'repeatable',
-                'fields' => [
-                [
-                    'name' => 'src',
-                    'label' => trans('backpack-store::product-field.fields.images.image'),
-                    'type' => 'browse',
-                ],
-                [
-                    'name' => 'alt',
-                    'label' => trans('backpack-store::product-field.fields.images.alt')
-                ],
-                [
-                    'name' => 'title',
-                    'label' => trans('backpack-store::product-field.fields.images.title')
-                ],
-                [
-                    'name' => 'size',
-                    'type' => 'radio',
-                    'label' => trans('backpack-store::product-field.fields.images.size'),
-                    'options' => [
-                    'cover' => 'Cover',
-                    'contain' => 'Contain'
-                    ],
-                    'inline' => true
-                ]
-                ],
-                'new_item_label'  => trans('backpack-store::product-field.fields.images.add'),
-                'init_rows' => 1,
-                'default' => [],
-                'tab' => trans('backpack-store::product-field.tabs.images')
-            ]);
-        }
+
+        $this->addImagesField();
+        // if(\Settings::get('dress.product.images.enable', true)) {
+        //     $this->crud->addField([
+        //         'name'  => 'images',
+        //         'label' => trans('backpack-store::product-field.fields.images.label'),
+        //         'type'  => 'repeatable',
+        //         'fields' => [
+        //         [
+        //             'name' => 'src',
+        //             'label' => trans('backpack-store::product-field.fields.images.image'),
+        //             'type' => 'browse',
+        //         ],
+        //         [
+        //             'name' => 'alt',
+        //             'label' => trans('backpack-store::product-field.fields.images.alt')
+        //         ],
+        //         [
+        //             'name' => 'title',
+        //             'label' => trans('backpack-store::product-field.fields.images.title')
+        //         ],
+        //         [
+        //             'name' => 'size',
+        //             'type' => 'radio',
+        //             'label' => trans('backpack-store::product-field.fields.images.size'),
+        //             'options' => [
+        //             'cover' => 'Cover',
+        //             'contain' => 'Contain'
+        //             ],
+        //             'inline' => true
+        //         ]
+        //         ],
+        //         'new_item_label'  => trans('backpack-store::product-field.fields.images.add'),
+        //         'init_rows' => 1,
+        //         'default' => [],
+        //         'tab' => trans('backpack-store::product-field.tabs.images')
+        //     ]);
+        // }
 
 
         // SEO FIELDS

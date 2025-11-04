@@ -255,6 +255,19 @@ class ProductController extends \App\Http\Controllers\Controller
   }
 
     
+  public function cart(Request $request){
+    
+    if(empty($request->cart))
+      return response()->json([]);
+     
+    $idsArray = array_keys($request->cart);
+
+    $products = $this->product_class::whereIn('id', $idsArray)->get();
+    
+    $collection = self::$resources['product']['medium']::collection($products); 
+
+    return $collection;
+  }
   
   /**
    * Method getCacheKey

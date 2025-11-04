@@ -8,6 +8,8 @@ use Orchestra\Testbench\Concerns\HandlesAnnotations;
 use Orchestra\Testbench\Concerns\HandlesAttributes;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 
+use function Orchestra\Testbench\once;
+
 /**
  * @internal
  */
@@ -29,21 +31,23 @@ final class TestingFeature
         ?Closure $attribute = null
     ): Fluent {
         /** @var \Illuminate\Support\Fluent{attribute: \Orchestra\Testbench\Features\FeaturesCollection} $result */
-        $result = new Fluent(['attribute' => new FeaturesCollection()]);
+        $result = new Fluent(['attribute' => new FeaturesCollection]);
+
+        $defaultResolver = once($default);
 
         if ($testCase instanceof PHPUnitTestCase) {
-            /** @phpstan-ignore-next-line */
+            /** @phpstan-ignore staticMethod.notFound */
             if ($testCase::usesTestingConcern(HandlesAnnotations::class)) {
-                value($annotation);
+                value($annotation, $defaultResolver);
             }
 
-            /** @phpstan-ignore-next-line */
+            /** @phpstan-ignore staticMethod.notFound */
             if ($testCase::usesTestingConcern(HandlesAttributes::class)) {
-                $result['attribute'] = value($attribute);
+                $result['attribute'] = value($attribute, $defaultResolver);
             }
         }
 
-        value($default);
+        $defaultResolver();
 
         return $result;
     }

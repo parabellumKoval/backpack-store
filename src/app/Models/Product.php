@@ -35,6 +35,7 @@ use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\SupplierProduct;
+use Backpack\Store\app\Models\Catalog;
 
 // RESOURCES
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
@@ -43,7 +44,12 @@ use Backpack\Store\app\Http\Resources\AttributeProductResource;
 use \Backpack\Store\app\Contracts\ProductService;
 use \Backpack\Store\app\Services\Product\SupplierProductResolver;
 
-// use Backpack\Store\app\Models\Traits\SearchProductTrait;
+// Images
+use ParabellumKoval\BackpackImages\Traits\HasImages;
+
+use Backpack\Store\app\Models\Traits\HasModification;
+use Backpack\Tag\app\Traits\Taggable;
+
 class Product extends Model
 {
     use HasFactory;
@@ -51,6 +57,7 @@ class Product extends Model
     use Sluggable;
     use SluggableScopeHelpers;
     use HasTranslations;
+    use HasModification;
 
     use MultistoreProductTrait;
     // use SearchProductTrait;
@@ -58,7 +65,10 @@ class Product extends Model
     use TouchCatalogOnProductEvents;
     use UpsellProductTrait;
 
+    use HasImages;
+
     use \Backpack\Store\app\Traits\Resources;
+    use Taggable;
 
     /*
     |--------------------------------------------------------------------------
@@ -98,7 +108,7 @@ class Product extends Model
     ];
     // protected $hidden = [];
     // protected $dates = [];
-    protected $with = ['categories', 'ap', 'suppliers'];
+    protected $with = ['categories', 'ap', 'suppliers', 'parent'];
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
@@ -123,11 +133,27 @@ class Product extends Model
 
     private ?ProductService $productService = null;
 
+    
     /*
     |--------------------------------------------------------------------------
     | FUNCTIONS
     |--------------------------------------------------------------------------
     */
+
+    public static function imageProviderName(?string $attribute = null): string
+    {
+        return 'local';
+    }
+
+    public static function imageStorageFolder(?string $attribute = null): string
+    {
+        return 'products';
+    }
+
+    // public static function imageFieldPrefix(): string
+    // {
+    //     return (string) config('services.cdn.articles_url', '/');
+    // }
 
     /**
      * Get all category IDs including parent categories
@@ -241,20 +267,20 @@ class Product extends Model
      * @param  mixed $amount
      * @return array
      */
-    public function getImages($amount = -1):array
-    {
-      if(!$this->images) {
-        return [];
-      }
+    // public function getImages($amount = -1):array
+    // {
+    //   if(!$this->images) {
+    //     return [];
+    //   }
 
-      if($amount < 0) {
-        return $this->images;
-      }elseif($amount === 0) {
-        return [];
-      }else {
-        return array_slice($this->images, 0, $amount);
-      }
-    }
+    //   if($amount < 0) {
+    //     return $this->images;
+    //   }elseif($amount === 0) {
+    //     return [];
+    //   }else {
+    //     return array_slice($this->images, 0, $amount);
+    //   }
+    // }
 
     /**
      * syncSuppliers
@@ -351,6 +377,15 @@ class Product extends Model
       return $this->productService()->supplierProducts($country_code);
     }
 
+    /**
+     * catalog
+     *
+     * @return void
+     */
+    public function catalog()
+    {
+      return $this->hasOne(Catalog::class, 'parent_id');
+    }
 
     /**
      * brand
@@ -371,7 +406,7 @@ class Product extends Model
      */
     public function parent()
     {
-      return $this->belongsTo(self::class, 'parent_id');
+      return $this->belongsTo(\Settings::get('dress.product.model', self::class), 'parent_id');
     }
     
     /**
@@ -383,7 +418,7 @@ class Product extends Model
      */
     public function children()
     {
-      return $this->hasMany(self::class, 'parent_id');
+      return $this->hasMany(\Settings::get('dress.product.model', self::class), 'parent_id');
     }
         
     /**
@@ -488,6 +523,7 @@ class Product extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
     
     public function getUniqTitleAttribute() {
       $brand_name = $this->brand->name ?? '-';
@@ -528,31 +564,31 @@ class Product extends Model
      * 
      * @return Array|null Image is array(src, alt, title, size) 
      */
-    public function getImageAttribute() {
-      $image = $this->images[0] ?? null;
+    // public function getImageAttribute() {
+    //   $image = $this->images[0] ?? null;
 
-      if(!$image && $this->parent)
-        $image = $this->parent->image;
+    //   if(!$image && $this->parent)
+    //     $image = $this->parent->image;
 
-      return $image;
-    }
+    //   return $image;
+    // }
     
-    /**
-     * getImageSrcAttribute
-     *
-     * Get src url address from getImageAttribute method
-     * 
-     * @return string|null string is image src url
-     */
-    public function getImageSrcAttribute() {
-      $base_path = \Settings::get('dress.product.image.base_path', '/');
+    // /**
+    //  * getImageSrcAttribute
+    //  *
+    //  * Get src url address from getImageAttribute method
+    //  * 
+    //  * @return string|null string is image src url
+    //  */
+    // public function getImageSrcAttribute() {
+    //   $base_path = \Settings::get('dress.product.image.base_path', '/');
 
-      if(isset($this->image['src'])) {
-        return $base_path . $this->image['src'];
-      }else {
-        return null;
-      }
-    }
+    //   if(isset($this->image['src'])) {
+    //     return $base_path . $this->image['src'];
+    //   }else {
+    //     return null;
+    //   }
+    // }
     
     /**
      * getSlugOrNameAttribute
@@ -584,31 +620,7 @@ class Product extends Model
       else
         return $this;
     }
-        
-    /**
-     * getModificationsAttribute
-     *
-     * Return all product modifications includes self model
-     * 
-     * @return collection
-     */
-    // public function getModificationsAttribute() {
-    //   if($this->children->count())
-    //   {
-    //     $children = clone $this->children;
-    //     return $children->prepend($this);
-    //   }
-    //   else if($this->parent)
-    //   {
-    //     $parent_children = clone $this->parent->children;
-    //     return $parent_children->prepend($this->parent);
-    //   }
-    //   else 
-    //   {
-    //     return collect([])->prepend($this);
-    //   }
-    // }
-
+      
     
     /**
      * getSeoAttribute
@@ -888,6 +900,15 @@ class Product extends Model
       }
     }
 
+    public function getResourceModificationsAttribute()
+    {
+        $mods = $this->inherited()->modifications;
+        if (!$mods || $mods->isEmpty()) {
+            return null;
+        }
+
+        return $this->buildResourceModifications($mods);
+    }
 
     /*
     |--------------------------------------------------------------------------

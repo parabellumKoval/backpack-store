@@ -25,6 +25,8 @@ use Backpack\Store\app\Events\ProductCreating;
 
 // use App\Http\Controllers\Admin\Traits\ProductCrud;
 
+use ParabellumKoval\BackpackImages\Traits\HasImagesCrudComponents;
+
 /**
  * Class ProductCrudController
  * @package App\Http\Controllers\Admin
@@ -40,6 +42,8 @@ class ProductCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+
+    use HasImagesCrudComponents;
 
     use \App\Http\Controllers\Admin\Traits\ProductCrud;
     use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductFiltersTrait;
@@ -169,6 +173,11 @@ class ProductCrudController extends CrudController
     {
         // Common Classes
         $this->crud->addClause('withSum', 'sp', 'in_stock');
+        
+        // Only base and simple product by default
+        if (!request()->has('with_mods')) {
+            $this->crud->addClause('whereNull', 'parent_id');
+        }
 
         // System Trait   
         $this->setupFilters();

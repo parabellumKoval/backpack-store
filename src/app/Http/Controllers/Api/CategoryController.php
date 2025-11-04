@@ -18,9 +18,12 @@ class CategoryController extends \App\Http\Controllers\Controller
 
     $is_root = $request->input('is_root', true);
     $is_active = $request->input('is_active', true);
+    $country = $request->input('country') ?? \Store::country();
 
     $categories = Category::query()
               ->select('ak_product_categories.*')
+              ->with('tags')
+              ->forCountry($country, true)
               
               ->distinct('ak_product_categories.id')
               
@@ -57,8 +60,28 @@ class CategoryController extends \App\Http\Controllers\Controller
     return $categories;
   }
 
+  // public function indexSimple(Request $request) {
+
+  //   $is_root = $request->input('is_root', true);
+  //   $is_active = $request->input('is_active', true);
+  //   $country = $request->input('country') ?? \Store::country();
+
+  //    $categories = Category::query()
+  //             ->select('ak_product_categories.*')
+  //             ->forCountry($country, true)
+  //             ->distinct('ak_product_categories.id')
+  //             ->active()
+  //             ->orderBy('lft')
+  //             ->get();
+  // }
+
   public function show(Request $request, $slug) {
-    $category = Category::where('slug', $slug)->first();
+    $country = $request->input('country') ?? \Store::country();
+    $category = Category::query()
+      ->forCountry($country, true)
+      ->with('tags')
+      ->where('slug', $slug)
+      ->firstOrFail();
     $resource = new self::$resources['category']['large']($category);
     // return new self::$resources['category']['large']($category);
     return $resource;

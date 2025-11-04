@@ -8,14 +8,16 @@ trait ProductColumnsTrait
 {
     protected function setupColumns()
     {
-        $this->crud->addColumn([
-            'name' => 'imageSrc',
-            'label' => trans('backpack-store::product-column.image'),
-            'type' => 'image',
-            'height' => '60px',
-            'width'  => '40px',
-            'priority' => 2,
-        ]);
+        // $this->crud->addColumn([
+        //     'name' => 'imageSrc',
+        //     'label' => trans('backpack-store::product-column.image'),
+        //     'type' => 'image',
+        //     'height' => '60px',
+        //     'width'  => '40px',
+        //     'priority' => 2,
+        // ]);
+
+        $this->addImagesColumn(['label' => trans('backpack-store::product-column.image')]);
 
         $this->crud->addColumn([
             'name' => 'adminCode',
@@ -47,9 +49,10 @@ trait ProductColumnsTrait
         ]);
 
         $this->crud->addColumn([
-            'name' => 'simplePrice',
+            'name' => 'adminPrice',
             'label' => trans('backpack-store::product-column.price'),
-            'type' => 'number',
+            'escaped' => false,
+            'limit' => 1500,
             'orderable'   => true,
             'orderLogic' => function ($query, $column, $columnDirection) {
                 return $query

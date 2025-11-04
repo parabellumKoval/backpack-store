@@ -27,7 +27,15 @@ class EffectiveProduct
         return $this->resolveAttribute($key);
     }
 
-    public function __call($m, $a) { return $this->p->$m(...$a); }
+    public function __call($m, $a) {
+        // 1) Отношения в __call не трогаем — прямая прокся на модель
+        if ($this->isRelation($m)) {
+            return $this->p->$m(...$a);
+        }
+
+        // 2) Любой обычный метод обрабатываем общей логикой
+        return $this->resolveMethod($m, $a);
+    }
 
     /* ===== helpers ===== */
 
@@ -72,6 +80,51 @@ class EffectiveProduct
 
         return $cv;
     }
+
+    private function resolveMethod(string $m, array $a)
+    {
+        // Получаем родителя, если есть
+        $parent = $this->p->parent_id
+            ? ($this->p->relationLoaded('parent') ? $this->p->parent : $this->p->parent()->first())
+            : null;
+
+        // Определяем порядок обхода: родитель-сначала или ребёнок-сначала
+        $first  = $this->preferParent ? $parent   : $this->p;
+        $second = $this->preferParent ? $this->p  : $parent;
+
+        $called = false;
+        $last   = null;
+
+        // Пытаемся вызвать на первом объекте, если можно напрямую вызвать метод
+        if ($first && is_callable([$first, $m])) {
+            $called = true;
+            $v = $first->$m(...$a);
+            if ($this->filled($v)) {
+                return $v;
+            }
+            $last = $v; // запомним последнее значение даже если "пустое"
+        }
+
+        // Пытаемся вызвать на втором объекте
+        if ($second && is_callable([$second, $m])) {
+            $called = true;
+            $v = $second->$m(...$a);
+            if ($this->filled($v)) {
+                return $v;
+            }
+            $last = $v;
+        }
+
+        // Если ни там, ни там метод напрямую не вызвался (динамические скоупы/магия Eloquent),
+        // отдаём на откуп исходной модели, чтобы её __call обработал это как нужно.
+        if (!$called) {
+            return $this->p->$m(...$a);
+        }
+
+        // Если вызывали, но везде "пусто", вернём последнее полученное значение.
+        return $last;
+    }
+
 
     private function fetch(Product $m, string $field)
     {

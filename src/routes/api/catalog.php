@@ -16,9 +16,11 @@ use Backpack\Store\app\Http\Controllers\Api\CatalogController;
 |
 */
 
-Route::prefix('api/catalog')->controller(CatalogController::class)->group(function () {
+Route::prefix('api/catalog')->middleware(['api', Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+  ->controller(CatalogController::class)->group(function () {
   
-  Route::get('/cache', 'cache')->middleware('api');
-  Route::get('', 'catalog')->middleware('api');
+    Route::get('/cache', 'cache');
+    Route::get('', 'catalog');
 
+    Route::get('/{slug}', 'show');
 });

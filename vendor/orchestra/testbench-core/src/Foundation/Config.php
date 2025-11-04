@@ -18,13 +18,13 @@ use function Orchestra\Testbench\transform_relative_path;
  *   env: array,
  *   providers: array<int, class-string>,
  *   dont-discover: array<int, string>,
- *   bootstrappers: class-string|array<int, class-string>|null
+ *   bootstrappers: array<int, class-string>|class-string|null
  * }
  * @phpstan-type TOptionalExtraConfig array{
  *   env?: array,
  *   providers?: array<int, class-string>,
  *   dont-discover?: array<int, string>,
- *   bootstrappers?: class-string|array<int, class-string>|null
+ *   bootstrappers?: array<int, class-string>|class-string|null
  * }
  * @phpstan-type TWorkbenchConfig array{
  *   start: string,
@@ -33,7 +33,7 @@ use function Orchestra\Testbench\transform_relative_path;
  *   install: bool,
  *   welcome: bool|null,
  *   sync: array<int, array{from: string, to: string}>,
- *   build: array<int, string>,
+ *   build: array<int|string, array<string, mixed>|string>,
  *   assets: array<int, string>,
  *   discovers: TWorkbenchDiscoversConfig
  * }
@@ -44,12 +44,13 @@ use function Orchestra\Testbench\transform_relative_path;
  *   install?: bool,
  *   welcome?: bool|null,
  *   sync?: array<int, array{from: string, to: string}>,
- *   build?: array<int, string>,
+ *   build?: array<int|string, array<string, mixed>|string>,
  *   assets?: array<int, string>,
  *   discovers?: TWorkbenchOptionalDiscoversConfig
  * }
  * @phpstan-type TWorkbenchDiscoversConfig array{
  *   config: bool,
+ *   factories: bool,
  *   web: bool,
  *   api: bool,
  *   commands: bool,
@@ -58,6 +59,7 @@ use function Orchestra\Testbench\transform_relative_path;
  * }
  * @phpstan-type TWorkbenchOptionalDiscoversConfig array{
  *   config?: bool,
+ *   factories?: bool,
  *   web?: bool,
  *   api?: bool,
  *   commands?: bool,
@@ -69,9 +71,9 @@ use function Orchestra\Testbench\transform_relative_path;
  *   env: array,
  *   providers: array<int, class-string>,
  *   dont-discover: array<int, string>,
- *   migrations: string|array<int, string>|bool,
- *   seeders: class-string|array<int, class-string>|bool,
- *   bootstrappers: class-string|array<int, class-string>|null,
+ *   migrations: array<int, string>|bool|string,
+ *   seeders: array<int, class-string>|bool|class-string,
+ *   bootstrappers: array<int, class-string>|class-string|null,
  *   workbench: TOptionalWorkbenchConfig
  * }
  * @phpstan-type TOptionalConfig array{
@@ -79,9 +81,9 @@ use function Orchestra\Testbench\transform_relative_path;
  *   env?: array,
  *   providers?: array<int, class-string>,
  *   dont-discover?: array<int, string>,
- *   migrations?: string|array<int, string>|bool,
- *   seeders?: class-string|array<int, class-string>|bool,
- *   bootstrappers?: class-string|array<int, class-string>|null,
+ *   migrations?: array<int, string>|bool|string,
+ *   seeders?: array<int, class-string>|bool|class-string,
+ *   bootstrappers?: array<int, class-string>|class-string|null,
  *   workbench?: TOptionalWorkbenchConfig|null
  * }
  */
@@ -123,6 +125,7 @@ class Config extends Fluent implements ConfigContract
         'assets' => [],
         'discovers' => [
             'config' => false,
+            'factories' => false,
             'web' => false,
             'api' => false,
             'commands' => false,
@@ -140,6 +143,7 @@ class Config extends Fluent implements ConfigContract
      */
     protected $workbenchDiscoversConfig = [
         'config' => false,
+        'factories' => false,
         'web' => false,
         'api' => false,
         'commands' => false,

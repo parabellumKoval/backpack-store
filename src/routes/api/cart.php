@@ -16,12 +16,11 @@ use Backpack\Store\app\Http\Controllers\Api\CartController;
 |
 */
 
-Route::prefix('api/cart')->controller(CartController::class)->group(function () {
+Route::prefix('api/cart')->middleware([Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+  ->controller(CartController::class)->group(function () {
   
-  Route::get('', 'index');
-
-  Route::post('', 'updateOrCreate');
-
-  Route::delete('{id}', 'delete');
+    Route::get('', 'index');
+    Route::post('', 'updateOrCreate');
+    Route::delete('{id}', 'delete');
 
 });

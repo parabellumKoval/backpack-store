@@ -85,11 +85,12 @@ class Store
     public static function currency(): string
     {
         return request()->get('currency')
+            ?? self::countryCurrency()
             ?? session('currency')
             ?? \Settings::get('dress.multistore.default_currency');
     }
 
-    // Получить все доступные страны (ты можешь заменить на свой способ)
+    // Получить все доступные страны
     public static function countries(): array
     {
         $countries = \Settings::get('dress.multistore.countries', []);
@@ -108,6 +109,14 @@ class Store
     {
         $values = self::countries();
         $countries = array_column($values, 'country', 'code');
+
+        return $countries;
+    }
+
+    public static function defaultCountryLocales(): array
+    {
+        $values = self::countries();
+        $countries = array_column($values, 'locale', 'code');
 
         return $countries;
     }
@@ -132,17 +141,42 @@ class Store
 
         return $currencies;
     }
+    
+    public static function countryCurrency(string $countryCode = null): string|null
+    {
+        $countryCode = $countryCode ?? self::context()->country;
+        $countries = self::countries();
+        
+        if (isset($countries[$countryCode])) {
+            return $countries[$countryCode]['currency'] ?? null;
+        }
+        
+        return null;
+    }
+
+    public static function countryLabel(string $countryCode = null): string
+    {
+        $countryCode = $countryCode ?? self::context()->country;
+        $countryCode = strtolower($countryCode);
+        $countries = self::countries();
+        
+        if (isset($countries[$countryCode])) {
+            return $countries[$countryCode]['country'] ?? $countryCode;
+        }
+        
+        return $countryCode;
+    }
 
     public static function getGlobalRegionUnit(): array
     {
         return [
-                'enabled' => true,
-                'country' => 'Global',
-                'locale' => 'en',
-                'code' => self::globalRegionCode(),
-                'currency' => 'USD',
-                'delivery' => [],
-                'payment' => []
+            'enabled' => true,
+            'country' => 'Global',
+            'locale' => 'en',
+            'code' => self::globalRegionCode(),
+            'currency' => 'USD',
+            'delivery' => [],
+            'payment' => []
         ];
     }
 }

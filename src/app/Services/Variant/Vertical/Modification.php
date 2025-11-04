@@ -8,6 +8,6 @@ use Backpack\Store\app\Models\Product;
 
 class Modification implements Contract {
     public function get(Product $product) {
-      return $product->children()->available()->get();
+      return $product->children()->available()->get()->sortBy('price');
     }
 }

@@ -16,11 +16,11 @@ use Backpack\Store\app\Http\Controllers\Api\ProductController;
 |
 */
 
-Route::prefix('api/product')->controller(ProductController::class)->group(function () {
-  
-  Route::get('', 'index')->middleware('api');
-  Route::get('/{slug}', 'show')->middleware('api');
-  Route::get('/random', 'random')->middleware('api');
-  Route::get('/ids', 'getByIds')->middleware('api');
-
+Route::prefix('api/product')->middleware(['api', Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+  ->controller(ProductController::class)->group(function () {
+    Route::get('', 'index');
+    Route::get('/random', 'random');
+    Route::get('/ids', 'getByIds');
+    Route::get('/cart', 'cart');
+    Route::get('/{slug}', 'show');
 });

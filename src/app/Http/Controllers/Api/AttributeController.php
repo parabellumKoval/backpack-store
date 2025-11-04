@@ -44,7 +44,11 @@ class AttributeController extends \App\Http\Controllers\Controller
   public function index(Request $request, bool $json_response = true) {
 
     // $node_ids = Category::getCategoryNodeIdList($request->input('category_slug'), $request->input('category_id'));
-    $node_ids = Category::getParentNodeIds($request->input('category_slug'), $request->input('category_id'));
+    $node_ids = Category::getParentNodeIds(
+      $request->input('category_slug'),
+      $request->input('category_id'),
+      $request->input('country') ?? \Store::country()
+    );
 
     // $start = microtime(true);
     

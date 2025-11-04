@@ -46,6 +46,12 @@ class CreateAkCatalogTable extends Migration
             $t->integer('reviews')->nullable();             // кол-во отзывов
             $t->integer('ratings')->nullable();             // кол-во оценок
 
+            //
+            $t->json('content')->nullable();
+            $t->json('merchant_content')->nullable();
+            $t->json('seo')->nullable();
+            $t->json('attrs')->nullable();
+            
             // Ключи/индексы
             // $t->primary(['product_id', 'country_code']);
             $t->unique(['product_id', 'country_code'], 'ak_catalog_unique_product_country');

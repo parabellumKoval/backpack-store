@@ -16,7 +16,7 @@ class BrandFilterResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'image' => $this->image,
+        'image' => $this->getFirstImageForApi(),
         'count' => $this->count
       ];
     }

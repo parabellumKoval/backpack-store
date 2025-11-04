@@ -10,7 +10,7 @@ use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\AttributeValue;
 
-use Backpack\Store\app\Services\ProductQueryService;
+use Backpack\Store\app\Services\Catalog\ProductQueryService;
 
 use Backpack\Store\app\Http\Resources\ProductCollection;
 
@@ -225,7 +225,11 @@ class ProductFilterService extends AbstractFilterService
   protected function getAttributes() {
     $locale = app()->getLocale();
     $fallback = config('app.fallback_locale');
-    $node_ids = Category::getParentNodeIds($this->request->input('category_slug'), $this->request->input('category_id'));
+    $node_ids = Category::getParentNodeIds(
+      $this->request->input('category_slug'),
+      $this->request->input('category_id'),
+      \Store::country()
+    );
 
     $rows = DB::table($this->query->select('ak_products.id'), 'products')
       ->join('ak_attribute_product as ap', 'ap.product_id', '=', 'products.id')

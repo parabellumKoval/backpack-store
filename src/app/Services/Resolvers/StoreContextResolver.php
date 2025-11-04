@@ -2,6 +2,7 @@
 namespace Backpack\Store\app\Services\Resolvers;
 
 use Backpack\Store\app\Services\StoreContext;
+use Backpack\Store\app\Services\Store;
 
 class StoreContextResolver
 {
@@ -12,6 +13,7 @@ class StoreContextResolver
             ?? config('dress.multistore.default_country');
 
         $currency = request()->get('currency')
+            ?? Store::countryCurrency($country)
             ?? session('currency')
             ?? config('dress.multistore.default_currency');
 

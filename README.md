@@ -91,3 +91,41 @@ instead of using the issue tracker.
 - [](https://github.com/parabellumKoval/backpack-store)
 - [All contributors](https://github.com/parabellumKoval/backpack-store/graphs/contributors)
 
+
+## Invoice subsystem
+
+The package ships with a PDF invoice subsystem that renders invoices "1:1" with the supplied Czech layout, generates SPD QR codes in advance, and exposes API/admin tooling.
+
+### API
+
+All routes are prefixed with `/api/store/invoices` and respect the `dress.store.auth_guard` guard.
+
+| Verb | URI | Description |
+| --- | --- | --- |
+| `GET` | `/api/store/invoices/{order}` | Inline PDF preview (requires auth) |
+| `GET` | `/api/store/invoices/{order}/download` | Download or create PDF (requires auth) |
+| `GET` | `/api/store/invoices/{order}/qr` | Return QR image (`format=svg|png`) |
+| `GET` | `/api/store/invoices/{order}/signed/{invoice}` | Signed download URL, protected by signature only |
+
+Query parameters:
+
+- `template` (optional) – template key, defaults to `cz.default`
+- `locale` (optional) – formatting locale
+- `format` (optional, QR route) – `svg` or `png`
+- `regenerate=1` – force regeneration even if cached
+
+### Admin UI
+
+Order CRUD now contains three quick actions (preview, download, QR) both in the list and show views. They point to the same API routes and honour permissions of the authenticated user or admin.
+
+### Settings & configuration
+
+The full configuration lives in `config/dress/invoice.php` (publishable via the `config` tag). Each option is exposed in Backpack Settings under the new "Счета и PDF" group, including:
+
+- Default template, locale and numbering rules
+- Seller details and assets (logo/stamp/signature)
+- Bank accounts per country (used for SPD payloads)
+- Storage disks/path masks for PDFs and QR cache
+- Signed URL TTL and QR message pattern
+
+Programmatic usage is available through dependency injection of `Backpack\Store\app\Services\Invoice\InvoiceService`. Calling `generate($order)` returns a payload with the rendered binary, the stored `OrderInvoice` record, QR data, and helper methods for signed URLs or downloads.

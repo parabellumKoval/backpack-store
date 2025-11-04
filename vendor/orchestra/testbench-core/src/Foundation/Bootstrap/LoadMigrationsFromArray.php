@@ -10,7 +10,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Orchestra\Testbench\Foundation\Env;
 
-use function Orchestra\Testbench\laravel_migration_path;
+use function Orchestra\Testbench\default_migration_path;
+use function Orchestra\Testbench\load_migration_paths;
 use function Orchestra\Testbench\transform_relative_path;
 use function Orchestra\Testbench\workbench;
 
@@ -22,22 +23,22 @@ final class LoadMigrationsFromArray
     /**
      * The migrations.
      *
-     * @var string|array<int, string>|bool
+     * @var array<int, string>|bool|string
      */
     public $migrations;
 
     /**
      * The seeders.
      *
-     * @var class-string|array<int, class-string>|bool
+     * @var array<int, class-string>|bool|class-string
      */
     public $seeders;
 
     /**
      * Construct a new Create Vendor Symlink bootstrapper.
      *
-     * @param  string|array<int, string>|bool  $migrations
-     * @param  class-string|array<int, class-string>|bool  $seeders
+     * @param  array<int, string>|bool|string  $migrations
+     * @param  array<int, class-string>|bool|class-string  $seeders
      */
     public function __construct($migrations = [], $seeders = false)
     {
@@ -100,35 +101,14 @@ final class LoadMigrationsFromArray
         $paths = Collection::make(
             ! \is_bool($this->migrations) ? Arr::wrap($this->migrations) : []
         )->when($this->includesDefaultMigrations($app), static function ($migrations) {
-            return $migrations->push(laravel_migration_path());
+            return $migrations->push(default_migration_path());
         })->filter(static function ($migration) {
             return \is_string($migration);
         })->transform(static function ($migration) use ($app) {
             return transform_relative_path($migration, $app->basePath());
         })->all();
 
-        $this->callAfterResolvingMigrator($app, static function ($migrator) use ($paths) {
-            foreach ((array) $paths as $path) {
-                $migrator->path($path);
-            }
-        });
-    }
-
-    /**
-     * Setup an after resolving listener, or fire immediately if already resolved.
-     *
-     * @param  \Illuminate\Contracts\Foundation\Application  $app
-     * @param  callable  $callback
-     * @return void
-     */
-    protected function callAfterResolvingMigrator($app, $callback)
-    {
-        /** @phpstan-ignore-next-line */
-        $app->afterResolving('migrator', $callback);
-
-        if ($app->resolved('migrator')) {
-            $callback($app->make('migrator'), $app);
-        }
+        load_migration_paths($app, $paths);
     }
 
     /**
@@ -142,6 +122,8 @@ final class LoadMigrationsFromArray
         return
             workbench()['install'] === true
             && Env::get('TESTBENCH_WITHOUT_DEFAULT_MIGRATIONS') !== true
-            && is_dir(laravel_migration_path());
+            && rescue(static function () {
+                return is_dir(default_migration_path());
+            }, false, false);
     }
 }

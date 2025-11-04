@@ -16,7 +16,7 @@ class CategoryTinyResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
-        'image' => $this->image,
+        'image' => $this->getFirstImageForApi(),
         'extras' => $this->extras
       ];
     }

@@ -9,9 +9,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Facade;
 use Orchestra\Testbench\Attributes\DefineEnvironment;
 use Orchestra\Testbench\Attributes\RequiresEnv;
+use Orchestra\Testbench\Attributes\RequiresLaravel;
+use Orchestra\Testbench\Attributes\ResolvesLaravel;
+use Orchestra\Testbench\Attributes\UsesFrameworkConfiguration;
 use Orchestra\Testbench\Attributes\WithConfig;
 use Orchestra\Testbench\Attributes\WithEnv;
-use Orchestra\Testbench\Attributes\WithImmutableDates;
 use Orchestra\Testbench\Bootstrap\LoadEnvironmentVariables;
 use Orchestra\Testbench\Features\TestingFeature;
 use Orchestra\Testbench\Foundation\PackageManifest;
@@ -116,16 +118,17 @@ trait CreatesApplication
      */
     final protected function resolveApplicationAliases($app): array
     {
-        $aliases = new Collection($this->getApplicationAliases($app));
-        $overrides = $this->overrideApplicationAliases($app);
+        $aliases = Collection::make(
+            $this->getApplicationAliases($app)
+        )->merge($this->getPackageAliases($app));
 
-        if (! empty($overrides)) {
+        if (! empty($overrides = $this->overrideApplicationAliases($app))) {
             $aliases->transform(static function ($alias, $name) use ($overrides) {
                 return $overrides[$name] ?? $alias;
             });
         }
 
-        return $aliases->merge($this->getPackageAliases($app))->all();
+        return $aliases->filter()->all();
     }
 
     /**
@@ -180,16 +183,17 @@ trait CreatesApplication
      */
     final protected function resolveApplicationProviders($app): array
     {
-        $providers = new Collection($this->getApplicationProviders($app));
-        $overrides = $this->overrideApplicationProviders($app);
+        $providers = Collection::make(
+            $this->getApplicationProviders($app)
+        )->merge($this->getPackageProviders($app));
 
-        if (! empty($overrides)) {
+        if (! empty($overrides = $this->overrideApplicationProviders($app))) {
             $providers->transform(static function ($provider) use ($overrides) {
                 return $overrides[$provider] ?? $provider;
             });
         }
 
-        return $providers->merge($this->getPackageProviders($app))->all();
+        return $providers->filter()->values()->all();
     }
 
     /**
@@ -283,7 +287,6 @@ trait CreatesApplication
             null,
             null,
             function () use ($app) {
-                /** @phpstan-ignore-next-line */
                 return $this->parseTestMethodAttributes($app, WithEnv::class);
             }
         )->get('attribute');
@@ -293,8 +296,8 @@ trait CreatesApplication
             null,
             null,
             function () use ($app) {
-                /** @phpstan-ignore-next-line */
-                return $this->parseTestMethodAttributes($app, RequiresEnv::class);
+                $this->parseTestMethodAttributes($app, RequiresEnv::class);
+                $this->parseTestMethodAttributes($app, RequiresLaravel::class);
             }
         );
 
@@ -313,6 +316,16 @@ trait CreatesApplication
      */
     protected function resolveApplicationConfiguration($app)
     {
+        TestingFeature::run(
+            $this,
+            null,
+            null,
+            function () use ($app) {
+                $this->parseTestMethodAttributes($app, ResolvesLaravel::class); /** @phpstan-ignore method.notFound */
+                $this->parseTestMethodAttributes($app, UsesFrameworkConfiguration::class); /** @phpstan-ignore method.notFound */
+            }
+        );
+
         $app->make('Illuminate\Foundation\Bootstrap\LoadConfiguration')->bootstrap($app);
         $app->make('Orchestra\Testbench\Bootstrap\ConfigureRay')->bootstrap($app);
         $app->make('Orchestra\Testbench\Foundation\Bootstrap\SyncDatabaseEnvironmentVariables')->bootstrap($app);
@@ -338,8 +351,7 @@ trait CreatesApplication
                 null,
                 null,
                 function () use ($app) {
-                    /** @phpstan-ignore-next-line */
-                    $this->parseTestMethodAttributes($app, WithConfig::class);
+                    $this->parseTestMethodAttributes($app, WithConfig::class);  /** @phpstan-ignore method.notFound */
                 }
             );
         });
@@ -420,26 +432,25 @@ trait CreatesApplication
                 $this->getEnvironmentSetUp($app);
             },
             function () use ($app) {
-                $this->parseTestMethodAnnotations($app, 'environment-setup'); // @phpstan-ignore-line
-                $this->parseTestMethodAnnotations($app, 'define-env'); // @phpstan-ignore-line
+                $this->parseTestMethodAnnotations($app, 'environment-setup');  /** @phpstan-ignore method.notFound */
+                $this->parseTestMethodAnnotations($app, 'define-env');  /** @phpstan-ignore method.notFound */
             },
             function () use ($app) {
-                $this->parseTestMethodAttributes($app, WithImmutableDates::class); // @phpstan-ignore-line
-                $this->parseTestMethodAttributes($app, DefineEnvironment::class); // @phpstan-ignore-line
+                $this->parseTestMethodAttributes($app, DefineEnvironment::class);  /** @phpstan-ignore method.notFound */
             }
         );
 
         if (static::usesTestingConcern(WithWorkbench::class)) {
-            /** @phpstan-ignore-next-line */
-            $this->bootDiscoverRoutesForWorkbench($app);
+            $this->bootDiscoverRoutesForWorkbench($app); /** @phpstan-ignore method.notFound */
+        }
+
+        if ($this->isRunningTestCase() && static::usesTestingConcern(HandlesRoutes::class)) {
+            $app->booted(function () use ($app) {
+                $this->setUpApplicationRoutes($app); /** @phpstan-ignore method.notFound */
+            });
         }
 
         $app->make('Illuminate\Foundation\Bootstrap\BootProviders')->bootstrap($app);
-
-        if ($this->isRunningTestCase() && static::usesTestingConcern(HandlesRoutes::class)) {
-            /** @phpstan-ignore-next-line */
-            $this->setUpApplicationRoutes($app);
-        }
 
         foreach ($this->getPackageBootstrappers($app) as $bootstrap) {
             $app->make($bootstrap)->bootstrap($app);

@@ -62,7 +62,7 @@ class CategoryResolver implements SourceResolver
             return [];
         }
 
-        $categories = $this->anchorCategoryIds($anchorId, $includeChildren);
+        $categories = $this->anchorCategoryIds($anchorId, $includeChildren, $context->country);
         if (empty($categories)) {
             return [];
         }
@@ -101,7 +101,7 @@ class CategoryResolver implements SourceResolver
         })->all();
     }
 
-    protected function anchorCategoryIds(int $anchorId, bool $includeChildren): array
+    protected function anchorCategoryIds(int $anchorId, bool $includeChildren, ?string $country = null): array
     {
         $ids = DB::table('ak_category_product')
             ->where('product_id', $anchorId)
@@ -109,6 +109,18 @@ class CategoryResolver implements SourceResolver
             ->toArray();
 
         $ids = array_values(array_unique(array_map('intval', $ids)));
+
+        if (!empty($ids) && $country) {
+            $ids = \Backpack\Store\app\Models\Category::query()
+                ->forCountry($country, true)
+                ->whereIn('id', $ids)
+                ->pluck('id')
+                ->map(function ($id) {
+                    return (int) $id;
+                })
+                ->toArray();
+        }
+
         if (!$includeChildren || empty($ids)) {
             return $ids;
         }
@@ -128,7 +140,7 @@ class CategoryResolver implements SourceResolver
             // DRESS
             // Сделать данные прокаленными, например в запись Category добавить сразу все дерево потомков (ids)
             // очень важно для производительности
-            $extra = array_merge($extra, \Backpack\Store\app\Models\Category::getCategoryNodeIdList(null,$row->id));
+            $extra = array_merge($extra, \Backpack\Store\app\Models\Category::getCategoryNodeIdList(null,$row->id, $country));
         }
 
         return array_values(array_unique(array_merge($ids, $extra)));
