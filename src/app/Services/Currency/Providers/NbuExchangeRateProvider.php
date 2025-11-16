@@ -10,7 +10,7 @@ class NbuExchangeRateProvider implements ExchangeRateProvider
 {
     protected string $cacheKey;
     protected ?string $cacheStore;
-    protected int $ttl;
+    protected ?int $ttl;  // Теперь может быть null для forever
     protected array $symbols;
     protected bool $lazyFetch;
     protected string $base;
@@ -20,7 +20,11 @@ class NbuExchangeRateProvider implements ExchangeRateProvider
         $cfg = \Settings::get('dress.currency');
         $this->cacheKey   = $cfg['cache_key'] ?? 'store:currency:rates:v1';
         $this->cacheStore = $cfg['cache_store'] ?? null;
-        $this->ttl        = (int)($cfg['cache_ttl_seconds'] ?? 93600);
+        
+        // Если cache_ttl_seconds = 0 или null, используем forever
+        $configTtl = $cfg['cache_ttl_seconds'] ?? 93600;
+        $this->ttl = $configTtl == 0 ? null : (int)$configTtl;
+        
         $this->symbols    = array_values(array_unique(array_map('strtoupper', $cfg['symbols'] ?? [])));
         // рабочая база для кросс-курсов — EUR (так удобнее в e-commerce)
         $this->base       = strtoupper($cfg['base'] ?? 'EUR');
@@ -58,7 +62,14 @@ class NbuExchangeRateProvider implements ExchangeRateProvider
         }
 
         $payload = $this->fetchFromSource();
-        $cache->put($this->cacheKey, $payload, $this->ttl);
+        
+        // Если ttl = null, используем forever, иначе используем ttl
+        if ($this->ttl === null) {
+            $cache->forever($this->cacheKey, $payload);
+        } else {
+            $cache->put($this->cacheKey, $payload, $this->ttl);
+        }
+        
         return $payload;
     }
 
@@ -123,6 +134,12 @@ class NbuExchangeRateProvider implements ExchangeRateProvider
     public function saveRates(array $payload): void
     {
         $cache = $this->cacheStore ? Cache::store($this->cacheStore) : Cache::store();
-        $cache->put($this->cacheKey, $payload, $this->ttl);
+        
+        // Если ttl = null, используем forever, иначе используем ttl
+        if ($this->ttl === null) {
+            $cache->forever($this->cacheKey, $payload);
+        } else {
+            $cache->put($this->cacheKey, $payload, $this->ttl);
+        }
     }
 }

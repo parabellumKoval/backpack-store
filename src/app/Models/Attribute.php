@@ -159,13 +159,7 @@ class Attribute extends Model
      * @return void
      */
     public function getCurrentLang() {
-      $lang = request()->query('locale');
-
-      if(!$lang) {
-        $lang = config('app.locale', 'en');
-      }
-
-      return $lang;
+      return backpack_translatable_request_locale(config('app.locale', 'en'));
     }
     /*
     |--------------------------------------------------------------------------

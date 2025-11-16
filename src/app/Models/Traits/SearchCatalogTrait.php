@@ -38,11 +38,13 @@ trait SearchCatalogTrait {
 
     public function resolveCategoryNamesArray(string $locale): array
     {
-        return $this->categories()
+        $v = $this->categories()
             ->map(fn (Category $c) => $c->getTranslation('name', $locale))
             ->filter()
             ->values()
             ->all();
+
+        return $v;
     }
 
     public static function searchIndexBase(): string { return 'products'; }

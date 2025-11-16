@@ -23,7 +23,7 @@ class AttributeSavedListener
      */
     public function handle(AttributeSaved $event)
     {
-      $lang = \Request::input('locale', config('app.locale'));
+      $lang = backpack_translatable_request_locale(config('app.locale'));
 
       // Attach attributes that is presented
       // $values = AttributeValue::whereIn('id', $event->attribute->values_store)

@@ -6,6 +6,7 @@ use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Services\ProductLists\Contracts\SourceResolver;
 use Backpack\Store\app\Services\ProductLists\FilterEngine;
 use Backpack\Store\app\Services\ProductLists\ListRequestContext;
+use Backpack\Store\app\Services\ProductLists\Supports\NormalizesAnchors;
 use Backpack\Store\app\Services\ProductLists\Supports\ResolvedItem;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceDefinition;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceResult;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class TagsResolver implements SourceResolver
 {
+    use NormalizesAnchors;
+
     public function __construct(protected FilterEngine $filterEngine)
     {
     }
@@ -29,6 +32,9 @@ class TagsResolver implements SourceResolver
             return new SourceResult($definition, []);
         }
 
+        $anchorBaseMap = $this->resolveBaseProductMap($anchors->ids);
+        $anchorBaseIds = $this->mapIdsToBase($anchors->ids, $anchorBaseMap);
+
         $matchMode = strtoupper((string) $definition->param('match_mode', 'ANY')) === 'ALL' ? 'ALL' : 'ANY';
         $minShared = $definition->param('min_shared');
         $minShared = is_numeric($minShared) ? max(1, (int) $minShared) : 1;
@@ -37,7 +43,14 @@ class TagsResolver implements SourceResolver
 
         $perAnchor = [];
         foreach ($anchors->ids as $anchorId) {
-            $perAnchor[$anchorId] = $this->fetchByTags($anchorId, $minShared, $perAnchorLimit, $anchors->model);
+            $perAnchor[$anchorId] = $this->fetchByTags(
+                $this->baseIdFor($anchorId, $anchorBaseMap),
+                $anchorId,
+                $minShared,
+                $perAnchorLimit,
+                $anchors->model,
+                $anchorBaseIds
+            );
         }
 
         $items = $this->combinePerAnchor($perAnchor, $matchMode, $anchors->ids);
@@ -49,7 +62,14 @@ class TagsResolver implements SourceResolver
         return new SourceResult($definition, $items);
     }
 
-    protected function fetchByTags(int $anchorId, int $minShared, ?int $limit, string $model): array
+    protected function fetchByTags(
+        int $anchorBaseId,
+        int $displayAnchorId,
+        int $minShared,
+        ?int $limit,
+        string $model,
+        array $excludedBaseIds
+    ): array
     {
         // пока поддерживаем только продуктовые якоря
         if ($model !== \Backpack\Store\app\Models\Product::class) {
@@ -57,22 +77,27 @@ class TagsResolver implements SourceResolver
         }
 
         $query = DB::table('ak_product_tag as t1')
+            ->join('ak_products as anchor', 'anchor.id', '=', 't1.product_id')
             ->join('ak_product_tag as t2', 't1.tag_id', '=', 't2.tag_id')
-            ->where('t1.product_id', $anchorId)
-            ->where('t2.product_id', '!=', $anchorId)
+            ->join('ak_products as candidate', 'candidate.id', '=', 't2.product_id')
+            ->whereRaw('COALESCE(anchor.parent_id, anchor.id) = ?', [$anchorBaseId])
             ->select('t2.product_id', DB::raw('COUNT(*) as matches'))
             ->groupBy('t2.product_id')
             ->having('matches', '>=', $minShared)
             ->orderByDesc('matches');
 
+        if (!empty($excludedBaseIds)) {
+            $query->whereNotIn(DB::raw('COALESCE(candidate.parent_id, candidate.id)'), $excludedBaseIds);
+        }
+
         if ($limit !== null && $limit > 0) {
             $query->limit($limit);
         }
 
-        return $query->get()->map(function ($row) use ($anchorId) {
+        return $query->get()->map(function ($row) use ($displayAnchorId) {
             return new ResolvedItem((int) $row->product_id, [
                 'source' => 'tags',
-                'anchor_id' => $anchorId,
+                'anchor_id' => $displayAnchorId,
                 'shared_count' => (int) $row->matches,
             ]);
         })->all();

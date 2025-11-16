@@ -6,6 +6,7 @@ use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Services\ProductLists\Contracts\SourceResolver;
 use Backpack\Store\app\Services\ProductLists\FilterEngine;
 use Backpack\Store\app\Services\ProductLists\ListRequestContext;
+use Backpack\Store\app\Services\ProductLists\Supports\NormalizesAnchors;
 use Backpack\Store\app\Services\ProductLists\Supports\ResolvedItem;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceDefinition;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceResult;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class PriceBandResolver implements SourceResolver
 {
+    use NormalizesAnchors;
+
     public function __construct(protected FilterEngine $filterEngine)
     {
     }
@@ -28,6 +31,10 @@ class PriceBandResolver implements SourceResolver
         if ($anchors === null || $anchors->isEmpty()) {
             return new SourceResult($definition, []);
         }
+
+        $anchorBaseMap = $this->resolveBaseProductMap($anchors->ids);
+        $anchorBaseIds = $this->mapIdsToBase($anchors->ids, $anchorBaseMap);
+        $anchorBaseLookup = $this->baseLookup($anchorBaseIds);
 
         $anchorPrices = $this->anchorPrices($anchors->ids, $context->country);
         if (empty($anchorPrices)) {
@@ -50,7 +57,7 @@ class PriceBandResolver implements SourceResolver
 
         $candidates = $this->fetchCandidates(
             $context->country,
-            $anchors->ids,
+            $anchorBaseIds,
             $reference,
             $minPrice,
             $maxPrice,
@@ -61,6 +68,8 @@ class PriceBandResolver implements SourceResolver
         if (!empty($definition->filters)) {
             $candidates = $this->filterEngine->apply($candidates, $definition->filters, $context);
         }
+
+        $candidates = $this->removeAnchorsFromItems($candidates, $anchorBaseLookup);
 
         return new SourceResult($definition, $candidates);
     }
@@ -97,7 +106,7 @@ class PriceBandResolver implements SourceResolver
 
     protected function fetchCandidates(
         string $country,
-        array $anchorIds,
+        array $anchorBaseIds,
         float $reference,
         float $minPrice,
         ?float $maxPrice,
@@ -105,9 +114,13 @@ class PriceBandResolver implements SourceResolver
         ?int $limit
     ): array {
         $query = DB::table('ak_catalog as c')
+            ->join('ak_products as p', 'p.id', '=', 'c.product_id')
             ->where('c.country_code', $country)
-            ->whereNotIn('c.product_id', $anchorIds)
             ->where('c.price', '>=', $minPrice);
+
+        if (!empty($anchorBaseIds)) {
+            $query->whereNotIn(DB::raw('COALESCE(p.parent_id, p.id)'), $anchorBaseIds);
+        }
 
         if ($maxPrice !== null && $maxPrice > 0) {
             $query->where('c.price', '<=', $maxPrice);

@@ -6,8 +6,13 @@ class MeiliSettingsBuilder
 {
     public static function build(): array
     {
-        
-        $settings = \Settings::get('dress.search.meilisearch.settings', []);
+        $default = config('dress.search.meilisearch.settings', []);
+        // $settings = \Settings::get('dress.search.meilisearch.settings', $default);
+        $settings = config('dress.search.meilisearch.settings', []);
+
+        // $settings = array_replace_recursive($default, $settings);
+        $settings = self::ensureFilterableAttributes($settings);
+        $settings = self::expandSearchableAttributes($settings);
 
         $settings = array_filter([
             'searchableAttributes' => $settings['searchableAttributes'] ?? null,
@@ -24,6 +29,66 @@ class MeiliSettingsBuilder
         return $settings;
     }
 
+    protected static function ensureFilterableAttributes(array $settings): array
+    {
+        $filterable = $settings['filterableAttributes'] ?? [];
+
+        if (empty($filterable)) {
+            $productModel = config('dress.search.models.products');
+            if (is_string($productModel)
+                && class_exists($productModel)
+                && method_exists($productModel, 'filterableAttributes')) {
+                $filterable = $productModel::filterableAttributes();
+            }
+        }
+
+        // гарантируем наличие in_stock так как он используется в фильтрах поиска
+        $filterable = array_unique(array_merge($filterable, ['in_stock']));
+
+        $settings['filterableAttributes'] = array_values($filterable);
+
+        return $settings;
+    }
+
+    protected static function expandSearchableAttributes(array $settings): array
+    {
+        $searchableAttrs = $settings['searchableAttributes'] ?? [];
+        
+        if (empty($searchableAttrs)) {
+            return $settings;
+        }
+
+        $locales = array_keys(\Settings::get('backpack.crud.locales', []));
+        $productModel = config('dress.search.models.products');
+        
+        // Получаем переводимые атрибуты из модели
+        $translatableFields = [];
+        if (is_string($productModel) && class_exists($productModel) && method_exists($productModel, 'searchableTranslatableAttributes')) {
+            $translatableMap = $productModel::searchableTranslatableAttributes();
+            foreach ($translatableMap as $k => $v) {
+                $translatableFields[] = is_int($k) ? $v : $k;
+            }
+            
+        }
+
+        $expandedAttrs = [];
+        
+        foreach ($searchableAttrs as $attr) {
+            if (in_array($attr, $translatableFields)) {
+                // Добавляем поля с суффиксами локалей
+                foreach ($locales as $locale) {
+                    $expandedAttrs[] = "{$attr}_{$locale}";
+                }
+            } else {
+                // Обычное поле без суффиксов
+                $expandedAttrs[] = $attr;
+            }
+        }
+
+        $settings['searchableAttributes'] = array_values(array_unique($expandedAttrs));
+
+        return $settings;
+    }
 
     private static function getToleranceLevel() {
         $toleranceLevel = \Settings::get('dress.search.typo.tolerance', 'medium');

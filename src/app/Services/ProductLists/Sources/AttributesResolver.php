@@ -6,12 +6,15 @@ use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Services\ProductLists\Contracts\SourceResolver;
 use Backpack\Store\app\Services\ProductLists\FilterEngine;
 use Backpack\Store\app\Services\ProductLists\ListRequestContext;
+use Backpack\Store\app\Services\ProductLists\Supports\NormalizesAnchors;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceDefinition;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceResult;
 use Illuminate\Support\Facades\DB;
 
 class AttributesResolver implements SourceResolver
 {
+    use NormalizesAnchors;
+
     public function __construct(protected FilterEngine $filterEngine)
     {
     }
@@ -27,6 +30,10 @@ class AttributesResolver implements SourceResolver
         if ($anchors === null || $anchors->isEmpty()) {
             return new SourceResult($definition, []);
         }
+
+        $anchorBaseMap = $this->resolveBaseProductMap($anchors->ids);
+        $anchorBaseIds = $this->mapIdsToBase($anchors->ids, $anchorBaseMap);
+        $anchorBaseLookup = $this->baseLookup($anchorBaseIds);
 
         $logic = $definition->param('logic') ?? 'AND';
         $rules = $definition->param('rules', []);
@@ -45,7 +52,7 @@ class AttributesResolver implements SourceResolver
             }
             $values = $rule['values'] ?? null;
             if (empty($values)) {
-                $values = $this->anchorAttributeValues($anchors->ids, (int) $attributeId, $context);
+                $values = $this->anchorAttributeValues($anchorBaseIds, (int) $attributeId, $context);
             }
             if (empty($values)) {
                 continue;
@@ -67,7 +74,7 @@ class AttributesResolver implements SourceResolver
 
         $perAnchorLimit = $definition->param('per_anchor_limit');
         $perAnchorLimit = is_numeric($perAnchorLimit) ? (int) $perAnchorLimit : null;
-        $limit = $perAnchorLimit ? $perAnchorLimit * max(count($anchors->ids), 1) : 100;
+        $limit = $perAnchorLimit ? $perAnchorLimit * max(count($anchorBaseIds), 1) : 100;
 
         $items = $this->filterEngine->collect($filter, $context, $limit);
 
@@ -75,19 +82,26 @@ class AttributesResolver implements SourceResolver
             $items = $this->filterEngine->apply($items, $definition->filters, $context);
         }
 
+        $items = $this->removeAnchorsFromItems($items, $anchorBaseLookup);
+
         return new SourceResult($definition, $items);
     }
 
-    protected function anchorAttributeValues(array $anchorIds, int $attributeId, ListRequestContext $context): array
+    protected function anchorAttributeValues(array $anchorBaseIds, int $attributeId, ListRequestContext $context): array
     {
+        if (empty($anchorBaseIds)) {
+            return [];
+        }
+
         $rows = DB::table('ak_catalog as c')
+            ->join('ak_products as p', 'p.id', '=', 'c.product_id')
             ->join('ak_catalog_attr as ca', function ($join) use ($attributeId, $context) {
                 $join->on('ca.group_id', '=', 'c.group_id')
                      ->where('ca.country_code', '=', $context->country)
                      ->where('ca.attribute_id', '=', $attributeId);
             })
             ->where('c.country_code', $context->country)
-            ->whereIn('c.product_id', $anchorIds)
+            ->whereIn(DB::raw('COALESCE(p.parent_id, p.id)'), $anchorBaseIds)
             ->select('ca.attribute_value_id', 'ca.value')
             ->get();
 

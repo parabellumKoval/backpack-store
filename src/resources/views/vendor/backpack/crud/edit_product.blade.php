@@ -42,15 +42,22 @@
 		  {!! method_field('PUT') !!}
 
 		  	@if ($crud->model->translationEnabled())
+                @php
+                    $translatableInputName = backpack_translatable_input_name();
+                    $selectedLocale = request()->input($translatableInputName) ?? App::getLocale();
+                @endphp
 		    <div class="mb-2 text-right">
 		    	<!-- Single button -->
 				<div class="btn-group">
 				  <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-				    {{trans('backpack::crud.language')}}: {{ $crud->model->getAvailableLocales()[request()->input('locale')?request()->input('locale'):App::getLocale()] }} &nbsp; <span class="caret"></span>
+				    {{trans('backpack::crud.language')}}: {{ $crud->model->getAvailableLocales()[$selectedLocale] ?? $selectedLocale }} &nbsp; <span class="caret"></span>
 				  </button>
 				  <ul class="dropdown-menu">
 				  	@foreach ($crud->model->getAvailableLocales() as $key => $locale)
-					  	<a class="dropdown-item" href="{{ url($crud->route.'/'.$entry->getKey().'/edit') }}?locale={{ $key }}">{{ $locale }}</a>
+                        @php
+                            $query = http_build_query([$translatableInputName => $key]);
+                        @endphp
+					  	<a class="dropdown-item" href="{{ url($crud->route.'/'.$entry->getKey().'/edit').'?'.$query }}">{{ $locale }}</a>
 				  	@endforeach
 				  </ul>
 				</div>
@@ -67,10 +74,7 @@
 		  </form>
 	</div>
 	<div class="col-md-4 bold-labels order-1 order-md-2">
-
 		@include('crud::inc.product_modification_tabs')	
-
 	</div>
 </div>
 @endsection
-

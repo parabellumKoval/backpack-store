@@ -6,6 +6,7 @@ use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Services\ProductLists\Contracts\SourceResolver;
 use Backpack\Store\app\Services\ProductLists\FilterEngine;
 use Backpack\Store\app\Services\ProductLists\ListRequestContext;
+use Backpack\Store\app\Services\ProductLists\Supports\NormalizesAnchors;
 use Backpack\Store\app\Services\ProductLists\Supports\ResolvedItem;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceDefinition;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceResult;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class LinksResolver implements SourceResolver
 {
+    use NormalizesAnchors;
+
     public function __construct(protected FilterEngine $filterEngine)
     {
     }
@@ -29,6 +32,9 @@ class LinksResolver implements SourceResolver
             return new SourceResult($definition, []);
         }
 
+        $anchorBaseMap = $this->resolveBaseProductMap($anchors->ids);
+        $anchorBaseIds = $this->mapIdsToBase($anchors->ids, $anchorBaseMap);
+
         $kind = $this->normalizeKind($definition->param('kind'));
         $minPriority = $definition->param('min_priority');
         $minPriority = is_numeric($minPriority) ? (int) $minPriority : null;
@@ -40,7 +46,15 @@ class LinksResolver implements SourceResolver
         $seen = [];
 
         foreach ($anchors->ids as $anchorId) {
-            $forward = $this->fetchForwardLinks($anchors->model, $anchorId, $kind, $minPriority, $perAnchorLimit);
+            $baseAnchorId = $this->baseIdFor($anchorId, $anchorBaseMap);
+            $forward = $this->fetchForwardLinks(
+                $anchors->model,
+                $baseAnchorId,
+                $anchorBaseIds,
+                $kind,
+                $minPriority,
+                $perAnchorLimit
+            );
             foreach ($forward as $row) {
                 if ($anchorId === (int) $row->product_id) {
                     continue;
@@ -58,7 +72,14 @@ class LinksResolver implements SourceResolver
             }
 
             if ($includeReverse) {
-                $reverseRows = $this->fetchReverseLinks($anchors->model, $anchorId, $kind, $minPriority, $perAnchorLimit);
+                $reverseRows = $this->fetchReverseLinks(
+                    $anchors->model,
+                    $baseAnchorId,
+                    $anchorBaseIds,
+                    $kind,
+                    $minPriority,
+                    $perAnchorLimit
+                );
                 foreach ($reverseRows as $row) {
                     $productId = (int) $row->linkable_id;
                     if ($productId === $anchorId) {
@@ -86,13 +107,22 @@ class LinksResolver implements SourceResolver
         return new SourceResult($definition, $items);
     }
 
-    protected function fetchForwardLinks(string $model, int $anchorId, ?string $kind, ?int $minPriority, ?int $limit)
+    protected function fetchForwardLinks(
+        string $model,
+        int $anchorBaseId,
+        array $excludedBaseIds,
+        ?string $kind,
+        ?int $minPriority,
+        ?int $limit
+    )
     {
-        $query = DB::table('ak_product_links')
-            ->where('linkable_type', $model)
-            ->where('linkable_id', $anchorId)
-            ->orderByDesc('priority')
-            ->orderBy('lft');
+        $query = DB::table('ak_product_links as l')
+            ->join('ak_products as linkable', 'linkable.id', '=', 'l.linkable_id')
+            ->join('ak_products as target', 'target.id', '=', 'l.product_id')
+            ->where('l.linkable_type', $model)
+            ->whereRaw('COALESCE(linkable.parent_id, linkable.id) = ?', [$anchorBaseId])
+            ->orderByDesc('l.priority')
+            ->orderBy('l.lft');
 
         if ($kind && $kind !== 'any') {
             $query->where('kind', $kind);
@@ -102,20 +132,33 @@ class LinksResolver implements SourceResolver
             $query->where('priority', '>=', $minPriority);
         }
 
+        if (!empty($excludedBaseIds)) {
+            $query->whereNotIn(DB::raw('COALESCE(target.parent_id, target.id)'), $excludedBaseIds);
+        }
+
         if ($limit !== null && $limit > 0) {
             $query->limit($limit);
         }
 
-        return $query->get();
+        return $query->select('l.product_id', 'l.priority', 'l.kind')->get();
     }
 
-    protected function fetchReverseLinks(string $model, int $anchorId, ?string $kind, ?int $minPriority, ?int $limit)
+    protected function fetchReverseLinks(
+        string $model,
+        int $anchorBaseId,
+        array $excludedBaseIds,
+        ?string $kind,
+        ?int $minPriority,
+        ?int $limit
+    )
     {
-        $query = DB::table('ak_product_links')
-            ->where('product_id', $anchorId)
-            ->where('linkable_type', $model)
-            ->orderByDesc('priority')
-            ->orderBy('lft');
+        $query = DB::table('ak_product_links as l')
+            ->join('ak_products as target', 'target.id', '=', 'l.linkable_id')
+            ->join('ak_products as source', 'source.id', '=', 'l.product_id')
+            ->where('l.linkable_type', $model)
+            ->whereRaw('COALESCE(source.parent_id, source.id) = ?', [$anchorBaseId])
+            ->orderByDesc('l.priority')
+            ->orderBy('l.lft');
 
         if ($kind && $kind !== 'any') {
             $query->where('kind', $kind);
@@ -125,11 +168,15 @@ class LinksResolver implements SourceResolver
             $query->where('priority', '>=', $minPriority);
         }
 
+        if (!empty($excludedBaseIds)) {
+            $query->whereNotIn(DB::raw('COALESCE(target.parent_id, target.id)'), $excludedBaseIds);
+        }
+
         if ($limit !== null && $limit > 0) {
             $query->limit($limit);
         }
 
-        return $query->get();
+        return $query->select('l.linkable_id', 'l.priority', 'l.kind')->get();
     }
 
     protected function normalizeKind(mixed $kind): ?string

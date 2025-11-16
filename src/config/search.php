@@ -3,6 +3,7 @@
 return [
     'enabled' => env('STORE_SEARCH_ENABLED', true),
     'driver'  => env('STORE_SEARCH_DRIVER', 'meilisearch'),
+    'only_in_stock' => env('STORE_SEARCH_ONLY_IN_STOCK', true),
 
     'suffix_per_country' => env('STORE_SEARCH_INDEX_SUFFIX_PER_COUNTRY', true),
 
@@ -23,8 +24,11 @@ return [
 
         // дефолтные настройки индекса (могут быть перекрыты из \Settings)
         'settings' => [
-            'searchableAttributes' => ['name', 'brand', 'category'],
-            'filterableAttributes' => ['brand', 'category', 'in_stock', 'country_code'],
+            'searchableAttributes' => [
+                'id', 'product_id', 'group_id', 'country_code', 'price', 'old_price', 'in_stock', 'brandName',
+                'name', 'short_name', 'categories'
+            ],
+            'filterableAttributes' => ['brandName', 'categories', 'in_stock', 'country_code'],
             'sortableAttributes'   => ['price', 'popularity', 'created_at'],
             'distinctAttribute'    => 'group_id',
             'pagination'           => ['maxTotalHits' => 20000],

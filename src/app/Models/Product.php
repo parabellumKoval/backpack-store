@@ -418,7 +418,8 @@ class Product extends Model
      */
     public function children()
     {
-      return $this->hasMany(\Settings::get('dress.product.model', self::class), 'parent_id');
+      return $this->hasMany(\Settings::get('dress.product.model', self::class), 'parent_id')
+                  ->where('id', '!=', $this->id); // Предотвращаем циклические ссылки
     }
         
     /**

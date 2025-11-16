@@ -13,18 +13,37 @@ use \Backpack\Store\app\Services\Search\SearchService;
 
 class SearchController extends Controller
 {
+    use \Backpack\Store\app\Traits\Resources;
+
+
+    public function __construct() {
+      self::resources_init();
+    }
+    
     /**
      * Поиск товаров (Meilisearch -> fallback DB)
      */
     public function products(SearchProductsRequest $r): JsonResponse
     {
         $q = trim((string)$r->get('q', ''));
+        $resource = $r->get('resource', 'medium');
+        $perPage = (int)$r->get('per_page', 20);
+
+        $inStockOnly = $r->has('in_stock')
+            ? (bool) $r->boolean('in_stock')
+            : null;
+
         $country = \Store::context()->country;
 
         $res = app(SearchService::class)
-                ->searchProducts($q, $country, (int)$r->get('per_page', 20));
+                ->searchProducts($q, $country, $perPage, $inStockOnly);
 
-        return response()->json($res);
+        $dataResourced = !empty($res['data'])? self::$resources['product'][$resource]::collection($res['data']): [];
+
+        return response()->json([
+            'meta' => $res['meta'],
+            'data' => $dataResourced
+        ]);
     }
 
     /**

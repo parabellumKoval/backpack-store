@@ -29,14 +29,16 @@ class ApplyMeiliSettingsJob implements ShouldQueue
             \Settings::get('dress.search.meilisearch.key')
         );
 
-        $base = \Settings::get('dress.search.index.products','products');
+        $base = 'products';
         $indexes = [$base];
 
-        if (\Settings::get('dress.search.index.suffix_per_country', false) && class_exists(\Store::class)) {
+        if (\Settings::get('dress.search.suffix_per_country', false) && class_exists(\Store::class)) {
             foreach (\Store::countries() as $code => $_) {
                 $indexes[] = "{$base}_{$code}";
             }
         }
+
+        \Log::info('Setting ' . print_r($this->settings, true));
 
         $tasks = [];
         foreach (array_unique($indexes) as $uid) {

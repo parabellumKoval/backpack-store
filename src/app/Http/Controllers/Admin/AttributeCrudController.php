@@ -54,7 +54,7 @@ class AttributeCrudController extends CrudController
         $this->crud->setEntityNameStrings('атрибут', 'атрибуты');
         
         // current language
-        $this->lang = \Request::input('locale', config('app.locale'));
+        $this->lang = backpack_translatable_request_locale(config('app.locale'));
 
         // languages
         $this->available_languages = config('backpack.crud.locales');

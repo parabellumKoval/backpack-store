@@ -1,4 +1,10 @@
-
+@php
+  if(isset($item['countries'])) {
+    $contries_string = collect($item['countries'])->pluck('code')->join(',');
+  }else {
+    $contries_string = '';
+  }
+@endphp
 <div class="supplier-item well row m-1 p-2" data-index="{{ $key }}">
         
     <div class="controls position-absolute" style="right: 20px; top: 10px; z-index:2;">
@@ -6,7 +12,7 @@
     </div>
 
     <input type="hidden" name="{{ $field['name'] }}[{{ $key }}][currency]" value="{{ $item['currency'] ?? '' }}" class="currency-input">
-    <input type="hidden" name="{{ $field['name'] }}[{{ $key }}][countries]" value="{{ isset($item['countries']) ? formatCountriesForDataAttr($item['countries']) : '' }}" class="countries-input">
+    <input type="hidden" name="{{ $field['name'] }}[{{ $key }}][countries]" value="{{ $contries_string }}" class="countries-input">
     
     <div class="form-group col-md-12">        
         <div class="checkbox">
@@ -24,7 +30,7 @@
             @foreach($suppliers as $supplier)
                 <option value="{{ $supplier['id'] }}" 
                         data-currency="{{ $supplier['currency'] }}"
-                        data-countries="{{ formatCountriesForDataAttr($supplier['countries']) }}"
+                        data-countries="{{ $contries_string }}"
                         {{ ($item['supplier'] ?? '') == $supplier['id'] ? 'selected' : '' }}>
                     {{ $supplier['name'] }}
                 </option>

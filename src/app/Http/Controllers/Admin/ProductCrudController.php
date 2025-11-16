@@ -291,9 +291,21 @@ class ProductCrudController extends CrudController
       // ---- ДАННЫЕ ДЛЯ ТАБОВ МОДИФИКАЦИЙ (и для create, и для edit) ----
       // в update — показываем siblings (все дети одного parent) либо своих детей
       $parent = $entry->parent ?: $entry;
+      
+      // Проверяем на циклические зависимости
+      if ($parent->id === $entry->id && $entry->parent_id !== null) {
+          // Предотвращаем циклические ссылки
+          $parent = $entry;
+      }
+      
+      // Ограничиваем количество модификаций для предотвращения утечки памяти
+      $maxModifications = 50; // Максимально 50 модификаций для отображения
+      
       $siblings = $parent->children()
-          ->select('id','short_name','price')
+          ->select('id','short_name','price', 'parent_id')
+          ->where('id', '!=', $parent->id) // Исключаем себя из списка
           ->orderBy('id')
+          ->limit($maxModifications)
           ->get()
           ->map(function($p){
               // $title = trim(($p->short_name ?: '—').' - '.(isset($p->simplePrice) ? $p->simplePrice : '—'), ' -');
@@ -305,12 +317,20 @@ class ProductCrudController extends CrudController
               ];
           })->values()->all();
 
+      // Подсчитываем общее количество модификаций
+      $totalModifications = $parent->children()
+          ->where('id', '!=', $parent->id)
+          ->count();
+
       // отдадим в шаблон через operation settings
       $this->crud->setOperationSetting('variantTabs', [
           'currentId'  => $entry->id,
           'parentId'   => $parent->id,
           'items'      => $siblings,
           'isBaseProduct'     => $isVariant? false: true,
+          'totalCount' => $totalModifications,
+          'maxShown'   => $maxModifications,
+          'hasMore'    => $totalModifications > $maxModifications
       ]);
 
 

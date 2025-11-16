@@ -6,6 +6,7 @@ use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Services\ProductLists\Contracts\SourceResolver;
 use Backpack\Store\app\Services\ProductLists\FilterEngine;
 use Backpack\Store\app\Services\ProductLists\ListRequestContext;
+use Backpack\Store\app\Services\ProductLists\Supports\NormalizesAnchors;
 use Backpack\Store\app\Services\ProductLists\Supports\ResolvedItem;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceDefinition;
 use Backpack\Store\app\Services\ProductLists\Supports\SourceResult;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 
 class BoughtTogetherResolver implements SourceResolver
 {
+    use NormalizesAnchors;
+
     public function __construct(protected FilterEngine $filterEngine)
     {
     }
@@ -35,16 +38,33 @@ class BoughtTogetherResolver implements SourceResolver
         $perAnchorLimit = $definition->param('per_anchor_limit');
         $perAnchorLimit = is_numeric($perAnchorLimit) ? (int) $perAnchorLimit : null;
 
+        $anchorBaseMap = $this->resolveBaseProductMap($anchors->ids);
+        $anchorBaseIds = $this->mapIdsToBase($anchors->ids, $anchorBaseMap);
+        $anchorBaseLookup = $this->baseLookup($anchorBaseIds);
+
         $items = [];
         $seen = [];
         foreach ($anchors->ids as $anchorId) {
-            $chunk = $this->fetchBoughtTogether($anchorId, $context->country, $minScore, $perAnchorLimit);
-            $this->pushRows($items, $seen, $chunk, $anchorId, false);
+            $baseAnchorId = $anchorBaseMap[$anchorId] ?? $anchorId;
+            $chunk = $this->fetchBoughtTogether(
+                $baseAnchorId,
+                $context->country,
+                $minScore,
+                $perAnchorLimit,
+                $anchorBaseIds
+            );
+            $this->pushRows($items, $seen, $chunk, $anchorId, false, $anchorBaseLookup);
 
             if ($fallbackGlobal && ($perAnchorLimit === null || count($chunk) < $perAnchorLimit)) {
                 $globalLimit = $perAnchorLimit ? max(0, $perAnchorLimit - count($chunk)) : null;
-                $globalRows = $this->fetchBoughtTogether($anchorId, null, $minScore, $globalLimit);
-                $this->pushRows($items, $seen, $globalRows, $anchorId, true);
+                $globalRows = $this->fetchBoughtTogether(
+                    $baseAnchorId,
+                    null,
+                    $minScore,
+                    $globalLimit,
+                    $anchorBaseIds
+                );
+                $this->pushRows($items, $seen, $globalRows, $anchorId, true, $anchorBaseLookup);
             }
         }
 
@@ -55,20 +75,39 @@ class BoughtTogetherResolver implements SourceResolver
         return new SourceResult($definition, $items);
     }
 
-    protected function fetchBoughtTogether(int $anchorId, ?string $country, ?int $minScore, ?int $limit)
-    {
-        $query = DB::table('ak_bought_together')
-            ->where('product_id', $anchorId)
-            ->orderByDesc('score');
+    protected function fetchBoughtTogether(
+        int $anchorBaseId,
+        ?string $country,
+        ?int $minScore,
+        ?int $limit,
+        array $excludedBaseIds
+    ) {
+        $query = DB::table('ak_bought_together as bt')
+            ->join('ak_products as anchor_products', 'anchor_products.id', '=', 'bt.product_id')
+            ->join('ak_products as with_products', 'with_products.id', '=', 'bt.with_product_id')
+            ->select([
+                'bt.with_product_id',
+                'bt.score',
+                DB::raw('COALESCE(with_products.parent_id, with_products.id) as with_base_product_id'),
+            ])
+            ->whereRaw('COALESCE(anchor_products.parent_id, anchor_products.id) = ?', [$anchorBaseId])
+            ->orderByDesc('bt.score');
 
         if ($country === null) {
-            $query->whereNull('country_code');
+            $query->whereNull('bt.country_code');
         } else {
-            $query->where('country_code', $country);
+            $query->where('bt.country_code', $country);
         }
 
         if ($minScore !== null) {
-            $query->where('score', '>=', $minScore);
+            $query->where('bt.score', '>=', $minScore);
+        }
+
+        if (!empty($excludedBaseIds)) {
+            $query->whereNotIn(
+                DB::raw('COALESCE(with_products.parent_id, with_products.id)'),
+                $excludedBaseIds
+            );
         }
 
         if ($limit !== null && $limit > 0) {
@@ -78,13 +117,28 @@ class BoughtTogetherResolver implements SourceResolver
         return $query->get();
     }
 
-    protected function pushRows(array &$items, array &$seen, $rows, int $anchorId, bool $global): void
-    {
+    protected function pushRows(
+        array &$items,
+        array &$seen,
+        $rows,
+        int $anchorId,
+        bool $global,
+        array $anchorBaseLookup
+    ): void {
         foreach ($rows as $row) {
             $productId = (int) $row->with_product_id;
+            $withBaseId = isset($row->with_base_product_id)
+                ? (int) $row->with_base_product_id
+                : $productId;
+
+            if (isset($anchorBaseLookup[$withBaseId])) {
+                continue;
+            }
+
             if ($productId === $anchorId) {
                 continue;
             }
+
             if (isset($seen[$productId])) {
                 continue;
             }
@@ -97,4 +151,5 @@ class BoughtTogetherResolver implements SourceResolver
             $seen[$productId] = true;
         }
     }
+
 }

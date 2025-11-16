@@ -6,6 +6,7 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 
 use Backpack\Store\app\Events\OrderCreated;
 use Backpack\Store\app\Listeners\OrderCreatedListener;
+use Backpack\Store\app\Listeners\UpdateBoughtTogether;
 
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 use Backpack\Store\app\Listeners\ProductAttachedToOrderListener;
@@ -59,6 +60,7 @@ class EventServiceProvider extends ServiceProvider
       ],
       ProductAttachedToOrder::class => [
         ProductAttachedToOrderListener::class,
+        UpdateBoughtTogether::class,
       ],
       PromocodeApplied::class => [
         PromocodeAppliedListener::class,

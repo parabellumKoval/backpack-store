@@ -245,7 +245,7 @@ class Product extends BaseProduct
         $total_sp = $is_static_code? $this->sp->count(): $this->sp->count() - 1;
       }
 
-      $html = "<div>" . $this->simpleCode . "</div>";
+      $html = "<div>" . $this->code . "</div>";
 
 
       if($is_static_code) {

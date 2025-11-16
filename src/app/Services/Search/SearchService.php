@@ -5,20 +5,21 @@ namespace Backpack\Store\app\Services\Search;
 use Backpack\Store\app\Models\Catalog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Backpack\Store\app\Job\LogSearchQueryJob;
+use Laravel\Scout\Builder;
 
 class SearchService
 {
-    use \Backpack\Store\app\Traits\Resources;
 
-    public function __construct() {
-      self::resources_init();
-    }
-
-    public function searchProducts(string $q, string $countryCode, int $perPage = 20): array
+    public function searchProducts(string $q, string $countryCode, int $perPage = 20, ?bool $onlyInStock = null): array
     {
+        $onlyInStock = $onlyInStock ?? (bool) \Settings::get(
+            'dress.search.only_in_stock',
+            config('dress.search.only_in_stock', true)
+        );
+
         $driver = \Settings::get('dress.search.driver', 'meilisearch');
         if (!\Settings::get('dress.search.enabled', false) || $driver !== 'meilisearch') {
-            return $this->dbFallback($q, $countryCode, $perPage);
+            return $this->dbFallback($q, $countryCode, $perPage, $onlyInStock);
         }
 
         $started = microtime(true);
@@ -28,18 +29,7 @@ class SearchService
         $norm = app(QueryNormalizer::class)->variants($q, $locale);
 
         $builder = Catalog::search($norm[0]);
-
-        // $indexName = $builder->model->searchableAs();
-        // dd($indexName);
-
-        // мультиязычие на стороне индекса:
-        // searchableAttributes уже включают name_*, categories_*, attrs_text_*
-        // если нужно "только дефолт языка страны":
-        if (\Settings::get('dress.search.multilang.default_per_country', false)) {
-            $builder->options([
-                'attributesToSearchOn' => ["name_{$locale}","brand_{$locale}","categories_{$locale}","attrs_text_{$locale}"]
-            ]);
-        }
+        $this->applyDefaultOptions($builder, $locale, $onlyInStock);
 
         // ранжирование/сортировка — по настройкам
         if ($sort = \Settings::get('dress.search.ranking.sort', [])) {
@@ -57,10 +47,7 @@ class SearchService
         if ($page->total() === 0 && count($norm) > 1) {
             foreach (array_slice($norm, 1) as $alt) {
                 $altBuilder = Catalog::search($alt);
-                
-                if (\Settings::get('dress.search.multilang.default_per_country', false)) {
-                    $altBuilder->options(['attributesToSearchOn' => ["name_{$locale}","brand_{$locale}","categories_{$locale}","attrs_text_{$locale}"]]);
-                }
+                $this->applyDefaultOptions($altBuilder, $locale, $onlyInStock);
                 
                 $page = $altBuilder->paginate($perPage);
                 if ($page->total() > 0) {
@@ -76,7 +63,7 @@ class SearchService
                         driver: 'meilisearch'
                     );
 
-                    return ['meta' => $this->meta($page), 'data' => self::$resources['product']['medium']::collection($page), 'suggestion' => $alt];
+                    return ['meta' => $this->meta($page), 'data' => $page, 'suggestion' => $alt];
                 }
             }
         }
@@ -93,14 +80,18 @@ class SearchService
             driver: 'meilisearch'
         );
 
-        return ['meta' => $this->meta($page), 'data' => self::$resources['product']['medium']::collection($page)];
+        return ['meta' => $this->meta($page), 'data' => $page];
     }
 
 
-    protected function dbFallback(string $q, string $country, int $perPage): array
+    protected function dbFallback(string $q, string $country, int $perPage, bool $onlyInStock): array
     {
         $locale = $this->countryToLocale($country);
         $query = Catalog::query()->where('country_code', $country)->where('is_available', 1);
+
+        if ($onlyInStock) {
+            $query->where('in_stock', '>', 0);
+        }
 
         // мульти-язычный LIKE по name_*/attrs_text_*
         $locales = \Settings::get('dress.search.multilang.enabled', true)
@@ -116,6 +107,42 @@ class SearchService
 
         $page = $query->paginate($perPage);
         return ['meta' => $this->meta($page), 'data' => $page->items()];
+    }
+
+    protected function applyDefaultOptions(Builder $builder, string $locale, bool $onlyInStock): void
+    {
+        $options = $builder->options ?? [];
+
+        if (\Settings::get('dress.search.multilang.default_per_country', false)) {
+            $options['attributesToSearchOn'] = [
+                "name_{$locale}",
+                "brand_{$locale}",
+                "categories_{$locale}",
+                "attrs_text_{$locale}",
+            ];
+        }
+
+        if ($onlyInStock) {
+            $options['filter'] = $this->mergeFilters($options['filter'] ?? null, 'in_stock > 0');
+        }
+
+        if (!empty($options)) {
+            $builder->options($options);
+        }
+    }
+
+    protected function mergeFilters($current, string $clause)
+    {
+        if (empty($current)) {
+            return $clause;
+        }
+
+        if (is_array($current)) {
+            $current[] = $clause;
+            return $current;
+        }
+
+        return "{$current} AND {$clause}";
     }
 
     protected function countryToLocale(string $country): string

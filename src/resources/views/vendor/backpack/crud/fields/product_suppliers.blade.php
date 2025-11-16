@@ -4,11 +4,6 @@
   $field['value'] = old($field['name']) ? old($field['name']) : (isset($field['value']) ? $field['value'] : (isset($field['default']) ? $field['default'] : [] ));
   $suppliers = $field['suppliers'];
   $currencies = $field['currencies'];
-
-  // Helper function to format countries data for data attributes
-  function formatCountriesForDataAttr($countries) {
-      return collect($countries)->pluck('code')->join(',');
-  }
 @endphp
 
 @include('crud::fields.inc.wrapper_start')

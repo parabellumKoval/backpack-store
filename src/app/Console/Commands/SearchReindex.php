@@ -42,14 +42,21 @@ class SearchReindex extends Command
             ->all();
 
         foreach ($countries as $code) {
-            // по желанию: вывести "создаётся индекс {products}_{code}"
-            Catalog::query()
-                ->where('country_code', $code)
-                ->where('is_available', 1)
-                ->orderBy('id')
-                ->chunkById(1000, function ($chunk) {
-                    $chunk->searchable();
-                });
+            $this->info("Индексация продуктов для страны: {$code}");
+            
+            // Получаем валюту для данной страны
+            $currency = \Store::countryCurrency($code) ?? \Store::currency();
+            
+            // Устанавливаем контекст для правильного создания индекса
+            \Store::withContext($code, $currency, function () use ($code) {
+                Catalog::query()
+                    ->where('country_code', $code)
+                    ->where('is_available', 1)
+                    ->orderBy('id')
+                    ->chunkById(1000, function ($chunk) {
+                        $chunk->searchable();
+                    });
+            });
         }
 
         $this->info('Готово.');

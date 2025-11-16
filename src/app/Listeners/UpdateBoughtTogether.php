@@ -8,8 +8,8 @@ class UpdateBoughtTogether
 {
     public function handle($event): void
     {
-        // $event должен содержать order с items (product_id, qty) и country_code
-        $items = collect($event->order->items ?? [])->pluck('product_id')->unique()->values()->all();
+        // $event должен содержать order с products и country_code
+        $items = collect($event->order->products ?? [])->pluck('id')->unique()->values()->all();
         $country = $event->order->country_code ?? null;
 
         // инкремент пар

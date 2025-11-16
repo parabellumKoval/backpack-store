@@ -18,8 +18,18 @@ $toggleFull = function(bool $full) {
   <div class="mod-sidebar card mb-3 ">
     <div class="card-header">
       Модификации товара
+      @if(isset($settings['totalCount']) && $settings['totalCount'] > 0)
+        <small class="text-muted">({{ count($settings['items'] ?? []) }}/{{ $settings['totalCount'] }})</small>
+      @endif
     </div>
     <div class="card-body py-2 d-flex flex-column" style="gap:.5rem;">
+      @if(isset($settings['hasMore']) && $settings['hasMore'])
+        <div class="alert alert-info p-2 mb-2">
+          <small>Показаны первые {{ $settings['maxShown'] ?? 50 }} модификаций из {{ $settings['totalCount'] ?? 0 }}. 
+          <a href="{{ url($crud->route) }}?parent_id={{ $settings['parentId'] }}" class="alert-link">Просмотреть все</a></small>
+        </div>
+      @endif
+      
       @foreach(($settings['items'] ?? []) as $it)
         @php
           $active = (isset($settings['currentId']) && $settings['currentId'] == $it['id']);
@@ -65,7 +75,13 @@ $toggleFull = function(bool $full) {
 
   @push('after_scripts')
   <script>
+    let isDeleting = false; // Предотвращаем множественные клики
+    
     function deleteEntry(button) {
+      if (isDeleting) {
+        return false;
+      }
+      
       const $button = $(button);
       const deleteUrl = $button.data('route');
       const parentUrl = $button.data('parent-url');
@@ -91,6 +107,9 @@ $toggleFull = function(bool $full) {
         },
       }).then((value) => {
         if (value) {
+          isDeleting = true;
+          $button.prop('disabled', true).find('i').removeClass('la-trash').addClass('la-spinner la-spin');
+          
           $.ajax({
             url: deleteUrl,
             type: 'DELETE',
@@ -109,7 +128,9 @@ $toggleFull = function(bool $full) {
               if (isCurrent) {
                 window.location.href = parentUrl || document.referrer || crud.route;
               } else {
-                $button.closest('.d-flex').remove();
+                $button.closest('.d-flex').fadeOut(300, function() {
+                  $(this).remove();
+                });
               }
             },
             error: function(result) {
@@ -117,6 +138,10 @@ $toggleFull = function(bool $full) {
                 type: "error",
                 text: "Ошибка при удалении"
               }).show();
+              $button.prop('disabled', false).find('i').removeClass('la-spinner la-spin').addClass('la-trash');
+            },
+            complete: function() {
+              isDeleting = false;
             }
           });
         }
