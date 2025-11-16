@@ -20,39 +20,45 @@ trait ProductColumnsTrait
         $this->addImagesColumn(['label' => trans('backpack-store::product-column.image')]);
 
         $this->crud->addColumn([
-            'name' => 'adminCode',
+            'name' => 'adminSupplierCodes',
             'label' => '<span title="' . trans('backpack-store::product-column.barcode.title') . '">' . trans('backpack-store::product-column.barcode.label') . '</span>',
+            'type' => 'closure',
             'escaped' => false,
-            'limit' => 2500,
             'priority' => 1,
+            'function' => function ($entry) {
+                return view('store-crud::columns.product_supplier_codes', ['entry' => $entry])->render();
+            },
             'searchLogic' => function ($query, $column, $searchTerm) {
                 $query
                     ->whereHas('sp', function($query) use($searchTerm) {
                         $query->where('code', 'LIKE', '%'.$searchTerm.'%')
-                        ->orWhere('barcode', 'LIKE', '%'.$searchTerm.'%');
+                              ->orWhere('barcode', 'LIKE', '%'.$searchTerm.'%');
                     })
                     ->orWhere('code', 'LIKE', '%'.$searchTerm.'%');
             },
         ]);
 
         $this->crud->addColumn([
-            'name' => 'inStockTotalSuppliers',
+            'name' => 'adminInStock',
             'label' => '<span title="' . trans('backpack-store::product-column.stock.title') . '">' . trans('backpack-store::product-column.stock.label') . '</span>',
-            'type' => 'number',
-            'suffix' => trans('backpack-store::product-column.stock.suffix'),
+            'type' => 'closure',
+            'escaped' => false,
             'priority' => 4,
             'orderable'   => true,
             'orderLogic' => function ($query, $column, $columnDirection) {
                 return $query->withSum('sp', 'in_stock')
                         ->orderBy('sp_sum_in_stock', $columnDirection);
             },
+            'function' => function ($entry) {
+                return view('store-crud::columns.product_supplier_stock', ['entry' => $entry])->render();
+            },
         ]);
 
         $this->crud->addColumn([
-            'name' => 'adminPrice',
+            'name' => 'adminSupplierPrices',
             'label' => trans('backpack-store::product-column.price'),
+            'type' => 'closure',
             'escaped' => false,
-            'limit' => 1500,
             'orderable'   => true,
             'orderLogic' => function ($query, $column, $columnDirection) {
                 return $query
@@ -61,6 +67,9 @@ trait ProductColumnsTrait
                 ->select('ak_products.*');
             },
             'priority' => 6,
+            'function' => function ($entry) {
+                return view('store-crud::columns.product_supplier_prices', ['entry' => $entry])->render();
+            },
         ]);
 
         $this->crud->addColumn([

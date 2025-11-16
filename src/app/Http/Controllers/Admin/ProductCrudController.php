@@ -173,6 +173,7 @@ class ProductCrudController extends CrudController
     {
         // Common Classes
         $this->crud->addClause('withSum', 'sp', 'in_stock');
+        $this->crud->query->with(['children.suppliers']);
         
         // Only base and simple product by default
         if (!request()->has('with_mods')) {

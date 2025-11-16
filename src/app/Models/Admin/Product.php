@@ -20,6 +20,8 @@ class Product extends BaseProduct
     public $default_supplier = null;
 
     public $available_languages = [];
+
+    protected ?array $adminSupplierMatrixCache = null;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -67,6 +69,140 @@ class Product extends BaseProduct
     {
         return 'Backpack\Store\app\Models\Product';
     } 
+
+    /**
+     * Build supplier summary for admin tables (prices, stock, codes)
+     */
+    public function adminSupplierMatrix(): array
+    {
+        if ($this->adminSupplierMatrixCache !== null) {
+            return $this->adminSupplierMatrixCache;
+        }
+
+        $this->loadMissing([
+            'suppliers',
+            'children.suppliers',
+        ]);
+
+        $children = $this->children instanceof \Illuminate\Support\Collection
+            ? $this->children
+            : collect($this->children ?? []);
+
+        $childrenWithSuppliers = $children->filter(function ($child) {
+            return $child->suppliers && $child->suppliers->count();
+        });
+
+        $shouldAggregateChildren = ($this->parent_id === null) && $childrenWithSuppliers->isNotEmpty();
+        $products = $shouldAggregateChildren ? $childrenWithSuppliers : collect([$this]);
+
+        $grouped = [];
+
+        foreach ($products as $product) {
+            $productSuppliers = $product->suppliers ?? collect();
+
+            foreach ($productSuppliers as $supplier) {
+                $supplierId = $supplier->id ?? null;
+
+                if ($supplierId === null) {
+                    continue;
+                }
+
+                if (!isset($grouped[$supplierId])) {
+                    $grouped[$supplierId] = [
+                        'supplier' => $supplier,
+                        'prices' => [],
+                        'stocks' => [],
+                        'codes' => [],
+                    ];
+                }
+
+                $pivot = $supplier->pivot;
+
+                if (!$pivot) {
+                    continue;
+                }
+
+                if ($pivot->price !== null) {
+                    $grouped[$supplierId]['prices'][] = (float) $pivot->price;
+                }
+
+                if ($pivot->in_stock !== null) {
+                    $grouped[$supplierId]['stocks'][] = (float) $pivot->in_stock;
+                }
+
+                $code = trim((string) ($pivot->code ?? ''));
+                $barcode = trim((string) ($pivot->barcode ?? ''));
+                $value = $code !== '' ? $code : $barcode;
+
+                if ($value !== '') {
+                    $grouped[$supplierId]['codes'][] = $value;
+                }
+            }
+        }
+
+        $suppliers = collect($grouped)
+            ->sortBy(function ($item) {
+                $name = $item['supplier']->name ?? '';
+                return mb_strtolower($name, 'UTF-8');
+            })
+            ->map(function ($item) {
+                return [
+                    'supplier' => $item['supplier'],
+                    'price' => $this->summarizeNumericMetric($item['prices']),
+                    'stock' => $this->summarizeNumericMetric($item['stocks']),
+                    'codes' => collect($item['codes'])->unique()->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return $this->adminSupplierMatrixCache = [
+            'is_composite' => $shouldAggregateChildren,
+            'suppliers' => $suppliers,
+        ];
+    }
+
+    protected function summarizeNumericMetric(array $values): array
+    {
+        if (!$values) {
+            return [
+                'has_data' => false,
+                'min' => null,
+                'max' => null,
+            ];
+        }
+
+        return [
+            'has_data' => true,
+            'min' => min($values),
+            'max' => max($values),
+        ];
+    }
+
+    /**
+     * Return images for list columns.
+     * For modifications without own images use parent's images.
+     */
+    public function getImageCollectionPaths(string $attribute, ?int $limit = null): array
+    {
+        $paths = parent::getImageCollectionPaths($attribute, $limit);
+
+        $hasOwnImages = collect($paths)
+            ->filter(fn ($path) => $path !== null && $path !== '')
+            ->isNotEmpty();
+
+        if ($hasOwnImages || $this->parent_id === null) {
+            return $paths;
+        }
+
+        $parent = $this->relationLoaded('parent') ? $this->getRelation('parent') : $this->parent;
+
+        if (!$parent) {
+            return $paths;
+        }
+
+        return $parent->getImageCollectionPaths($attribute, $limit);
+    }
 
     /*
     |--------------------------------------------------------------------------
