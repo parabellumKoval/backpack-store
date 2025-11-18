@@ -403,4 +403,68 @@ class Attribute extends Model
       $this->attribute_values = !empty($value_decoded)? $value_decoded: null;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | SERVICE OPERATION
+    |--------------------------------------------------------------------------
+    */
+    public function getServiceMergeConfiguration(): array
+    {
+        return [
+            'label' => 'Слияние атрибутов',
+            'description' => 'Собирает все значения и связи атрибутов в одну запись.',
+            'candidate_search' => ['name', 'slug', 'id'],
+            'fields' => [
+                'name' => [
+                    'label' => 'Название',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'content' => [
+                    'label' => 'Описание',
+                    'strategy' => 'translations',
+                ],
+                'extras_trans' => [
+                    'label' => 'Доп. переводы',
+                    'strategy' => 'translations',
+                ],
+                'extras' => [
+                    'label' => 'Extras',
+                    'strategy' => 'append',
+                ],
+                'values' => [
+                    'label' => 'Сырые значения',
+                    'strategy' => 'append',
+                ],
+            ],
+            'relations' => [
+                'categories' => [
+                    'label' => 'Категории',
+                    'type' => 'table',
+                    'table' => 'ak_attribute_category',
+                    'column' => 'attribute_id',
+                    'primary_key' => 'id',
+                    'unique' => ['category_id'],
+                    'default' => true,
+                ],
+                'products' => [
+                    'label' => 'Значения на товарах',
+                    'type' => 'table',
+                    'table' => 'ak_attribute_product',
+                    'column' => 'attribute_id',
+                    'primary_key' => 'id',
+                    'unique' => ['product_id', 'attribute_value_id'],
+                    'help' => 'Перепривязывает pivot-записи AttributeProduct.',
+                ],
+                'attribute_values' => [
+                    'label' => 'Справочник значений',
+                    'type' => 'table',
+                    'table' => 'ak_attribute_values',
+                    'column' => 'attribute_id',
+                    'primary_key' => 'id',
+                    'help' => 'Переносит значения AttributeValue.',
+                ],
+            ],
+        ];
+    }
 }

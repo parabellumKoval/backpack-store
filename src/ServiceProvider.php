@@ -15,6 +15,8 @@ use Backpack\Store\app\Providers\ShippingServiceProvider;
 use Backpack\Store\app\Contracts\ProductService;
 use Backpack\Store\app\Contracts\BonusService;
 use Backpack\Store\app\Contracts\Admin\SupplierFormStrategy;
+use Backpack\Store\app\Services\Product\ProductOrdersAttachService;
+use Backpack\Store\app\Services\Product\ProductOrdersReportService;
 
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
@@ -109,6 +111,9 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->mergeConfigFrom(__DIR__ . '/config/payment.php', 'dress.payment');
 
     $this->resolveBonusService();
+
+    $this->app->singleton(ProductOrdersAttachService::class);
+    $this->app->singleton(ProductOrdersReportService::class);
   }
 
 

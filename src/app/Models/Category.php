@@ -635,4 +635,83 @@ class Category extends Model
     | MUTATORS
     |--------------------------------------------------------------------------
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | SERVICE OPERATION
+    |--------------------------------------------------------------------------
+    */
+    public function getServiceMergeConfiguration(): array
+    {
+        return [
+            'label' => 'Слияние категорий',
+            'description' => 'Объедините дубликаты категорий и перенесите связанные сущности.',
+            'candidate_search' => ['name', 'slug', 'id'],
+            'fields' => [
+                'name' => [
+                    'label' => 'Название',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'content' => [
+                    'label' => 'Контент',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'seo' => [
+                    'label' => 'SEO',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'extras_trans' => [
+                    'label' => 'Доп. переводы',
+                    'strategy' => 'translations',
+                ],
+                'extras' => [
+                    'label' => 'Extras',
+                    'strategy' => 'append',
+                ],
+                'params' => [
+                    'label' => 'Параметры',
+                    'strategy' => 'append',
+                ],
+                'countries' => [
+                    'label' => 'Страны',
+                    'strategy' => 'append',
+                ],
+                'images' => [
+                    'label' => 'Изображения',
+                    'strategy' => 'append',
+                ],
+            ],
+            'relations' => [
+                'products' => [
+                    'label' => 'Назначенные товары (ak_category_product)',
+                    'type' => 'table',
+                    'table' => 'ak_category_product',
+                    'column' => 'category_id',
+                    'primary_key' => 'id',
+                    'unique' => ['product_id'],
+                    'default' => true,
+                    'help' => 'Перепривязывает товары к базовой категории и убирает дубликаты записей.',
+                ],
+                'attributes' => [
+                    'label' => 'Привязанные атрибуты',
+                    'type' => 'table',
+                    'table' => 'ak_attribute_category',
+                    'column' => 'category_id',
+                    'primary_key' => 'id',
+                    'unique' => ['attribute_id'],
+                ],
+                'children' => [
+                    'label' => 'Дочерние категории',
+                    'type' => 'table',
+                    'table' => 'ak_product_categories',
+                    'column' => 'parent_id',
+                    'primary_key' => 'id',
+                    'help' => 'Устанавливает нового родителя для вложенных категорий.',
+                ],
+            ],
+        ];
+    }
 }

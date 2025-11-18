@@ -3,9 +3,12 @@
 namespace Backpack\Store\app\Http\Controllers\Admin\Traits\Product;
 
 use Backpack\Store\app\Models\Category;
+use Backpack\Reviews\app\Http\Controllers\Admin\Traits\HasRatingColumn;
 
 trait ProductColumnsTrait
 {
+    use HasRatingColumn;
+
     protected function setupColumns()
     {
         // $this->crud->addColumn([
@@ -72,13 +75,17 @@ trait ProductColumnsTrait
             },
         ]);
 
-        $this->crud->addColumn([
+        $this->addToggleColumn([
             'name' => 'is_active',
             'label' => '<span title="' . trans('backpack-store::product-column.active.title') . '">' . trans('backpack-store::product-column.active.label') . '</span>',
-            'type' => 'toggle',
-            'view_namespace' => 'store-crud::columns',
             'priority' => 5,
             'orderable'   => true,
+            'toggle' => [
+                'values' => [
+                    'checked' => 1,
+                    'unchecked' => 0,
+                ],
+            ],
         ]);
 
         // $this->crud->addColumn([
@@ -113,6 +120,11 @@ trait ProductColumnsTrait
             },
         ]);
 
+        $this->addRatingColumn([
+            'priority' => 3,
+            'reviewable_type' => $this->getProductReviewsMorphClass(),
+        ]);
+
         $this->crud->addColumn([
             'name' => 'adminTranslations',
             'label' => '<span title="' . trans('backpack-store::product-column.translations.title') . '">' . trans('backpack-store::product-column.translations.label') . '</span>',
@@ -139,5 +151,26 @@ trait ProductColumnsTrait
             'limit' => 5500,
             'priority' => 4
         ]);
+    }
+
+    protected function getProductReviewsMorphClass(): ?string
+    {
+        if (property_exists($this, 'reviewsMorphClass') && $this->reviewsMorphClass) {
+            return $this->reviewsMorphClass;
+        }
+
+        if (class_exists(\App\Models\Product::class)) {
+            return \App\Models\Product::class;
+        }
+
+        if (class_exists(\Backpack\Store\app\Models\Product::class)) {
+            return \Backpack\Store\app\Models\Product::class;
+        }
+
+        if (property_exists($this, 'product_class') && $this->product_class) {
+            return $this->product_class;
+        }
+
+        return null;
     }
 }

@@ -263,7 +263,8 @@ class Order extends Model
     */
     public function products()
     {
-      return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product')->withPivot('amount');
+      return $this->belongsToMany('Backpack\Store\app\Models\Product', 'ak_order_product')
+                  ->withPivot(['amount', 'value', 'currency_code', 'country_code', 'supplier_id']);
     }
 
     // Owner/User Model/ Profile Model etc.

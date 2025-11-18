@@ -14,16 +14,31 @@ Route::group([
 ], function () { // custom admin routes
     Route::crud('product', 'ProductCrudController');
     Route::crud('category', 'CategoryCrudController');
+    Route::post('category/{id}/toggle', [
+        'as' => 'category.toggle',
+        'uses' => 'CategoryCrudController@toggleColumnRouter',
+        'operation' => 'list',
+    ]);
     // Route::crud('attribute_group', 'AttributeGroupCrudController');
     // Route::crud('delivery', 'DeliveryCrudController');
     // Route::crud('payment', 'PaymentCrudController');
     Route::crud('order', 'OrderCrudController');
     Route::crud('promocode', 'PromocodeCrudController');
+    Route::post('promocode/{id}/toggle', [
+        'as' => 'promocode.toggle',
+        'uses' => 'PromocodeCrudController@toggleColumnRouter',
+        'operation' => 'list',
+    ]);
     
     Route::crud('search-queries', 'SearchQueryCrudController');
     
     // lists
     Route::crud('product-list', ProductListCrudController::class);
+
+    Route::get('dashboard/store-widgets/orders', [
+        'uses' => 'DashboardWidgetController@orders',
+        'as' => 'backpack.store.dashboard.orders',
+    ]);
 
     // seo page
     Route::crud('seo-page', SeoPageCrudController::class);
@@ -40,14 +55,29 @@ Route::group([
     if(\Settings::get('dress.attribute.enable')) {
       Route::crud('attribute', 'AttributeCrudController');
       Route::crud('value', 'AttributeValueCrudController');
+      Route::post('attribute/{id}/toggle', [
+        'as' => 'attribute.toggle',
+        'uses' => 'AttributeCrudController@toggleColumnRouter',
+        'operation' => 'list',
+      ]);
     }
 
     if(\Settings::get('dress.brand.enable')) {
       Route::crud('brand', 'BrandCrudController');
+      Route::post('brand/{id}/toggle', [
+        'as' => 'brand.toggle',
+        'uses' => 'BrandCrudController@toggleColumnRouter',
+        'operation' => 'list',
+      ]);
     }
 
     if(\Settings::get('dress.supplier.enable')) {
       Route::crud('supplier', 'SupplierCrudController');
+      Route::post('supplier/{id}/toggle', [
+        'as' => 'supplier.toggle',
+        'uses' => 'SupplierCrudController@toggleColumnRouter',
+        'operation' => 'list',
+      ]);
     }
 
     if(\Settings::get('dress.source.enable')) {
@@ -57,7 +87,7 @@ Route::group([
     
     Route::post('product/{id}/toggle', [
       'as' => 'product.toggle',
-      'uses' => 'ProductCrudController@toggleIsActiveRouter',
+      'uses' => 'ProductCrudController@toggleColumnRouter',
       'operation' => 'list',
     ]);
 
@@ -71,6 +101,12 @@ Route::group([
       'uses' => 'ProductCrudController@handleSelect2MultipleRouter'
     ]);
 
+    Route::get('product/{productId}/orders-tab', [
+        'as' => 'product.orders-tab',
+        'uses' => 'ProductCrudController@ordersTabData',
+        // 'operation' => 'update',
+    ]);
+
 
     Route::post('product/bulk-action/{action}', [
         'as' => 'product.bulk-action',
@@ -80,4 +116,3 @@ Route::group([
 
 
 }); // this should be the absolute last line of this file
-

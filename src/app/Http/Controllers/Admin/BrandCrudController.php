@@ -20,9 +20,12 @@ class BrandCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
+    // use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
 
     use HasImagesCrudComponents;
+    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
 
     use \App\Http\Controllers\Admin\Traits\BrandCrud;
     
@@ -54,10 +57,9 @@ class BrandCrudController extends CrudController
         ]);
 
 
-        $this->crud->addColumn([
-          'name' => 'is_active',
-          'label' => '✅',
-          'type' => 'check'
+        $this->addToggleColumn([
+            'name' => 'is_active',
+            'label' => '✅',
         ]);
 
 

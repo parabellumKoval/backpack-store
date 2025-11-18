@@ -23,6 +23,7 @@ class SupplierCrudController extends CrudController
 
 
     use \App\Http\Controllers\Admin\Traits\SupplierCrud;
+    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
     
     private $brand_class = null;
     private $ui;
@@ -41,10 +42,9 @@ class SupplierCrudController extends CrudController
 
     protected function setupListOperation()
     {
-      $this->crud->addColumn([
-        'name' => 'is_active',
-        'label' => '✅',
-        'type' => 'check'
+      $this->addToggleColumn([
+          'name' => 'is_active',
+          'label' => '✅',
       ]);
 
       $this->crud->addColumn([

@@ -17,6 +17,8 @@ use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\SupplierProduct;
+use Backpack\Store\Facades\ProductOrders;
+use Backpack\Store\app\Services\Product\ProductOrdersReportService;
 
 //EVENTS
 use Backpack\Store\app\Events\ProductSaving;
@@ -41,9 +43,11 @@ class ProductCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation { update as traitUpdate; }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
     use HasImagesCrudComponents;
+    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
 
     use \App\Http\Controllers\Admin\Traits\ProductCrud;
     use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductFiltersTrait;
@@ -335,7 +339,19 @@ class ProductCrudController extends CrudController
       ]);
 
 
-      // \Backpack\Reviews\Facades\Reviews::attachToCrud($this->crud, 'Отзывы');
+      if (!$isVariant) {
+        $reviewableType = $this->getProductReviewsMorphClass();
+        \Backpack\Reviews\Facades\Reviews::attachToCrud($this->crud, 'Отзывы', array_filter([
+          'reviewable_type' => $reviewableType,
+        ]));
+      }
+
+      if ((bool) config('dress.store.enable_orders_in_product_crud', true)) {
+        ProductOrders::attachToCrud($this->crud, trans('backpack-store::product.orders_tab.tab_title'), [
+          'product_id' => $entry->id,
+          'fetch_url' => route('product.orders-tab', ['productId' => $entry->id]),
+        ]);
+      }
     }
 
     /**
@@ -568,25 +584,6 @@ class ProductCrudController extends CrudController
     }
     
     /**
-     * Method toggleIsActiveRouter
-     *
-     * @param $id $id [explicite description]
-     *
-     * @return void
-     */
-    public function toggleIsActiveRouter($id)
-    {
-        $this->crud->hasAccessOrFail('update');
-
-        $entry = $this->crud->model->findOrFail($id);
-        $entry->is_active = request()->input('is_active', 0);
-        $entry->save();
-
-        return response()->json(['success' => true]);
-    }
-
-
-    /**
      * Method handleBulkActionRouter
      *
      * @param $action $action [explicite description]
@@ -681,4 +678,29 @@ class ProductCrudController extends CrudController
                 ]);
         }
     }
+
+  /**
+   * Return aggregated orders data for the Orders tab.
+   */
+  public function ordersTabData(Request $request, $productId)
+  {
+    abort_unless(config('dress.store.enable_orders_in_product_crud', true), 404);
+
+    $this->crud->hasAccessOrFail('update');
+    $productId = (int) $productId;
+    if ($productId <= 0) {
+      abort(404);
+    }
+
+    /** @var ProductOrdersReportService $service */
+    $service = app(ProductOrdersReportService::class);
+
+    $payload = $service->build($productId, [
+      'page' => request()->integer('page') ?: 1,
+      'per_page' => request()->integer('per_page') ?: 10,
+      'range_months' => request()->integer('months') ?: 12,
+    ]);
+
+    return response()->json($payload);
+  }
 }

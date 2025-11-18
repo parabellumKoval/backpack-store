@@ -49,6 +49,7 @@ use ParabellumKoval\BackpackImages\Traits\HasImages;
 
 use Backpack\Store\app\Models\Traits\HasModification;
 use Backpack\Tag\app\Traits\Taggable;
+use Backpack\Reviews\app\Traits\Reviewable;
 
 class Product extends Model
 {
@@ -69,6 +70,7 @@ class Product extends Model
 
     use \Backpack\Store\app\Traits\Resources;
     use Taggable;
+    use Reviewable;
 
     /*
     |--------------------------------------------------------------------------
@@ -964,4 +966,116 @@ class Product extends Model
     // public function setNameAttribute($v) {
     //   dd($v, $this->attributes);
     // }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SERVICE OPERATION
+    |--------------------------------------------------------------------------
+    */
+    public function getServiceMergeConfiguration(): array
+    {
+        return [
+            'label' => 'Слияние товаров',
+            'description' => 'Объединяет дубликаты товаров и переносит связанные данные.',
+            'candidate_search' => ['name', 'slug', 'code', 'id'],
+            'fields' => [
+                'name' => [
+                    'label' => 'Название',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'short_name' => [
+                    'label' => 'Короткое название',
+                    'strategy' => 'translations',
+                ],
+                'content' => [
+                    'label' => 'Описание',
+                    'strategy' => 'translations',
+                ],
+                'merchant_content' => [
+                    'label' => 'Контент для маркетплейсов',
+                    'strategy' => 'translations',
+                ],
+                'excerpt' => [
+                    'label' => 'Краткое описание',
+                    'strategy' => 'translations',
+                ],
+                'seo' => [
+                    'label' => 'SEO',
+                    'strategy' => 'translations',
+                ],
+                'extras_trans' => [
+                    'label' => 'Доп. переводы',
+                    'strategy' => 'translations',
+                ],
+                'extras' => [
+                    'label' => 'Extras',
+                    'strategy' => 'append',
+                ],
+                'images' => [
+                    'label' => 'Изображения',
+                    'strategy' => 'append',
+                ],
+                'props' => [
+                    'label' => 'Характеристики',
+                    'strategy' => 'append',
+                ],
+                'priceOverrides' => [
+                    'label' => 'Переопределения цен',
+                    'strategy' => 'append',
+                ],
+                'suppliersData' => [
+                    'label' => 'Данные поставщиков',
+                    'strategy' => 'append',
+                ],
+            ],
+            'relations' => [
+                'categories' => [
+                    'label' => 'Категории',
+                    'type' => 'table',
+                    'table' => 'ak_category_product',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'unique' => ['category_id'],
+                    'default' => true,
+                    'help' => 'Переносит записи из pivot-таблицы и удаляет дубликаты.',
+                ],
+                'attributes' => [
+                    'label' => 'Атрибуты (ak_attribute_product)',
+                    'type' => 'table',
+                    'table' => 'ak_attribute_product',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'unique' => ['attribute_id', 'attribute_value_id'],
+                ],
+                'suppliers' => [
+                    'label' => 'Поставщики',
+                    'type' => 'table',
+                    'table' => 'ak_supplier_product',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'unique' => ['supplier_id'],
+                ],
+                'taggables' => [
+                    'label' => 'Теги',
+                    'type' => 'table',
+                    'table' => 'ak_taggables',
+                    'column' => 'taggable_id',
+                    'primary_key' => 'id',
+                    'unique' => ['tag_id'],
+                    'constraints' => [
+                        ['column' => 'taggable_type', 'value' => static::class],
+                    ],
+                ],
+                'children' => [
+                    'label' => 'Модификации (parent_id)',
+                    'type' => 'table',
+                    'table' => 'ak_products',
+                    'column' => 'parent_id',
+                    'primary_key' => 'id',
+                    'help' => 'Привязывает дочерние товары к новой базовой записи.',
+                ],
+            ],
+        ];
+    }
 }

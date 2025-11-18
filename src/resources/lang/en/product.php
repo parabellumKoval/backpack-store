@@ -24,5 +24,37 @@ return [
         'stock' => 'Stock Quantity',
         'in_stock' => 'In Stock',
         'categories' => 'Categories',
-    ]
+    ],
+    'orders_tab' => [
+        'tab_title' => 'Orders',
+        'title' => 'Orders',
+        'summary' => [
+            'orders' => 'Orders',
+            'quantity' => 'Units sold',
+            'revenue' => 'Revenue',
+            'revenue_empty' => 'No revenue recorded yet.',
+        ],
+        'chart' => [
+            'title' => 'Monthly demand',
+            'quantity_label' => 'Units',
+            'revenue_label' => 'Revenue',
+        ],
+        'table' => [
+            'order' => 'Order',
+            'status' => 'Statuses',
+            'customer' => 'Customer',
+            'quantity' => 'Qty',
+            'price' => 'Unit price',
+            'total' => 'Total',
+        ],
+        'messages' => [
+            'loading' => 'Loading orders…',
+            'empty' => 'No orders yet.',
+            'error' => 'Failed to load orders. Please retry.',
+            'chart_empty' => 'Not enough data for the chart yet.',
+        ],
+        'pagination' => [
+            'showing' => 'Showing :from–:to of :total orders',
+        ],
+    ],
 ];

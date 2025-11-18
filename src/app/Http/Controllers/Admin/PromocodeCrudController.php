@@ -25,6 +25,7 @@ class PromocodeCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
 
     use \App\Http\Controllers\Admin\Traits\PromocodeCrud;
     
@@ -41,10 +42,9 @@ class PromocodeCrudController extends CrudController
 
     protected function setupListOperation()
     {
-        $this->crud->addColumn([
-          'name' => 'is_active',
-          'label' => '✅',
-          'type' => 'check'
+        $this->addToggleColumn([
+            'name' => 'is_active',
+            'label' => '✅',
         ]);
 
         $this->crud->addColumn([

@@ -70,7 +70,13 @@ class OrderCrudController extends CrudController
           continue;
 
         $amount = $product->amount ?? 1;
-        $entry->products()->attach($product->id, ['amount' => $amount]);
+        $entry->products()->attach($product->id, [
+          'amount' => $amount,
+          'value' => $product->price,
+          'currency_code' => $entry->currency_code ?? \Store::countryCurrency($entry->country_code),
+          'country_code' => $entry->country_code ?? \Store::country(),
+          'supplier_id' => null,
+        ]);
       }
 
       ProductAttachedToOrder::dispatch($entry);

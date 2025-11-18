@@ -236,4 +236,52 @@ class Brand extends Model
     | MUTATORS
     |--------------------------------------------------------------------------
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | SERVICE OPERATION
+    |--------------------------------------------------------------------------
+    */
+    public function getServiceMergeConfiguration(): array
+    {
+        return [
+            'label' => 'Слияние брендов',
+            'description' => 'Переносит переводы, изображения и связанные товары.',
+            'candidate_search' => ['name', 'slug', 'id'],
+            'fields' => [
+                'name' => [
+                    'label' => 'Название',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'content' => [
+                    'label' => 'Описание',
+                    'strategy' => 'translations',
+                ],
+                'seo' => [
+                    'label' => 'SEO',
+                    'strategy' => 'translations',
+                ],
+                'extras' => [
+                    'label' => 'Extras',
+                    'strategy' => 'append',
+                ],
+                'images' => [
+                    'label' => 'Изображения',
+                    'strategy' => 'append',
+                ],
+            ],
+            'relations' => [
+                'products' => [
+                    'label' => 'Товары бренда',
+                    'type' => 'table',
+                    'table' => 'ak_products',
+                    'column' => 'brand_id',
+                    'primary_key' => 'id',
+                    'default' => true,
+                    'help' => 'Заменит brand_id в товарах, чтобы они ссылались на базовый бренд.',
+                ],
+            ],
+        ];
+    }
 }

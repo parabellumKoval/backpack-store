@@ -76,13 +76,13 @@ class XmlSource extends Command
     public function __construct()
     {
       parent::__construct();
-      $this->isSuppliersEnabled = \Settings::get('dress.supplier.enable', false);
+      $this->isSuppliersEnabled = config('dress.supplier.enable', false);
 
-      $this->SP_CLASS = \Settings::get('dress.supplier.model_supplier_product', 'Backpack\Store\app\Models\SupplierProduct');
-      $this->PRODUCT_CLASS = \Settings::get('dress.product.model', 'Backpack\Store\app\Models\Product');
+      $this->SP_CLASS = config('dress.supplier.model_supplier_product', 'Backpack\Store\app\Models\SupplierProduct');
+      $this->PRODUCT_CLASS = config('dress.product.model', 'Backpack\Store\app\Models\Product');
 
-      $this->IS_TEST_MODE = \Settings::get('dress.source.test.enable', false);
-      $this->TEST_ITEMS = \Settings::get('dress.source.test.items', -1);
+      $this->IS_TEST_MODE = config('dress.source.test.enable', false);
+      $this->TEST_ITEMS = config('dress.source.test.items', -1);
     }
 
     /**

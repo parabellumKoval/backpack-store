@@ -28,8 +28,11 @@ class AttributeCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
+    // use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
+    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
     
     // all available types
     private $types;
@@ -137,10 +140,9 @@ class AttributeCrudController extends CrudController
           },
         ]);
 
-        $this->crud->addColumn([
-          'name' => 'is_active',
-          'label' => 'Активен',
-          'type' => 'boolean'
+        $this->addToggleColumn([
+            'name' => 'is_active',
+            'label' => 'Активен',
         ]);
 
         $this->crud->addColumn([

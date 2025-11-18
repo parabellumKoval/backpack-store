@@ -21,10 +21,13 @@ class CategoryCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\BulkDeleteOperation;
+    // use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
     use \Backpack\Helpers\app\Http\Controllers\Operations\ReorderDeepOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
     
     use HasImagesCrudComponents;
+    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
     
     use \App\Http\Controllers\Admin\Traits\CategoryCrud;
     use TagFields;
@@ -141,11 +144,9 @@ class CategoryCrudController extends CrudController
             'label' => '📷',
         ]);
 
-        // IS ACTIVE
-        $this->crud->addColumn([
+        $this->addToggleColumn([
             'name' => 'is_active',
             'label' => '✅',
-            'type' => 'check'
         ]);
 
         $this->crud->addColumn([
