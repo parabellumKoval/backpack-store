@@ -9,6 +9,7 @@ use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use ParabellumKoval\BackpackImages\Traits\HasImagesCrudComponents;
 use Backpack\LangFileManager\app\Models\Language;
 use Backpack\Tag\app\Traits\TagFields;
+use Backpack\Helpers\Traits\Admin\HasSeoFilters;
 
 /**
  * Class CategoryCrudController
@@ -27,6 +28,7 @@ class CategoryCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
     
     use HasImagesCrudComponents;
+    use HasSeoFilters;
     use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
     
     use \App\Http\Controllers\Admin\Traits\CategoryCrud;
@@ -110,33 +112,15 @@ class CategoryCrudController extends CrudController
             }
         });
 
-        $this->crud->addFilter([
+        $this->addSeoFilledFilter([
             'name' => 'is_seo',
-            'label' => 'Заполнено SEO',
-            'type' => 'select2',
-        ], function(){
-            return [
-                0 => 'Не заполнено SEO',
-                2 => 'Заполнено SEO',
-            ];
-        }, function($is_seo){
-            $locale = \Lang::locale();
-
-            if($is_seo == 0) {
-                $this->crud->query
-                    ->where('seo', null)
-                    ->orWhere(function ($query) use ($locale) {
-                        $query
-                            ->where("seo->{$locale}->meta_title", '=', null)
-                            ->where("seo->{$locale}->meta_description", '!=', null)
-                            ->where("seo->{$locale}->h1", '=', null);
-                    });
-            }elseif($is_seo == 2){
-                $this->crud->query->where("seo->{$locale}->meta_title", '!=', null);
-                $this->crud->query->orWhere("seo->{$locale}->meta_description", '!=', null);
-                $this->crud->query->orWhere("seo->{$locale}->h1", '!=', null);
-            }
-        });
+            'label' => trans('backpack-store::category.filters.seo.label'),
+            'field' => 'seo',
+            'properties' => ['meta_title', 'meta_description', 'h1'],
+            'options' => trans('backpack-store::category.filters.seo.options'),
+            'empty_value' => 0,
+            'filled_value' => 2,
+        ]);
 
         $this->setupFilers();
 
@@ -157,11 +141,16 @@ class CategoryCrudController extends CrudController
         ]);
 
         $this->crud->addColumn([
-            'name' => 'is_seo',
+            'name' => 'seo',
             'label' => 'SEO',
-            'type' => 'model_function',
-            'function_name' => 'getAdminColumnSeo',
-            'limit' => 1000,
+            'type' => 'seo_status',
+            'seo_field' => 'seo',
+            'properties' => [
+                'h1' => trans('backpack-store::category.fields.h1'),
+                'meta_title' => trans('backpack-store::category.fields.meta_title'),
+                'meta_description' => trans('backpack-store::category.fields.meta_description'),
+            ],
+            'empty_text' => 'Не заполнено',
         ]);
 
         $this->crud->addColumn([
@@ -250,23 +239,34 @@ class CategoryCrudController extends CrudController
             [
                 'name' => 'h1',
                 'label' => 'H1 заголовок',
+                'type' => 'countable_textarea',
                 'fake' => true,
                 'store_in' => 'seo',
+                'rows' => 1,
+                'resizable' => false,
+                'recommended_length' => 60,
                 'tab' => 'SEO'
             ],
             [
                 'name' => 'meta_title',
                 'label' => 'Meta title',
+                'type' => 'countable_textarea',
                 'fake' => true,
                 'store_in' => 'seo',
+                'rows' => 2,
+                'resizable' => true,
+                'recommended_length' => 70,
                 'tab' => 'SEO'
             ],
             [
                 'name' => 'meta_description',
                 'label' => 'Meta description',
-                'type' => 'textarea',
+                'type' => 'countable_textarea',
                 'fake' => true,
                 'store_in' => 'seo',
+                'rows' => 3,
+                'resizable' => true,
+                'recommended_length' => 160,
                 'tab' => 'SEO'
             ],
             [

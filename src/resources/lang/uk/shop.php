@@ -29,5 +29,22 @@ return [
     "failed" => "Ошибка",
     "delivered" => "Доставлен",
     "pickedup" => "Забран"
-  ]
+  ],
+
+  'payment_methods' => [
+    'default_cash' => 'Готівкою при самовивозі',
+    'zasilkovna_cod' => 'Накладений платіж Zásilkovna',
+    'novaposhta_cod' => 'Накладений платіж Нова Пошта',
+    'liqpay_online' => 'Оплата LiqPay онлайн',
+    'card_online' => 'Оплата карткою онлайн',
+    'bank_transfer' => 'Банківський переказ',
+  ],
+
+  'delivery_methods' => [
+    'novaposhta_address' => 'Кур\'єр Нова Пошта',
+    'novaposhta_warehouse' => 'Відділення Нова Пошта',
+    'packeta_address' => 'Кур\'єр Packeta',
+    'packeta_warehouse' => 'Пункт видачі Packeta',
+    'default_pickup' => 'Самовивіз',
+  ],
 ];

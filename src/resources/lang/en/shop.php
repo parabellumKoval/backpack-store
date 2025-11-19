@@ -28,5 +28,22 @@ return [
     "failed" => "Ошибка",
     "delivered" => "Доставлен",
     "pickedup" => "Забран"
-  ]
+  ],
+
+  'payment_methods' => [
+    'default_cash' => 'Cash on pickup',
+    'zasilkovna_cod' => 'Cash on delivery (Packeta)',
+    'novaposhta_cod' => 'Cash on delivery (Nova Poshta)',
+    'liqpay_online' => 'LiqPay online payment',
+    'card_online' => 'Card payment online',
+    'bank_transfer' => 'Bank transfer',
+  ],
+
+  'delivery_methods' => [
+    'novaposhta_address' => 'Nova Poshta courier',
+    'novaposhta_warehouse' => 'Nova Poshta pickup point',
+    'packeta_address' => 'Packeta courier',
+    'packeta_warehouse' => 'Packeta pickup point',
+    'default_pickup' => 'Store pickup',
+  ],
 ];

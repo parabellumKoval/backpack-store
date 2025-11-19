@@ -40,6 +40,9 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/resources/views',
     ]);
 
+    // Register store namespace for review cards
+    View::addNamespace('store', __DIR__.'/resources/views');
+
     // Load translations
     $this->loadTranslationsFrom(__DIR__.'/resources/lang', 'backpack-store');
 
@@ -109,6 +112,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->mergeConfigFrom(__DIR__ . '/config/invoice.php', 'dress.invoice');
     $this->mergeConfigFrom(__DIR__ . '/config/delivery.php', 'dress.delivery');
     $this->mergeConfigFrom(__DIR__ . '/config/payment.php', 'dress.payment');
+    $this->mergeConfigFrom(__DIR__ . '/config/admin_orders.php', 'dress.admin_orders');
 
     $this->resolveBonusService();
 
@@ -214,6 +218,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
       __DIR__ . '/config/invoice.php' => config_path('/dress/invoice.php'),
       __DIR__ . '/config/delivery.php' => config_path('/dress/delivery.php'),
       __DIR__ . '/config/payment.php' => config_path('/dress/payment.php'),
+      __DIR__ . '/config/admin_orders.php' => config_path('/dress/admin_orders.php'),
     ], 'config');
     
     $this->publishes([

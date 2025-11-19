@@ -13,6 +13,13 @@ return [
     ],
     'filters' => [
         'country' => 'Country',
-        'language' => 'Language'
+        'language' => 'Language',
+        'seo' => [
+            'label' => 'SEO filled',
+            'options' => [
+                0 => 'Empty',
+                2 => 'Filled',
+            ],
+        ],
     ]
 ];

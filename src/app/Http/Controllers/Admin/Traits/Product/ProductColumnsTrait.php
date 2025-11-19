@@ -88,6 +88,23 @@ trait ProductColumnsTrait
             ],
         ]);
 
+        $this->crud->addColumn([
+            'name' => 'seo',
+            'label' => 'SEO',
+            'type' => 'seo_status_compact',
+            'seo_field' => 'seo',
+            'properties' => [
+                'meta_title' => 'Meta Title',
+                'meta_description' => 'Meta Description',
+            ],
+            'compact_labels' => [
+                'meta_title' => 'MT',
+                'meta_description' => 'MD',
+            ],
+            'empty_text' => 'Не заполнено',
+            'priority' => 6,
+        ]);
+
         // $this->crud->addColumn([
         //     'name' => 'name',
         //     'label' => trans('backpack-store::product-column.name'),

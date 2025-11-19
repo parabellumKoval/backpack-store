@@ -46,13 +46,15 @@ class ProductCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
     //use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-    use HasImagesCrudComponents;
-    use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
 
-    use \App\Http\Controllers\Admin\Traits\ProductCrud;
-    use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductFiltersTrait;
-    use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductFieldsTrait;
-    use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductColumnsTrait;
+      use HasImagesCrudComponents;
+      use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
+
+      use \App\Http\Controllers\Admin\Traits\ProductCrud;
+      use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductFiltersTrait;
+      use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductFieldsTrait;
+      use \Backpack\Store\app\Http\Controllers\Admin\Traits\Product\ProductColumnsTrait;
+      use \Backpack\Tag\app\Traits\TagFields;
 
     protected $setupDetailsRowRoutes = true;
     
@@ -193,11 +195,14 @@ class ProductCrudController extends CrudController
         //
         $this->crud->addButton('top', 'export_csv', 'view', 'store-crud::buttons.product_bulk_actions', 'top_search');
 
-        // System Trait   
-        $this->setupColumns();
+  // System Trait   
+  $this->setupColumns();
 
-        // User Trait
-        $this->listOperation();
+  // Add tag column
+  $this->setupTagColumns();
+
+  // User Trait
+  $this->listOperation();
     }
     
     /**
@@ -238,6 +243,12 @@ class ProductCrudController extends CrudController
       } else {
         // System Trait
         $this->setupFields();
+
+        // Add tag fields
+        $this->setupTagFields();
+        $this->crud->modifyField('tags', [
+            'tab' => 'Дополнительно'
+        ]);
 
         // User Trait
         $this->createOperation();
@@ -288,6 +299,12 @@ class ProductCrudController extends CrudController
       } else {
         // System Trait
         $this->setupFields();
+
+        // Add tag fields
+        $this->setupTagFields();
+        $this->crud->modifyField('tags', [
+            'tab' => 'Дополнительно'
+        ]);
 
         // User Trait
         $this->createOperation();

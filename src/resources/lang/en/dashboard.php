@@ -47,6 +47,12 @@ return [
         'orders_widget_error' => 'Failed to load orders. Try again.',
         'empty_state' => 'Nothing to display',
         'orders_widget_items' => '{0} No items|{1} :count item|[2,*] :count items',
+        'orders_countries_title' => 'Orders by country',
+        'orders_countries_months' => '{1} Last :count month|[2,*] Last :count months',
+        'orders_countries_total' => 'Total orders',
+        'orders_countries_orders' => '{0} No orders|{1} :count order|[2,*] :count orders',
+        'orders_countries_unknown' => 'Unknown',
+        'orders_countries_empty' => 'Not enough data to display the chart',
     ],
     'stats' => [
         'daily' => 'Daily',

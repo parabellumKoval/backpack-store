@@ -8,6 +8,7 @@ use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 use ParabellumKoval\BackpackImages\Traits\HasImagesCrudComponents;
 use Backpack\LangFileManager\app\Models\Language;
+use Backpack\Helpers\Traits\Admin\HasSeoFilters;
 
 /**
  * Class BrandCrudController
@@ -25,6 +26,7 @@ class BrandCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\ServiceOperation;
 
     use HasImagesCrudComponents;
+    use HasSeoFilters;
     use \Backpack\Helpers\Traits\Admin\HasToggleColumns;
 
     use \App\Http\Controllers\Admin\Traits\BrandCrud;
@@ -51,6 +53,16 @@ class BrandCrudController extends CrudController
     protected function setupListOperation()
     {
         $langs_list = $this->langs_list;
+
+        $this->addSeoFilledFilter([
+            'name' => 'seo_status',
+            'label' => trans('backpack-store::brand.filters.seo.label'),
+            'field' => 'seo',
+            'properties' => ['meta_title', 'meta_description', 'h1'],
+            'options' => trans('backpack-store::brand.filters.seo.options'),
+            'empty_value' => 0,
+            'filled_value' => 2,
+        ]);
         
         $this->addImagesColumn([
             'label' => '📷',
@@ -80,6 +92,19 @@ class BrandCrudController extends CrudController
         $this->crud->addColumn([
             'name' => 'slug',
             'label' => 'Slug',
+        ]);
+
+        $this->crud->addColumn([
+            'name' => 'seo',
+            'label' => 'SEO',
+            'type' => 'seo_status',
+            'seo_field' => 'seo',
+            'properties' => [
+                'h1' => 'H1',
+                'meta_title' => 'Meta title',
+                'meta_description' => 'Meta description',
+            ],
+            'empty_text' => trans('backpack-store::brand.filters.seo.options.0'),
         ]);
 
         $this->listOperation();
@@ -151,26 +176,36 @@ class BrandCrudController extends CrudController
         $this->crud->addField([
           'name' => 'h1',
           'label' => 'H1 заголовок',
+          'type' => 'countable_textarea',
           'fake' => true,
           'store_in' => 'seo',
+          'rows' => 1,
+          'resizable' => false,
+          'recommended_length' => 60,
           'tab' => 'SEO'
         ]);
         
         $this->crud->addField([
           'name' => 'meta_title',
           'label' => "Meta Title", 
-          'type' => 'text',
+          'type' => 'countable_textarea',
           'fake' => true, 
           'store_in' => 'seo',
+          'rows' => 2,
+          'resizable' => true,
+          'recommended_length' => 70,
           'tab' => 'SEO'
         ]);
 
         $this->crud->addField([
           'name' => 'meta_description',
           'label' => "Meta Description", 
-          'type' => 'textarea',
+          'type' => 'countable_textarea',
           'fake' => true, 
           'store_in' => 'seo',
+          'rows' => 3,
+          'resizable' => true,
+          'recommended_length' => 160,
           'tab' => 'SEO'
         ]);
 

@@ -47,6 +47,12 @@ return [
         'orders_widget_error' => 'Не удалось получить данные. Повторите попытку.',
         'empty_state' => 'Нет данных',
         'orders_widget_items' => '{0} Нет товаров|{1} :count товар|[2,4] :count товара|[5,*] :count товаров',
+        'orders_countries_title' => 'Заказы по странам',
+        'orders_countries_months' => '{1} За последний :count месяц|[2,4] За последние :count месяца|[5,*] За последние :count месяцев',
+        'orders_countries_total' => 'Всего заказов',
+        'orders_countries_orders' => '{0} Нет заказов|{1} :count заказ|[2,4] :count заказа|[5,*] :count заказов',
+        'orders_countries_unknown' => 'Не указано',
+        'orders_countries_empty' => 'Недостаточно данных для построения графика',
     ],
     'stats' => [
         'daily' => 'За день',

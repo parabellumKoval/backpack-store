@@ -4,6 +4,8 @@ namespace Backpack\Store\app\Services;
 
 use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Product;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -103,6 +105,124 @@ class AdminDashboardWidgetService
             'orders' => $this->formatOrders($orders),
             'countries' => $this->countriesForFilters(),
             'active' => $country,
+        ];
+    }
+
+    public function ordersByCountryStats(int $limit = 5, int $months = 6): array
+    {
+        $limit = max(1, $limit);
+        $months = max(1, $months);
+        $rangeEnd = Carbon::now();
+        $rangeStart = (clone $rangeEnd)->subMonths($months - 1)->startOfMonth();
+        $countrySql = "UPPER(COALESCE(country_code, 'UN'))";
+        $bucketSql = "DATE_FORMAT(created_at, '%Y-%m-01')";
+
+        $countryTotals = DB::table($this->ordersTable)
+            ->selectRaw("{$countrySql} as country_code")
+            ->selectRaw('COUNT(*) as total_orders')
+            ->selectRaw('SUM(COALESCE(grand_total, price, 0)) as total_amount')
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->groupBy(DB::raw($countrySql))
+            ->orderByDesc('total_orders')
+            ->get();
+
+        $totalOrders = (int) $countryTotals->sum('total_orders');
+
+        if ($totalOrders === 0) {
+            return [
+                'chart' => ['labels' => [], 'datasets' => []],
+                'countries' => [],
+                'totalOrders' => 0,
+                'range' => [
+                    'start' => $rangeStart->copy(),
+                    'end' => $rangeEnd->copy(),
+                    'months' => $months,
+                ],
+            ];
+        }
+
+        $topCountries = $countryTotals->take($limit)->values();
+        $countryCodes = $topCountries->pluck('country_code')->all();
+        $palette = $this->countryPalette();
+        $unknownLabel = trans('backpack-store::dashboard.widgets.orders_countries_unknown');
+
+        $period = collect(CarbonPeriod::create($rangeStart, '1 month', (clone $rangeEnd)->startOfMonth()))
+            ->map(fn (Carbon $date) => $date->copy())
+            ->values();
+        $labels = $period->map(fn (Carbon $point) => $point->format('M Y'))->all();
+
+        $chartRows = DB::table($this->ordersTable)
+            ->selectRaw("{$bucketSql} as bucket")
+            ->selectRaw("{$countrySql} as country_code")
+            ->selectRaw('COUNT(*) as total_orders')
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->when(!empty($countryCodes), function ($query) use ($countryCodes, $countrySql) {
+                return $query->whereIn(DB::raw($countrySql), $countryCodes);
+            })
+            ->groupBy(DB::raw($bucketSql), DB::raw($countrySql))
+            ->orderBy(DB::raw($bucketSql))
+            ->get();
+
+        $bucketed = collect($chartRows)
+            ->groupBy('country_code')
+            ->map(fn ($rows) => collect($rows)->keyBy('bucket'));
+
+        $datasets = [];
+        $countriesData = [];
+
+        foreach ($topCountries as $index => $country) {
+            $code = $country->country_code;
+            $colorHex = $palette[$index % count($palette)];
+            $countryLabel = $this->countryLabel($code) ?: ($code === 'UN' ? $unknownLabel : strtoupper($code));
+            $flag = $code === 'UN' ? null : $this->countryFlagHtml($code);
+            $countryBuckets = $bucketed->get($code, collect());
+            $dataPoints = $period->map(function (Carbon $point) use ($countryBuckets) {
+                $bucketKey = $point->format('Y-m-01');
+                $row = $countryBuckets->get($bucketKey);
+                return (int) ($row->total_orders ?? 0);
+            })->all();
+
+            $datasets[] = [
+                'label' => $countryLabel,
+                'data' => $dataPoints,
+                'borderColor' => $this->rgbaColor($colorHex, 1),
+                'backgroundColor' => $this->rgbaColor($colorHex, 0.12),
+                'fill' => false,
+                'tension' => 0.35,
+                'pointRadius' => 3,
+                'pointBorderColor' => '#ffffff',
+                'borderWidth' => 2,
+            ];
+
+            $ordersCount = (int) ($country->total_orders ?? 0);
+            $share = $totalOrders > 0 ? round($ordersCount / $totalOrders * 100, 1) : 0;
+            $share = max(0, min(100, $share));
+
+            $countriesData[] = [
+                'code' => $code,
+                'label' => $countryLabel,
+                'flag' => $flag,
+                'orders' => $ordersCount,
+                'orders_formatted' => number_format($ordersCount, 0, '.', ' '),
+                'percent' => $share,
+                'percent_display' => number_format($share, 1),
+                'amount_display' => $this->formatMoney($country->total_amount ?? 0),
+                'color' => $colorHex,
+            ];
+        }
+
+        return [
+            'chart' => [
+                'labels' => $labels,
+                'datasets' => $datasets,
+            ],
+            'countries' => $countriesData,
+            'totalOrders' => $totalOrders,
+            'range' => [
+                'start' => $rangeStart->copy(),
+                'end' => $rangeEnd->copy(),
+                'months' => $months,
+            ],
         ];
     }
 
@@ -442,6 +562,38 @@ class AdminDashboardWidgetService
         $symbol = $this->baseCurrencySymbol ?: $this->baseCurrency;
 
         return $symbol . ' ' . $amount;
+    }
+
+    protected function countryPalette(): array
+    {
+        return [
+            '#5A8DEE',
+            '#FF5B5C',
+            '#39DA8A',
+            '#FDAC41',
+            '#00CFDD',
+            '#826BF8',
+            '#FF8F00',
+        ];
+    }
+
+    protected function rgbaColor(string $hex, float $alpha = 1.0): string
+    {
+        $hex = ltrim($hex, '#');
+
+        if (strlen($hex) === 3) {
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+        }
+
+        if (strlen($hex) !== 6) {
+            return sprintf('rgba(90, 141, 238, %.2F)', max(0, min(1, $alpha)));
+        }
+
+        $red = hexdec(substr($hex, 0, 2));
+        $green = hexdec(substr($hex, 2, 2));
+        $blue = hexdec(substr($hex, 4, 2));
+
+        return sprintf('rgba(%d, %d, %d, %.2F)', $red, $green, $blue, max(0, min(1, $alpha)));
     }
 
     protected function normalizeCountry(?string $country): ?string

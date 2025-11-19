@@ -167,6 +167,9 @@ class OrderCrudController extends CrudController
   
   protected function setupListOperation()
   {
+      $this->crud->enableDetailsRow();
+      $this->crud->setDetailsRowView('store-crud::details.order_products');
+
       $this->crud->addFilter([
         'name' => 'status',
         'label' => trans('backpack-store::order.fields.status'),
@@ -243,8 +246,7 @@ class OrderCrudController extends CrudController
         $this->crud->addColumn([
           'name' => 'country_code',
           'label' => 'Страна',
-          'type' => 'select_from_array',
-          'options' => \Store::countryOptions()
+          'type' => 'country_flag_label',
         ]);
       }
 
@@ -716,6 +718,8 @@ class OrderCrudController extends CrudController
   
   protected function setupShowOperation()
   {
+      $this->crud->set('show.setFromDb', false);
+
       CRUD::addButtonFromView('top', 'invoice_preview', 'invoice_preview', 'beginning');
       CRUD::addButtonFromView('top', 'invoice_download', 'invoice_download', 'beginning');
       CRUD::addButtonFromView('top', 'invoice_qr', 'invoice_qr', 'beginning');

@@ -47,6 +47,12 @@ return [
         'orders_widget_error' => 'Не вдалося отримати дані. Спробуйте ще раз.',
         'empty_state' => 'Немає даних',
         'orders_widget_items' => '{0} Немає товарів|{1} :count товар|[2,4] :count товари|[5,*] :count товарів',
+        'orders_countries_title' => 'Замовлення за країнами',
+        'orders_countries_months' => '{1} За останній :count місяць|[2,4] За останні :count місяці|[5,*] За останні :count місяців',
+        'orders_countries_total' => 'Усього замовлень',
+        'orders_countries_orders' => '{0} Немає замовлень|{1} :count замовлення|[2,4] :count замовлення|[5,*] :count замовлень',
+        'orders_countries_unknown' => 'Невідомо',
+        'orders_countries_empty' => 'Недостатньо даних для побудови графіка',
     ],
     'stats' => [
         'daily' => 'За день',

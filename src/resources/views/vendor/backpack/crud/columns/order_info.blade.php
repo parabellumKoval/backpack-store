@@ -36,6 +36,10 @@
   $bonusWallet = $bonusInfo['wallet_currency'] ?? null;
   $bonusRefunded = (bool)($bonusInfo['refunded'] ?? false);
 
+  $countryCode = strtoupper((string) ($entry->country_code ?? ''));
+  $countryName = $countryCode ? \Store::countryLabel(strtolower($countryCode)) : null;
+  $countryFlag = $countryCode ? get_flag($countryCode) : null;
+
   $promoDiscount = max(0, (float)($entry->promocode_discount_total ?? 0));
   $personalDiscount = max(0, (float)($entry->personal_discount_total ?? 0));
   
@@ -47,6 +51,18 @@
 @endphp
 
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 1.6; color: #333;">
+  @if($countryCode)
+    <div style="margin-bottom: 24px; padding: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; display: flex; align-items: center; gap: 16px;">
+      <div style="font-size: 36px; line-height: 1;">{{ $countryFlag ?? '🌍' }}</div>
+      <div>
+        <div style="font-size: 12px; color: #6c757d; text-transform: uppercase; letter-spacing: 0.08em;">Страна заказа</div>
+        <div style="font-size: 16px; font-weight: 600; color: #212529;">
+          {{ $countryName ?? $countryCode }}
+          <span style="font-size: 13px; color: #6c757d;">({{ $countryCode }})</span>
+        </div>
+      </div>
+    </div>
+  @endif
   
   {{-- Информация о покупателе --}}
   @if($user && !empty($user))
@@ -87,50 +103,14 @@
   <div style="margin-bottom: 20px;">
     <h5 style="font-size: 16px; font-weight: 600; color: #212529; margin-bottom: 16px; display: flex; align-items: center;">
       🛍️ Товары
-    </h5>
+  </h5>
 
     @forelse($products as $index => $product)
-      <div style="margin-bottom: 16px; padding: 16px; background: #ffffff; border: 1px solid #dee2e6; border-radius: 8px; display: flex; gap: 16px;">
-        
-        {{-- Изображение товара --}}
-        @if(isset($product['image']['src']) && !empty($product['image']['src']))
-          <div style="flex-shrink: 0;">
-            <img src="{{ url($product['image']['src']) }}" 
-                 alt="{{ $product['name'] ?? 'Товар' }}"
-                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #e0e0e0;" 
-                 onerror="this.style.display='none'" />
-          </div>
-        @endif
-
-        {{-- Информация о товаре --}}
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-weight: 600; color: #212529; margin-bottom: 8px; font-size: 14px;">
-            {{ $product['name'] ?? 'Товар без названия' }}
-            @if(!empty($product['short_name']))
-              <span style="color: #6c757d; font-weight: 400; font-size: 13px;">{{ $product['short_name'] }}</span>
-            @endif
-          </div>
-          
-          <div style="display: grid; grid-template-columns: auto auto; gap: 8px; font-size: 13px;">
-            @if(!empty($product['old_price']) && $product['old_price'] > 0)
-              <div style="color: #6c757d;">
-                Старая цена: <s>{{ $formatMoney($product['old_price']) }}</s>
-              </div>
-            @endif
-            
-            <div style="color: #495057;">
-              Цена: <strong style="color: #28a745;">{{ $formatMoney($product['price'] ?? 0) }}</strong>
-            </div>
-            
-            <div style="color: #495057;">
-              Количество: <strong>{{ $product['amount'] ?? 0 }} шт</strong>
-            </div>
-            
-            <div style="color: #495057;">
-              Сумма: <strong style="color: #212529;">{{ $formatMoney(($product['price'] ?? 0) * ($product['amount'] ?? 0)) }}</strong>
-            </div>
-          </div>
-        </div>
+      <div style="margin-bottom: 16px;">
+        @include('store-crud::components.order.product-card', [
+          'product' => $product,
+          'currency' => $currency,
+        ])
       </div>
     @empty
       <div style="padding: 20px; text-align: center; color: #6c757d; background: #f8f9fa; border-radius: 6px;">

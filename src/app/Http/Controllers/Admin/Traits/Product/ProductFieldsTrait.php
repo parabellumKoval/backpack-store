@@ -465,18 +465,24 @@ trait ProductFieldsTrait
         $this->crud->addField([
             'name' => 'meta_title',
             'label' => trans('backpack-store::product-field.fields.seo.meta_title'),
-            'type' => 'text',
+            'type' => 'countable_textarea',
             'fake' => true, 
             'store_in' => 'seo',
+            'rows' => 2,
+            'resizable' => true,
+            'recommended_length' => 70,
             'tab' => trans('backpack-store::product-field.tabs.seo')
         ]);
 
         $this->crud->addField([
             'name' => 'meta_description',
             'label' => trans('backpack-store::product-field.fields.seo.meta_description'),
-            'type' => 'textarea',
+            'type' => 'countable_textarea',
             'fake' => true, 
             'store_in' => 'seo',
+            'rows' => 3,
+            'resizable' => true,
+            'recommended_length' => 160,
             'tab' => trans('backpack-store::product-field.tabs.seo')
         ]);
     }
