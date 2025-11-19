@@ -134,28 +134,9 @@ class CategoryCrudController extends CrudController
         ]);
 
         $this->crud->addColumn([
-            'name' => 'products',
-            'label' => '📦',
-            'type' => 'relationship_count',
-            'suffix' => ' тов.'
-        ]);
-
-        $this->crud->addColumn([
-            'name' => 'seo',
-            'label' => 'SEO',
-            'type' => 'seo_status',
-            'seo_field' => 'seo',
-            'properties' => [
-                'h1' => trans('backpack-store::category.fields.h1'),
-                'meta_title' => trans('backpack-store::category.fields.meta_title'),
-                'meta_description' => trans('backpack-store::category.fields.meta_description'),
-            ],
-            'empty_text' => 'Не заполнено',
-        ]);
-
-        $this->crud->addColumn([
             'name' => 'name',
             'label' => 'Название',
+            'type' => 'text_progress',
             'limit' => 200,
             'searchLogic' => function ($query, $column, $searchTerm) use($langs_list) {
                 $query->where(function($query) use ($searchTerm, $langs_list){
@@ -166,6 +147,19 @@ class CategoryCrudController extends CrudController
                 });
             },
         ]);
+
+        $this->crud->addColumn([
+            'name' => 'seo',
+            'label' => 'SEO',
+            'type' => 'seo_status_linear',
+            'seo_field' => 'seo',
+            'properties' => [
+                'h1' => trans('backpack-store::category.fields.h1'),
+                'meta_title' => trans('backpack-store::category.fields.meta_title'),
+                'meta_description' => trans('backpack-store::category.fields.meta_description'),
+            ],
+            'empty_text' => 'Не заполнено',
+        ]);
       
         $this->crud->addColumn([
             'name' => 'parent',
@@ -175,6 +169,13 @@ class CategoryCrudController extends CrudController
         $this->crud->addColumn([
             'name' => 'depth',
             'label' => 'Уровень',
+        ]);
+
+        $this->crud->addColumn([
+            'name' => 'products',
+            'label' => '📦',
+            'type' => 'relationship_count',
+            'suffix' => ' тов.'
         ]);
 
         $this->crud->addColumn([
