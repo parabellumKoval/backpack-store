@@ -22,6 +22,7 @@ class Product extends BaseProduct
     public $available_languages = [];
 
     protected ?array $adminSupplierMatrixCache = null;
+    protected ?array $adminSupplierWarehouseGridCache = null;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -159,6 +160,133 @@ class Product extends BaseProduct
         return $this->adminSupplierMatrixCache = [
             'is_composite' => $shouldAggregateChildren,
             'suppliers' => $suppliers,
+        ];
+    }
+
+    public function adminSupplierWarehouseGrid(): array
+    {
+        if ($this->adminSupplierWarehouseGridCache !== null) {
+            return $this->adminSupplierWarehouseGridCache;
+        }
+
+        if ($this->parent_id !== null) {
+            $this->loadMissing([
+                'parent.children.suppliers',
+                'parent.suppliers',
+            ]);
+        }
+
+        $rootProduct = $this->parent_id !== null
+            ? ($this->relationLoaded('parent') ? $this->getRelation('parent') : $this->parent)
+            : $this;
+
+        if (!$rootProduct) {
+            $rootProduct = $this;
+        }
+
+        $rootProduct->loadMissing([
+            'children.suppliers',
+            'suppliers',
+        ]);
+
+        $modifications = $rootProduct->children instanceof \Illuminate\Support\Collection
+            ? $rootProduct->children
+            : collect($rootProduct->children ?? []);
+
+        $hasRealModifications = $modifications->isNotEmpty();
+
+        if (!$hasRealModifications) {
+            $modifications = collect([$rootProduct]);
+        }
+
+        $modifications = $modifications
+            ->sortBy(function ($product) {
+                $label = trim((string) ($product->short_name ?? $product->name ?? ''));
+
+                if ($label === '') {
+                    $label = (string) $product->id;
+                }
+
+                return mb_strtolower($label, 'UTF-8');
+            })
+            ->values();
+
+        $modificationsData = $modifications
+            ->map(function ($product) use ($rootProduct) {
+                return [
+                    'id' => $product->id,
+                    'short_name' => $product->short_name,
+                    'name' => $product->name,
+                    'code' => $product->code,
+                    'is_active' => (bool) $product->is_active,
+                    'is_base' => $product->id === $rootProduct->id,
+                ];
+            })
+            ->all();
+
+        $suppliersMap = [];
+
+        foreach ($modifications as $product) {
+            $productSuppliers = $product->suppliers instanceof \Illuminate\Support\Collection
+                ? $product->suppliers
+                : collect($product->suppliers ?? []);
+
+            foreach ($productSuppliers as $supplier) {
+                $supplierId = $supplier->id;
+
+                if ($supplierId === null) {
+                    continue;
+                }
+
+                $supplierActive = (int) ($supplier->is_active ?? 1) !== 0;
+
+                if (!$supplierActive) {
+                    continue;
+                }
+
+                $pivot = $supplier->pivot;
+
+                if (!$pivot) {
+                    continue;
+                }
+
+                if ($pivot->is_active !== null && (int) $pivot->is_active === 0) {
+                    continue;
+                }
+
+                if (!isset($suppliersMap[$supplierId])) {
+                    $suppliersMap[$supplierId] = [
+                        'id' => $supplierId,
+                        'name' => $supplier->name ?? '—',
+                        'color' => $supplier->color ?? '#d1d5db',
+                        'currency' => $supplier->currency ?? $supplier->currency_code ?? '',
+                        'items' => [],
+                    ];
+                }
+
+                $suppliersMap[$supplierId]['items'][$product->id] = [
+                    'code' => $pivot->code ?? null,
+                    'barcode' => $pivot->barcode ?? null,
+                    'in_stock' => $pivot->in_stock,
+                    'price' => $pivot->price,
+                    'old_price' => $pivot->old_price,
+                ];
+            }
+        }
+
+        $suppliers = collect($suppliersMap)
+            ->sortBy(function ($supplier) {
+                return mb_strtolower($supplier['name'] ?? '', 'UTF-8');
+            })
+            ->values()
+            ->all();
+
+        return $this->adminSupplierWarehouseGridCache = [
+            'modifications' => $modificationsData,
+            'suppliers' => $suppliers,
+            'has_real_modifications' => $hasRealModifications,
+            'root_product_id' => $rootProduct->id,
+            'current_product_id' => $this->id,
         ];
     }
 
@@ -505,6 +633,7 @@ class Product extends BaseProduct
     public function getAdminNameAttribute() {
         return view('store-crud::columns.product_name', [
             // product
+            'entry' => $this,
             'name' => $this->name,
             'brand' => $this->brand,
             'category' => $this->category,

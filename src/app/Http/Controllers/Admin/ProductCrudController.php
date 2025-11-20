@@ -10,6 +10,7 @@ use Backpack\Store\app\Http\Controllers\Admin\Base\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 // MODELS
 use Backpack\Store\app\Models\Category;
@@ -195,14 +196,14 @@ class ProductCrudController extends CrudController
         //
         $this->crud->addButton('top', 'export_csv', 'view', 'store-crud::buttons.product_bulk_actions', 'top_search');
 
-  // System Trait   
-  $this->setupColumns();
+        // System Trait   
+        $this->setupColumns();
 
-  // Add tag column
-  $this->setupTagColumns();
+        // Add tag column
+        $this->setupTagColumns();
 
-  // User Trait
-  $this->listOperation();
+        // User Trait
+        $this->listOperation();
     }
     
     /**
@@ -379,15 +380,67 @@ class ProductCrudController extends CrudController
      * @return void
      */
     public function showDetailsRow($id) {
-      $sps = SupplierProduct::
-                where('product_id', $id)
-              ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
-              ->orderBy('price')
-              ->get();
+      // $sps = SupplierProduct::
+      //           where('product_id', $id)
+      //         ->orderByRaw('IF(in_stock > ?, ?, ?) DESC', [0, 1, 0])
+      //         ->orderBy('price')
+      //         ->get();
+
+      // $currency = \Settings::get('dress.store.currency.symbol');
+
+      // return view('store-crud::details.product_suppliers', compact('sps', 'currency'));
+
+      $product = $this->crud->getEntry($id);
+
+      if (!$product) {
+        abort(404);
+      }
+
+      $baseProduct = $product->parent ?? $product;
+
+      $baseProduct->loadMissing([
+        'suppliers' => fn ($query) => $query->orderBy('name'),
+        'children.suppliers' => fn ($query) => $query->orderBy('name'),
+      ]);
+
+      $modifications = collect($baseProduct->children ?? [])
+        ->sortBy(function ($item) {
+          $key = $item->short_name ?? $item->name ?? '';
+          return Str::lower((string) $key);
+        })
+        ->values();
+
+      if ($modifications->isEmpty()) {
+        $modifications = collect([$baseProduct]);
+      } else {
+        $modifications = $modifications->prepend($baseProduct)->values();
+      }
+
+      $modifications = $modifications->map(function ($item) {
+        $suppliers = $item->suppliers instanceof \Illuminate\Support\Collection
+          ? $item->suppliers
+          : collect($item->suppliers ?? []);
+
+        $item->setRelation('suppliers', $suppliers
+          ->sortBy(function ($supplier) {
+            $name = $supplier->name ?? '';
+            return Str::lower((string) $name);
+          })
+          ->values());
+
+        return $item;
+      });
 
       $currency = \Settings::get('dress.store.currency.symbol');
+      $currentProductId = $product->id;
+      $baseProductId = $baseProduct->id;
 
-      return view('store-crud::details.product_suppliers', compact('sps', 'currency'));
+      return view('store-crud::details.product_modifications', compact(
+        'modifications',
+        'currency',
+        'currentProductId',
+        'baseProductId'
+      ));
     }
 
     // Upsell

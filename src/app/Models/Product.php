@@ -987,22 +987,27 @@ class Product extends Model
                 'short_name' => [
                     'label' => 'Короткое название',
                     'strategy' => 'translations',
+                    'default' => true,
                 ],
                 'content' => [
                     'label' => 'Описание',
                     'strategy' => 'translations',
+                    'default' => true,
                 ],
                 'merchant_content' => [
                     'label' => 'Контент для маркетплейсов',
                     'strategy' => 'translations',
+                    'default' => true,
                 ],
                 'excerpt' => [
                     'label' => 'Краткое описание',
                     'strategy' => 'translations',
+                    'default' => true,
                 ],
                 'seo' => [
                     'label' => 'SEO',
                     'strategy' => 'translations',
+                    'default' => true,
                 ],
                 'extras_trans' => [
                     'label' => 'Доп. переводы',
@@ -1027,6 +1032,7 @@ class Product extends Model
                 'suppliersData' => [
                     'label' => 'Данные поставщиков',
                     'strategy' => 'append',
+                    'default' => true,
                 ],
             ],
             'relations' => [
@@ -1068,7 +1074,7 @@ class Product extends Model
                     ],
                 ],
                 'children' => [
-                    'label' => 'Модификации (parent_id)',
+                    'label' => 'Модификации',
                     'type' => 'table',
                     'table' => 'ak_products',
                     'column' => 'parent_id',

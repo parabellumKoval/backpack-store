@@ -4,7 +4,9 @@
 @endphp
 <div class="product-admin-name">
  
-    <div class="product-admin-name__title">{{ $name }}</div>
+    <div class="product-admin-name__title">
+        @include('crud::columns.text_progress', ['column' => ['name' => 'name', 'type' => 'text_progress'], 'entry' => $entry])
+    </div>
 
     <div class="product-admin-name__metadata">
         @if($brand)
@@ -18,11 +20,11 @@
         @endif
     </div>
 
-    @if($modifications)
+    <!-- @if($modifications)
         <div class="mt-2">
             @foreach($modifications as $modification)
                 <a href="{{ url('/admin/product/' . $modification['id'] . '/edit') }}" class="btn btn-outline-primary btn-sm mod-btn">{{ $modification['name'] }}</a>
             @endforeach
         </div>
-    @endif
+    @endif -->
 </div>
