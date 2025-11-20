@@ -25,9 +25,11 @@ class ProductModificationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'suppliersData' => $this->normalizeSuppliersData($this->input('suppliersData', [])),
-        ]);
+        if ($this->shouldProcessSuppliersData()) {
+            $this->merge([
+                'suppliersData' => $this->normalizeSuppliersData($this->input('suppliersData', [])),
+            ]);
+        }
     }
     
     /**

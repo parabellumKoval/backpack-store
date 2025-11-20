@@ -30,14 +30,17 @@ class ProductSavedListener
      */
     public function handle(ProductSaved $event)
     {
-      $suppliers = $event->product->suppliers_data ?? $event->product->default_supplier ?? null;
+      $suppliersData = $event->product->suppliers_data;
+      $defaultSupplier = $event->product->default_supplier;
 
-      if(!empty($suppliers)) {
+      if ($suppliersData !== null) {
         if(\Settings::get('dress.supplier.enable', false)) {
-          $this->setMultipleSuppliers($event->product, $suppliers);
+          $this->setMultipleSuppliers($event->product, $suppliersData);
         }else {
-          $this->setDefaultSupplier($event->product, $suppliers);
+          $this->setDefaultSupplier($event->product, $suppliersData);
         }
+      }elseif($defaultSupplier !== null) {
+        $this->setDefaultSupplier($event->product, $defaultSupplier);
       }
       
 

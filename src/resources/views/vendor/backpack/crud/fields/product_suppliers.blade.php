@@ -8,6 +8,8 @@
 
 @include('crud::fields.inc.wrapper_start')
 
+<input type="hidden" name="suppliersData_present" value="1">
+
 <div class="suppliers-container">
     <label>{!! $field['label'] !!}</label>
     @foreach($field['value'] as $key => $item)

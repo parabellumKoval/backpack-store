@@ -27,6 +27,22 @@ trait BuildsSuppliersDataRules
     }
 
     /**
+     * Проверяет, нужно ли обрабатывать данные поставщиков для текущего запроса.
+     */
+    protected function shouldProcessSuppliersData(): bool
+    {
+        $fieldPresent = false;
+
+        if (method_exists($this, 'boolean')) {
+            $fieldPresent = $this->boolean('suppliersData_present');
+        } elseif (method_exists($this, 'input')) {
+            $fieldPresent = filter_var($this->input('suppliersData_present'), FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return (bool) ($this->has('suppliersData') || $fieldPresent);
+    }
+
+    /**
      * Базовые и условные правила для suppliersData.* по индексам.
      */
     protected function buildSuppliersDataRules(array $suppliers): array

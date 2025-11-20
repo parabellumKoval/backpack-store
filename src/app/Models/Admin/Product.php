@@ -746,6 +746,333 @@ class Product extends BaseProduct
 
     public function setDisabledRegionsAttribute($value) {
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SERVICE OPERATION
+    |--------------------------------------------------------------------------
+    */
+    public function getServiceMergeConfiguration(): array
+    {
+        return [
+            'label' => 'Слияние товаров',
+            'description' => 'Объединяет дубликаты товаров и переносит связанные данные.',
+            'candidate_search' => ['name', 'slug', 'code', 'id'],
+            'fields' => [
+                'name' => [
+                    'label' => 'Название',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'short_name' => [
+                    'label' => 'Короткое название',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'content' => [
+                    'label' => 'Описание',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'merchant_content' => [
+                    'label' => 'Контент для маркетплейсов',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'excerpt' => [
+                    'label' => 'Краткое описание',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'seo' => [
+                    'label' => 'SEO',
+                    'strategy' => 'translations',
+                    'default' => true,
+                ],
+                'extras_trans' => [
+                    'label' => 'Доп. переводы',
+                    'strategy' => 'translations',
+                ],
+                'extras' => [
+                    'label' => 'Extras',
+                    'strategy' => 'append',
+                ],
+                'images' => [
+                    'label' => 'Изображения',
+                    'strategy' => 'append',
+                ],
+                'props' => [
+                    'label' => 'Характеристики',
+                    'strategy' => 'append',
+                ],
+                'priceOverrides' => [
+                    'label' => 'Переопределения цен',
+                    'strategy' => 'append',
+                    'handler' => 'mergePriceOverridesField',
+                ],
+                // 'suppliersData' => [
+                //     'label' => 'Данные поставщиков',
+                //     'strategy' => 'append',
+                //     'default' => true,
+                //     'handler' => 'mergeSuppliersDataField',
+                // ],
+            ],
+            'relations' => [
+                'categories' => [
+                    'label' => 'Категории',
+                    'type' => 'table',
+                    'table' => 'ak_category_product',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'unique' => ['category_id'],
+                    'default' => true,
+                    'help' => 'Переносит записи из pivot-таблицы и удаляет дубликаты.',
+                ],
+                'attributes' => [
+                    'label' => 'Атрибуты (ak_attribute_product)',
+                    'type' => 'table',
+                    'table' => 'ak_attribute_product',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'unique' => ['attribute_id', 'attribute_value_id'],
+                ],
+                'suppliers' => [
+                    'label' => 'Поставщики',
+                    'type' => 'table',
+                    'table' => 'ak_supplier_product',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'unique' => ['supplier_id'],
+                ],
+                'taggables' => [
+                    'label' => 'Теги',
+                    'type' => 'table',
+                    'table' => 'ak_taggables',
+                    'column' => 'taggable_id',
+                    'primary_key' => 'id',
+                    'unique' => ['tag_id'],
+                    'constraints' => [
+                        ['column' => 'taggable_type', 'value' => static::class],
+                    ],
+                ],
+                'children' => [
+                    'label' => 'Модификации',
+                    'type' => 'table',
+                    'table' => 'ak_products',
+                    'column' => 'parent_id',
+                    'primary_key' => 'id',
+                    'help' => 'Привязывает дочерние товары к новой базовой записи.',
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Merge supplier data while respecting the force flag and supplier ids.
+     */
+    public function mergeSuppliersDataField(self $source, array $payload): void
+    {
+        $field = $payload['field'] ?? 'suppliersData';
+        $force = (bool) ($payload['force'] ?? false);
+
+        $this->performArrayFieldMerge(
+            $source,
+            $field,
+            'supplier',
+            $force,
+            function (array $item) {
+                if (array_key_exists('supplier', $item) && $item['supplier'] !== null && $item['supplier'] !== '') {
+                    $item['supplier'] = (int) $item['supplier'];
+                }
+
+                return $item;
+            }
+        );
+    }
+
+    /**
+     * Merge price overrides grouped by country codes.
+     */
+    public function mergePriceOverridesField(self $source, array $payload): void
+    {
+        $field = $payload['field'] ?? 'priceOverrides';
+        $force = (bool) ($payload['force'] ?? false);
+
+        $this->performArrayFieldMerge(
+            $source,
+            $field,
+            'country',
+            $force,
+            function (array $item) {
+                if (isset($item['country'])) {
+                    $country = strtolower(trim((string) $item['country']));
+                    $item['country'] = $country !== '' ? $country : null;
+                }
+
+                return $item;
+            }
+        );
+    }
+
+    /**
+     * Merge a repeatable array field using a specific key column.
+     *
+     * @param  callable|null  $normalizer
+     */
+    public function performArrayFieldMerge(self $source, string $field, string $keyName, bool $force, ?callable $normalizer = null): void
+    {
+        $targetItems = $this->normalizeMergeableFieldValue($this->getAttribute($field));
+        $sourceItems = $this->normalizeMergeableFieldValue($source->getAttribute($field));
+
+        if ($sourceItems === []) {
+            return;
+        }
+
+        if ($normalizer) {
+            $targetItems = $this->applyMergeItemNormalizer($targetItems, $normalizer);
+            $sourceItems = $this->applyMergeItemNormalizer($sourceItems, $normalizer);
+        }
+
+        $merged = $this->mergeItemsByKey($targetItems, $sourceItems, $keyName, $force);
+        $this->setAttribute($field, $merged);
+    }
+
+    /**
+     * Normalize mixed values into an array of associative rows.
+     *
+     * @param  mixed  $value
+     * @return array<int, array<string, mixed>>
+     */
+    public function normalizeMergeableFieldValue($value): array
+    {
+        if ($value instanceof \Illuminate\Contracts\Support\Arrayable) {
+            $value = $value->toArray();
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                return [];
+            }
+
+            $decoded = json_decode($trimmed, true);
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $value = $decoded;
+            }
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $normalized[] = $item;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Apply a normalizer callback to each row of data.
+     *
+     * @param  callable  $normalizer
+     * @return array<int, array<string, mixed>>
+     */
+    public function applyMergeItemNormalizer(array $items, callable $normalizer): array
+    {
+        $normalized = [];
+
+        foreach ($items as $item) {
+            $item = $normalizer($item);
+
+            if (is_array($item)) {
+                $normalized[] = $item;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Merge rows by a specific key with optional forced overwrites.
+     *
+     * @param  array<int, array<string, mixed>>  $targetItems
+     * @param  array<int, array<string, mixed>>  $sourceItems
+     * @return array<int, array<string, mixed>>
+     */
+    public function mergeItemsByKey(array $targetItems, array $sourceItems, string $keyName, bool $force): array
+    {
+        if ($sourceItems === []) {
+            return $targetItems;
+        }
+
+        $result = array_values($targetItems);
+        $positions = [];
+
+        foreach ($result as $index => $item) {
+            $key = $this->extractMergeKeyValue($item, $keyName);
+
+            if ($key !== null && ! array_key_exists($key, $positions)) {
+                $positions[$key] = $index;
+            }
+        }
+
+        foreach ($sourceItems as $item) {
+            $key = $this->extractMergeKeyValue($item, $keyName);
+
+            if ($key === null) {
+                if ($force) {
+                    $result[] = $item;
+                }
+
+                continue;
+            }
+
+            if (! array_key_exists($key, $positions)) {
+                $positions[$key] = count($result);
+                $result[] = $item;
+
+                continue;
+            }
+
+            if ($force) {
+                $result[$positions[$key]] = $item;
+            }
+        }
+
+        return array_values($result);
+    }
+
+    /**
+     * Extract comparable key value from a row.
+     */
+    public function extractMergeKeyValue(array $item, string $keyName): ?string
+    {
+        if (! array_key_exists($keyName, $item)) {
+            return null;
+        }
+
+        $value = $item[$keyName];
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        return null;
+    }
 }
 
 

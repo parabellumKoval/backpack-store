@@ -362,6 +362,14 @@ class ProductCrudController extends CrudController
         \Backpack\Reviews\Facades\Reviews::attachToCrud($this->crud, 'Отзывы', array_filter([
           'reviewable_type' => $reviewableType,
         ]));
+
+        // Prevent Backpack from treating the reviews widget as a relational field (it calls sync otherwise).
+        $this->crud->modifyField('reviews', [
+          'entity' => false,
+          'model' => false,
+          'pivot' => false,
+          'relation_type' => null,
+        ]);
       }
 
       if ((bool) config('dress.store.enable_orders_in_product_crud', true)) {
