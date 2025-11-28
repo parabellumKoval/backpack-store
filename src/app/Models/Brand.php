@@ -20,6 +20,7 @@ use ParabellumKoval\BackpackImages\Traits\HasImages;
 
 // MODEL
 use Backpack\Store\app\Model\Product;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class Brand extends Model
 {
@@ -29,6 +30,7 @@ class Brand extends Model
    use SluggableScopeHelpers;
    use HasTranslations;
     use HasImages;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -170,6 +172,29 @@ class Brand extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            $this->slug,
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'hidden'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $this->slug,
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'hidden'),
+        ]);
+    }
 
     /**
      * getImageAttribute

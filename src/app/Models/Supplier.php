@@ -12,11 +12,13 @@ use Backpack\Store\database\factories\BrandFactory;
 
 // MODEL
 use Backpack\Store\app\Models\Product;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class Supplier extends Model
 {
     use HasFactory;
     use CrudTrait;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -105,6 +107,34 @@ class Supplier extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        $countryList = is_array($this->regions) ? implode(', ', $this->regions) : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            'currency: '.($this->currency_code ?? '-'),
+            $countryList ? 'countries: '.$countryList : null,
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'inactive'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $countryList = is_array($this->regions) ? implode(', ', $this->regions) : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            'currency: '.($this->currency_code ?? '-'),
+            $countryList ? 'countries: '.$countryList : null,
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'inactive'),
+        ]);
+    }
 
     public function getColorAttribute() {
       return $this->extras['color'] ?? '#000000';

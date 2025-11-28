@@ -136,6 +136,9 @@ class ProductSavedListener
     }
     
     private function handleHorizontallModifications($event) {
+        if (!empty($event->product->skipServiceModificationSync)) {
+          return;
+        }
         // Save modifications
         $modifications = $event->product->modificationsToSave;
         $old_modifications = $event->product->modifications;

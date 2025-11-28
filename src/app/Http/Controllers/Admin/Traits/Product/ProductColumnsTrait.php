@@ -173,8 +173,8 @@ trait ProductColumnsTrait
             'label' => trans('backpack-store::product-column.categories'),
             'type'  => 'select2_multiple',
             'model' => Category::class,
-            'attribute' => 'name',
-            'data_source' => url('admin/api/category'),
+            'attribute' => 'uniqHtml',
+            'data_source' => route('backpack.helpers.fetch', ['key' => 'category']),
             'max_width' => '400px',
             'priority' => 7
         ]);

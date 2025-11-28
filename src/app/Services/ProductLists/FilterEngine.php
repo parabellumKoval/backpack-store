@@ -143,6 +143,7 @@ class FilterEngine
             'stock' => $this->filterByStock($filter, $context, $restrict, $limit),
             'sale', 'discount' => $this->filterBySale($filter, $context, $restrict, $limit),
             'products', 'product' => $this->filterByProducts($filter, $restrict),
+            'orders' => $this->filterByOrders($filter, $context, $restrict, $limit),
             default => null,
         };
     }
@@ -429,6 +430,51 @@ class FilterEngine
         }
 
         return $productIds;
+    }
+
+    protected function filterByOrders(array $filter, ListRequestContext $context, ?array $restrict, ?int $limit): ?array
+    {
+        $minCount = $filter['min_count'] ?? $filter['min_orders'] ?? null;
+        $minCount = max(1, (int) ($minCount ?? 1));
+
+        $metric = $filter['metric'] ?? 'orders';
+        $metric = in_array($metric, ['orders', 'quantity'], true) ? $metric : 'orders';
+
+        $periodDays = max(0, (int) ($filter['period_days'] ?? 0));
+        $scope = $filter['scope'] ?? 'current_country';
+
+        $query = $this->catalogBaseQuery($context)
+            ->join('ak_order_product as op', 'op.product_id', '=', 'c.product_id');
+
+        if ($scope !== 'global') {
+            $query->where('op.country_code', '=', $context->country);
+        }
+
+        if ($periodDays > 0) {
+            $since = now()->subDays($periodDays);
+            $query->join('ak_orders as o', 'o.id', '=', 'op.order_id')
+                ->where('o.created_at', '>=', $since);
+        }
+
+        if ($restrict) {
+            $query->whereIn('c.product_id', $restrict);
+        }
+
+        $metricSelect = $metric === 'quantity'
+            ? 'COALESCE(SUM(op.amount), 0)'
+            : 'COUNT(DISTINCT op.order_id)';
+
+        $query->select('c.product_id')
+            ->selectRaw($metricSelect.' as metric_value')
+            ->groupBy('c.product_id')
+            ->having('metric_value', '>=', $minCount)
+            ->orderByDesc('metric_value');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query->pluck('c.product_id')->toArray();
     }
 
     protected function expandCategoryIds(array $ids, bool $includeChildren): array

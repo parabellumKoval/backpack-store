@@ -71,6 +71,17 @@ class CategoryCrudController extends CrudController
     {
         $langs_list = $this->langs_list;
 
+        $depthOptions = [];
+        $depthValues = $this->category_class::withoutGlobalScopes()
+            ->select('depth')
+            ->whereNotNull('depth')
+            ->distinct()
+            ->orderBy('depth')
+            ->pluck('depth');
+        foreach ($depthValues as $depth) {
+            $depthOptions[$depth] = (string) $depth;
+        }
+
         // Filter by category
         $this->crud->addFilter([
             'name' => 'category',
@@ -81,6 +92,16 @@ class CategoryCrudController extends CrudController
         }, function($id) {
             $this->crud->query->where('parent_id', $id);
         });
+
+        if (!empty($depthOptions)) {
+            $this->crud->addFilter([
+                'name' => 'depth',
+                'label' => 'Уровень',
+                'type' => 'select2',
+            ], $depthOptions, function ($depth) {
+                $this->crud->query->where('depth', $depth);
+            });
+        }
 
         $this->crud->addFilter([
             'name' => 'is_active',
@@ -219,6 +240,10 @@ class CategoryCrudController extends CrudController
                 'name' => 'parent',
                 'label' => 'Родительская категория',
                 'type' => 'relationship',
+                'attribute' => 'uniqHtml',
+                'ajax' => true,
+                'data_source' => route('backpack.helpers.fetch', ['key' => 'category']),
+                'minimum_input_length' => 2,
                 'tab' => trans('backpack-store::category.tabs.main')
             ],
             [
@@ -301,10 +326,13 @@ class CategoryCrudController extends CrudController
         $this->crud->addField([
             'name' => 'merchant_id',
             'label' => 'Категория Google Merchants',
-            'type' => 'select2',
+            'type' => 'relationship',
             'entity' => 'merchant',
-            'attribute' => 'keyName',
+            'attribute' => 'uniqHtml',
             'model' => 'Backpack\Store\app\Models\MerchantCategory',
+            'ajax' => true,
+            'data_source' => route('backpack.helpers.fetch', ['key' => 'merchant_category']),
+            'minimum_input_length' => 2,
             'tab' => 'Google Merchants',
             'hint' => 'Выберите из списка категорию Google Merchants, которой соответствует данная.',
         ]);

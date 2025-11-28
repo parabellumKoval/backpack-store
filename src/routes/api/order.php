@@ -20,7 +20,11 @@ use Backpack\Store\app\Http\Controllers\Api\OrderController;
 $guard = 'sanctum';
 
 Route::prefix('api/order')
-  ->middleware([Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class, \Backpack\Store\app\Http\Middleware\ForceJsonResponse::class])
+  ->middleware([
+    Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class,
+    \Backpack\Store\app\Http\Middleware\ForceJsonResponse::class,
+    Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class,
+  ])
   ->controller(OrderController::class)->group(function () use($guard) {
     // GET orders list with pagination for authed user
     Route::post('/get', 'index')->middleware(['api', "auth:${guard}"]);

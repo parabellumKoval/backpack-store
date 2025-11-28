@@ -16,9 +16,14 @@ use Backpack\Store\app\Http\Controllers\Api\CategoryController;
 |
 */
 
-Route::prefix('api/category')->middleware(['api', Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+Route::prefix('api/category')->middleware([
+    'api',
+    Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class,
+    Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class,
+])
   ->controller(CategoryController::class)->group(function () {
     Route::get('', 'index');
+    Route::get('/main', 'main');
     Route::get('/simple', 'indexSimple');
     Route::get('/{slug}', 'show');
 });

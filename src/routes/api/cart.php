@@ -16,7 +16,10 @@ use Backpack\Store\app\Http\Controllers\Api\CartController;
 |
 */
 
-Route::prefix('api/cart')->middleware([Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+Route::prefix('api/cart')->middleware([
+    Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class,
+    Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class,
+])
   ->controller(CartController::class)->group(function () {
   
     Route::get('', 'index');

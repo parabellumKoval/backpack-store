@@ -10,6 +10,7 @@ Route::prefix('api/store/invoices')
     ->middleware([
         'api',
         Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class,
+        Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class,
     ])
     ->controller(InvoiceController::class)
     ->group(function () use ($guard) {

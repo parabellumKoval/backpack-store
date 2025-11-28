@@ -3,9 +3,11 @@
 namespace Backpack\Store\app\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class Cart extends Model
 {
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -63,6 +65,37 @@ class Cart extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    public function getUniqStringAttribute(): string
+    {
+        $user = $this->relationLoaded('user') ? $this->getRelation('user') : null;
+        $product = $this->relationLoaded('product') ? $this->getRelation('product') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $user->email ?? $user->name ?? sprintf('user #%s', $this->user_id ?? '?'),
+            $product?->name ?? sprintf('product #%s', $this->product_id ?? '?'),
+            sprintf('qty: %s', $this->amount ?? 0),
+            $this->status ? 'status: '.$this->status : null,
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $user = $this->relationLoaded('user') ? $this->getRelation('user') : null;
+        $product = $this->relationLoaded('product') ? $this->getRelation('product') : null;
+
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $user->email ?? $user->name ?? sprintf('user #%s', $this->user_id ?? '?'),
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $product?->name ?? sprintf('product #%s', $this->product_id ?? '?'),
+            sprintf('qty: %s', $this->amount ?? 0),
+            $this->status ? 'status: '.$this->status : null,
+        ]);
+    }
+
     public function getStatusStringAttribute(){
 	    if($this->status == 'new' || $this->status == 'pending' || $this->status == 'paid' || $this->status == 'sent')
 	    	return '<span class="icon-sent order-history-icon"></span><span class="text">'.$this->status.'</span>';

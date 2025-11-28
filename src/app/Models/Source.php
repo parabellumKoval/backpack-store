@@ -13,11 +13,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\CategorySource;
 use Backpack\Store\app\Models\BrandSource;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class Source extends Model
 {
     use HasFactory;
     use CrudTrait;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -162,6 +164,38 @@ class Source extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        $supplier = $this->relationLoaded('supplier') ? $this->getRelation('supplier') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            $this->key,
+            $this->type,
+            $supplier?->name ?? sprintf('supplier #%s', $this->supplier_id ?? '?'),
+            $this->is_active ? 'active' : 'disabled',
+            $this->last_loading ? 'last '.$this->last_loading->format('Y-m-d H:i') : null,
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $supplier = $this->relationLoaded('supplier') ? $this->getRelation('supplier') : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $this->key,
+            $this->type,
+            $supplier?->name ?? sprintf('supplier #%s', $this->supplier_id ?? '?'),
+            $this->is_active ? 'active' : 'disabled',
+            $this->last_loading ? 'last '.$this->last_loading->format('Y-m-d H:i') : null,
+        ]);
+    }
     
     /**
      * getBrandsDataAttribute

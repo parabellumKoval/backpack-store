@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\CategoryFactory;
 use ParabellumKoval\BackpackImages\Traits\HasImages;
 use Backpack\Tag\app\Traits\Taggable;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class Category extends Model
 {
@@ -28,6 +29,7 @@ class Category extends Model
     use HasTranslations;
     use HasImages;
     use Taggable;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -87,6 +89,7 @@ class Category extends Model
         'children' => $this->childrenForCountry(null, true),
         'uniq_title' => $this->uniqTitle,
         'tags' => $tags,
+        'extras' => $this->extras,
       ];    
     }
     
@@ -486,6 +489,27 @@ class Category extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */ 
+
+    public function getUniqStringAttribute(): string
+    {
+        return $this->formatUniqString([
+            $this->uniqTitle,
+            $this->slug,
+            sprintf('status: %s', $this->is_active ? 'active' : 'hidden'),
+            $this->getAdminCountriesLabel(),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $headline = $this->formatUniqString([$this->uniqTitle]);
+
+        return $this->formatUniqHtml($headline, [
+            $this->slug,
+            sprintf('status: %s', $this->is_active ? 'active' : 'hidden'),
+            $this->getAdminCountriesLabel(),
+        ]);
+    }
 
     
     public function getUniqTitleAttribute() {

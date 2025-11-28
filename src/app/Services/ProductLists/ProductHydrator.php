@@ -16,12 +16,17 @@ class ProductHydrator
 
     public function fetchCatalogRows(array $ids, string $country): array
     {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
         if (empty($ids)) {
             return [];
         }
 
-        $rows = Catalog::where('country_code', $country)->whereIn('product_id', $ids)->paginate();
-        return $rows->all();
+        return Catalog::query()
+            ->where('country_code', $country)
+            ->whereIn('product_id', $ids)
+            ->get()
+            ->keyBy('product_id')
+            ->all();
     }
 
     public function hydrate(array $ids, string $country, string $lang) {

@@ -664,9 +664,9 @@ class SourceCrudController extends CrudController
               'entity' => 'categories',
               'placeholder' => "Select a category", 
               'model' => 'Backpack\Store\app\Models\Category',
-              'attribute' => "name",
+              'attribute' => "uniqHtml",
               'minimum_input_length' => 2,
-              'data_source' => url("/admin/api/category"),
+              'data_source' => route('backpack.helpers.fetch', ['key' => 'category']),
               'wrapper'   => [ 
                 'class' => 'form-group col-md-6'
               ],
@@ -715,9 +715,9 @@ class SourceCrudController extends CrudController
               'entity' => 'brands',
               'placeholder' => "Select a category", 
               'model' => 'Backpack\Store\app\Models\Brand',
-              'attribute' => "name",
+              'attribute' => "uniqHtml",
               'minimum_input_length' => 2,
-              'data_source' => url("/admin/api/brand"),
+              'data_source' => route('backpack.helpers.fetch', ['key' => 'brand']),
               'wrapper'   => [ 
                 'class' => 'form-group col-md-8'
               ],

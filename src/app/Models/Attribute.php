@@ -20,6 +20,7 @@ use Backpack\Store\database\factories\AttributeFactory;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\Category;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class Attribute extends Model
 {
@@ -28,6 +29,7 @@ class Attribute extends Model
     use Sluggable;
     use SluggableScopeHelpers;
     use HasTranslations;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -210,7 +212,35 @@ class Attribute extends Model
     |--------------------------------------------------------------------------
     | ACCESSORS
     |--------------------------------------------------------------------------
-    */
+    */ 
+
+    public function getUniqStringAttribute(): string
+    {
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            $this->slug,
+            sprintf('type: %s', $this->type ?? '?'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+        ]);
+
+        $status = $this->is_active ? 'active' : 'inactive';
+        $filterState = $this->in_filters ? 'filters: on' : null;
+
+        return $this->formatUniqHtml($headline, [
+            $this->slug,
+            sprintf('type: %s', $this->type ?? '?'),
+            $status,
+            $filterState,
+        ]);
+    }
     
     /**
      * getSlugOrNameAttribute

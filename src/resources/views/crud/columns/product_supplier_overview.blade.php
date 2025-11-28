@@ -47,14 +47,52 @@
         return $formatNumber($numeric, 2);
     };
 
-    $modLabel = function (array $mod) {
-        $short = trim((string) ($mod['short_name'] ?? ''));
+    $resolveLocalizedValue = static function (array $mod, string $attribute): string {
+        $value = trim((string) ($mod[$attribute] ?? ''));
+
+        if ($value !== '') {
+            return $value;
+        }
+
+        $translationsKey = $attribute . '_translations';
+        $translations = $mod[$translationsKey] ?? null;
+
+        if (!is_array($translations)) {
+            return '';
+        }
+
+        $preferredLocales = array_values(array_filter([
+            app()->getLocale(),
+            config('app.fallback_locale'),
+        ]));
+
+        foreach ($preferredLocales as $locale) {
+            $candidate = trim((string) ($translations[$locale] ?? ''));
+
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        foreach ($translations as $candidate) {
+            $candidate = trim((string) $candidate);
+
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return '';
+    };
+
+    $modLabel = static function (array $mod) use ($resolveLocalizedValue) {
+        $short = $resolveLocalizedValue($mod, 'short_name');
 
         if ($short !== '') {
             return $short;
         }
 
-        $name = trim((string) ($mod['name'] ?? ''));
+        $name = $resolveLocalizedValue($mod, 'name');
 
         if ($name !== '') {
             return $name;

@@ -125,12 +125,14 @@ class OrderCrudController extends CrudController
           $existingBonuses = $info['bonuses'] ?? [];
           $currencyCode = $entry->currency_code ?? \Store::countryCurrency($entry->country_code);
           $bonusFiat = $entry->bonus_discount_total ?? $info['bonusesUsed'];
+          $defaultWalletCurrency = $existingBonuses['wallet_currency'] ?? null;
           $info['bonuses'] = array_merge([
             'points' => 0,
             'fiat_amount' => $bonusFiat,
             'fiat_currency' => $currencyCode,
             'order_currency' => $currencyCode,
-            'wallet_currency' => $existingBonuses['wallet_currency'] ?? null,
+            'wallet_currency' => $defaultWalletCurrency,
+            'wallet_currency_label' => $defaultWalletCurrency ? store_currency_label($defaultWalletCurrency) : null,
             'refunded' => $existingBonuses['refunded'] ?? false,
             'reference_id' => $existingBonuses['reference_id'] ?? null,
           ], $existingBonuses);
@@ -442,9 +444,9 @@ class OrderCrudController extends CrudController
             'type'      => 'select2_from_ajax',
             'label'   => 'Товар',
             'model'     => $this->PRODUCT_MODEL,
-            'attribute' => 'name',
+            'attribute' => 'uniqHtml',
             'entity' => 'products',
-            'data_source' => url("/admin/api/product"),
+            'data_source' => route('backpack.helpers.fetch', ['key' => 'product']),
             'wrapper' => ['class' => 'form-group col-md-10'],
             'placeholder' => "Выберите товар",
             'minimum_input_length' => 2

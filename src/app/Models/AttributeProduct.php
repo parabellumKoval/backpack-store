@@ -16,12 +16,14 @@ use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\Product;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class AttributeProduct extends Pivot
 {
   use HasFactory;
   use CrudTrait;
   use HasTranslations;
+  use FormatsUniqAttribute;
 
   /*
   |--------------------------------------------------------------------------
@@ -86,6 +88,41 @@ class AttributeProduct extends Pivot
   | ACCESSORS
   |--------------------------------------------------------------------------
   */
+
+  public function getUniqStringAttribute(): string
+  {
+      $attribute = $this->relationLoaded('attribute') ? $this->getRelation('attribute') : null;
+      $product = $this->relationLoaded('product') ? $this->getRelation('product') : null;
+      $attributeValue = $this->relationLoaded('attribute_value') ? $this->getRelation('attribute_value') : null;
+
+      $valueLabel = $this->value_trans ?? $this->value ?? $attributeValue?->value;
+
+      return $this->formatUniqString([
+          '#'.$this->id,
+          $valueLabel,
+          $attribute?->name ?? sprintf('attribute #%s', $this->attribute_id ?? '?'),
+          $product?->name ?? sprintf('product #%s', $this->product_id ?? '?'),
+      ]);
+  }
+
+  public function getUniqHtmlAttribute(): string
+  {
+      $attribute = $this->relationLoaded('attribute') ? $this->getRelation('attribute') : null;
+      $product = $this->relationLoaded('product') ? $this->getRelation('product') : null;
+      $attributeValue = $this->relationLoaded('attribute_value') ? $this->getRelation('attribute_value') : null;
+
+      $valueLabel = $this->value_trans ?? $this->value ?? $attributeValue?->value;
+      $headline = $this->formatUniqString([
+          '#'.$this->id,
+          $valueLabel,
+      ]);
+
+      return $this->formatUniqHtml($headline, [
+          $attribute?->name ?? sprintf('attribute #%s', $this->attribute_id ?? '?'),
+          $attributeValue?->value ? 'option: '.$attributeValue->value : null,
+          $product?->name ?? sprintf('product #%s', $this->product_id ?? '?'),
+      ]);
+  }
 
   // public function getValueAttribute() {
 

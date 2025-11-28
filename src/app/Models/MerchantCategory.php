@@ -5,11 +5,13 @@ namespace Backpack\Store\app\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 
 class MerchantCategory extends Model
 {
   use CrudTrait;
+  use FormatsUniqAttribute;
 
   /*
   |--------------------------------------------------------------------------
@@ -66,6 +68,27 @@ class MerchantCategory extends Model
   | ACCESSORS
   |--------------------------------------------------------------------------
   */
+
+  public function getUniqStringAttribute(): string
+  {
+      return $this->formatUniqString([
+          '#'.$this->id,
+          $this->key,
+          $this->name,
+      ]);
+  }
+
+  public function getUniqHtmlAttribute(): string
+  {
+      $headline = $this->formatUniqString([
+          '#'.$this->id,
+          $this->name,
+      ]);
+
+      return $this->formatUniqHtml($headline, [
+          $this->key,
+      ]);
+  }
   
   public function getKeyNameAttribute() {
     return "{$this->key} - {$this->name}";

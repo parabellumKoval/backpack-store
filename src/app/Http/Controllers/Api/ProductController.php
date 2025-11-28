@@ -14,6 +14,8 @@ use Backpack\Store\app\Http\Resources\ProductCollection;
 
 use Backpack\Store\app\Services\Catalog\ProductFilterService;
 use Backpack\Store\app\Services\Catalog\ProductQueryService;
+use Backpack\Store\app\Contracts\SupplierFilter;
+use Backpack\Store\Facades\Store;
 
 class ProductController extends \App\Http\Controllers\Controller
 {
@@ -260,10 +262,25 @@ class ProductController extends \App\Http\Controllers\Controller
     if(empty($request->cart))
       return response()->json([]);
      
-    $idsArray = array_keys($request->cart);
+    $requestedIds = array_map('intval', array_keys($request->cart));
+    $country = Store::context()->country ?? null;
 
-    $products = $this->product_class::whereIn('id', $idsArray)->get();
+    $availableIds = app(SupplierFilter::class)
+      ->spOk($country)
+      ->whereIn('product_id', $requestedIds)
+      ->pluck('product_id')
+      ->map(function ($id) {
+        return (int)$id;
+      })
+      ->unique()
+      ->all();
+
+    $products = $this->product_class::whereIn('id', $requestedIds)->get();
     
+    $products->each(function ($product) use ($availableIds) {
+      $product->external = in_array($product->id, $availableIds, true) ? 0 : 1;
+    });
+
     $collection = self::$resources['product']['medium']::collection($products); 
 
     return $collection;

@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,9 +20,11 @@ use Backpack\Store\app\Services\Search\SearchConfigurableAbstract;
 // Images
 use ParabellumKoval\BackpackImages\Traits\HasImages;
 
+use Backpack\Reviews\app\Contracts\ReviewableAvailabilityScope;
 use Backpack\Store\app\Models\Traits\HasModification;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
-class Catalog extends SearchConfigurableAbstract
+class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabilityScope
 {
 
     use HasTranslations;
@@ -29,6 +32,7 @@ class Catalog extends SearchConfigurableAbstract
     use HasModification;
 
     use HasImages;
+    use FormatsUniqAttribute;
     /*
     |--------------------------------------------------------------------------
     | GLOBAL VARIABLES
@@ -104,6 +108,20 @@ class Catalog extends SearchConfigurableAbstract
     
     public function scopeAvailable($q) {
       return $q->where('is_available', 1);
+    }
+
+    public function scopeReviewableAvailability(Builder $query, array $context = []): Builder
+    {
+        $table = $query->getModel()->getTable();
+
+        $query->where("{$table}.is_available", 1);
+
+        $country = $context['country'] ?? null;
+        if ($country) {
+            $query->where("{$table}.country_code", $country);
+        }
+
+        return $query;
     }
 
     /**
@@ -230,6 +248,41 @@ class Catalog extends SearchConfigurableAbstract
 
     public function getCurrencyAttribute() {
       return $this->currency_code;
+    }
+
+    public function getUniqStringAttribute(): string
+    {
+        $priceText = $this->price !== null
+            ? sprintf('%s %s', number_format((float) $this->price, 2, '.', ' '), $this->currency_code ?? '')
+            : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            sprintf('product #%s', $this->product_id ?? '?'),
+            $this->country_code ? strtoupper($this->country_code) : null,
+            $priceText ? 'price: '.$priceText : null,
+            sprintf('availability: %s', $this->is_available ? 'yes' : 'no'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $priceText = $this->price !== null
+            ? sprintf('%s %s', number_format((float) $this->price, 2, '.', ' '), $this->currency_code ?? '')
+            : null;
+
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            sprintf('product #%s', $this->product_id ?? '?'),
+            $this->country_code ? strtoupper($this->country_code) : null,
+            $priceText ? 'price: '.$priceText : null,
+            sprintf('availability: %s', $this->is_available ? 'yes' : 'no'),
+        ]);
     }
 
 }

@@ -16,7 +16,9 @@ use Backpack\Store\app\Http\Controllers\Api\BrandController;
 |
 */
 
-Route::prefix('api/brand')->controller(BrandController::class)->group(function () {
+Route::prefix('api/brand')
+  ->middleware([Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class])
+  ->controller(BrandController::class)->group(function () {
   
   Route::get('', 'index')->middleware('api');
 

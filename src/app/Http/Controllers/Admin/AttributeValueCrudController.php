@@ -80,7 +80,11 @@ class AttributeValueCrudController extends CrudController
         $this->crud->addField([
           'name' => 'attribute',
           'label' => 'Атрибут',
-          'type' => 'relationship'
+          'type' => 'relationship',
+          'attribute' => 'uniqHtml',
+          'ajax' => true,
+          'data_source' => route('backpack.helpers.fetch', ['key' => 'attribute']),
+          'minimum_input_length' => 2,
         ]);
 
         $this->crud->addField([

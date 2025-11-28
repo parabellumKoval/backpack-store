@@ -222,8 +222,8 @@ class ProductListCrudController extends CrudController
                           'name'        => 'product_id',
                           'label'       => 'Товар',
                           'type'        => 'select2_from_ajax',
-                          'data_source' => backpack_url('/api/product'), 
-                          'attribute'   => 'name',
+                          'data_source' => route('backpack.helpers.fetch', ['key' => 'product']),
+                          'attribute'   => 'uniqHtml',
                           'model'       => \Backpack\Store\app\Models\Product::class,
                           'placeholder' => 'Начните вводить название',
                           'minimum_input_length' => 2,
@@ -544,6 +544,7 @@ class ProductListCrudController extends CrudController
         'stock'             => 'Склад',
         'sale'              => 'Скидка',
         'products'          => 'Товары',
+        'orders'            => 'Заказы',
       ];
 
       if(!empty($exclude))
@@ -562,8 +563,8 @@ class ProductListCrudController extends CrudController
                 'name'        => 'categories',
                 'label'       => 'Категории',
                 'type'        => 'select2_from_ajax_multiple',
-                'data_source' => backpack_url('/api/category'),
-                'attribute'   => 'name',
+                'data_source' => route('backpack.helpers.fetch', ['key' => 'category']),
+                'attribute'   => 'uniqHtml',
                 'model'       => \Backpack\Store\app\Models\Category::class,
                 'minimum_input_length' => 2,
                         'placeholder' => "Выберите категорию",
@@ -585,8 +586,8 @@ class ProductListCrudController extends CrudController
                 'name'        => 'brands',
                 'label'       => 'Бренды',
                 'type'        => 'select2_from_ajax_multiple',
-                'data_source' => backpack_url('/api/brand'),
-                'attribute'   => 'name',
+                'data_source' => route('backpack.helpers.fetch', ['key' => 'brand']),
+                'attribute'   => 'uniqHtml',
                 'model'       => \Backpack\Store\app\Models\Brand::class,
                 'allows_multiple' => true,
                 'minimum_input_length' => 2,
@@ -603,8 +604,8 @@ class ProductListCrudController extends CrudController
                 'name'        => 'tags',
                 'label'       => 'Теги',
                 'type'        => 'select2_from_ajax_multiple',
-                'data_source' => backpack_url('/api/tag'),
-                'attribute'   => 'name',
+                'data_source' => route('backpack.helpers.fetch', ['key' => 'tag']),
+                'attribute'   => 'uniqHtml',
                 'model'       => \Backpack\Tag\app\Models\Tag::class,
                         'placeholder' => "Выберите тег",
                 'allows_multiple' => true,
@@ -635,8 +636,8 @@ class ProductListCrudController extends CrudController
                     'name'        => 'attribute',
                     'label'       => 'Атрибут',
                     'type'        => 'select2_from_ajax',
-                    'data_source' => backpack_url('/api/attribute'),
-                    'attribute'   => 'name',
+                    'data_source' => route('backpack.helpers.fetch', ['key' => 'attribute']),
+                    'attribute'   => 'uniqHtml',
                     'model'       => \Backpack\Store\app\Models\Attribute::class,
                     'placeholder' => "Выберите атрибут",
                     'minimum_input_length' => 2,
@@ -726,12 +727,53 @@ class ProductListCrudController extends CrudController
                 'name'        => 'include_product_ids',
                 'label'       => 'Выберите товары',
                 'type'        => 'select2_from_ajax_multiple',
-                'data_source' => backpack_url('/api/product'),
-                'attribute'   => 'name',
+                'data_source' => route('backpack.helpers.fetch', ['key' => 'product']),
+                'attribute'   => 'uniqHtml',
                 'model'       => \Backpack\Store\app\Models\Product::class,
                 'allows_multiple' => true,
                 'minimum_input_length' => 2,
                 'placeholder' => "Выберите товар",
+              ],
+              $this->getFilterDirectionFields()
+            ],
+          ],
+
+          // --- orders ---
+          'orders' => [
+            'fields' => [
+              [
+                'name'    => 'metric',
+                'label'   => 'Метрика',
+                'type'    => 'select_from_array',
+                'options' => [
+                  'orders'   => 'Кол-во заказов',
+                  'quantity' => 'Кол-во товаров',
+                ],
+                'default' => 'orders',
+              ],
+              [
+                'name'  => 'min_count',
+                'label' => 'Мин. значение',
+                'type'  => 'number',
+                'default' => 1,
+                'attributes' => ['min'=>1],
+              ],
+              [
+                'name'  => 'period_days',
+                'label' => 'За период (дней)',
+                'type'  => 'number',
+                'attributes' => ['min'=>0],
+                'hint' => '0 = учитывать всю историю заказов',
+              ],
+              [
+                'name'    => 'scope',
+                'label'   => 'Источник заказов',
+                'type'    => 'select_from_array',
+                'options' => [
+                  'current_country' => 'Только текущая страна',
+                  'global'          => 'Все страны',
+                ],
+                'default' => 'current_country',
               ],
               $this->getFilterDirectionFields()
             ],
@@ -828,6 +870,7 @@ class ProductListCrudController extends CrudController
             'random'         => 'Случайный',
             'price_asc'      => 'Цена (по-возрастанию)',
             'price_desc'     => 'Цена (по-убыванию)',
+            'orders_count'   => 'По кол-ву заказов',
         ];
     }
 

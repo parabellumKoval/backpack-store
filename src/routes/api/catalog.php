@@ -16,7 +16,11 @@ use Backpack\Store\app\Http\Controllers\Api\CatalogController;
 |
 */
 
-Route::prefix('api/catalog')->middleware(['api', Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+Route::prefix('api/catalog')->middleware([
+    'api',
+    Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class,
+    Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class,
+])
   ->controller(CatalogController::class)->group(function () {
   
     Route::get('/cache', 'cache');

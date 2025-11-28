@@ -13,8 +13,7 @@ class AddXRegionHeadersToRequest
 
         if ($region !== null && $region !== '') {
             $request->merge([
-                'country' => trim($region),
-                // 'country' => strtoupper(trim($region)),
+                'country' => trim($region)
             ]);
         }
 

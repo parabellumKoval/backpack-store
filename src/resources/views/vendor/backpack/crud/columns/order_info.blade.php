@@ -7,21 +7,35 @@
 
   $payment = null;
   if(isset($info['payment'])) {
-    if(is_array($info['payment'])) {
-      $payment_items = array_filter($info['payment']);
+    $paymentData = $info['payment'];
+    if(is_array($paymentData)) {
+      if(!empty($paymentData['method'])) {
+        $methodLabel = store_payment_method_label($paymentData['method']);
+        if($methodLabel) {
+          $paymentData['method'] = $methodLabel;
+        }
+      }
+      $payment_items = array_filter($paymentData);
       $payment = implode(', ', $payment_items);
     } else {
-      $payment = $info['payment'];
+      $payment = store_payment_method_label($paymentData) ?? $paymentData;
     }
   }
 
   $delivery = null;
   if(isset($info['delivery'])) {
-    if(is_array($info['delivery'])) {
-      $delivery_items = array_filter($info['delivery']);
+    $deliveryData = $info['delivery'];
+    if(is_array($deliveryData)) {
+      if(!empty($deliveryData['method'])) {
+        $methodLabel = store_delivery_method_label($deliveryData['method']);
+        if($methodLabel) {
+          $deliveryData['method'] = $methodLabel;
+        }
+      }
+      $delivery_items = array_filter($deliveryData);
       $delivery = implode(', ', $delivery_items);
     } else {
-      $delivery = $info['delivery'];
+      $delivery = store_delivery_method_label($deliveryData) ?? $deliveryData;
     }
   }
 
@@ -34,6 +48,7 @@
   $bonusFiat = (float)($bonusInfo['fiat_amount'] ?? ($rawInfo['bonusesUsed'] ?? 0));
   $bonusPoints = (float)($bonusInfo['points'] ?? 0);
   $bonusWallet = $bonusInfo['wallet_currency'] ?? null;
+  $bonusWalletLabel = $bonusWallet ? store_currency_label($bonusWallet) : null;
   $bonusRefunded = (bool)($bonusInfo['refunded'] ?? false);
 
   $countryCode = strtoupper((string) ($entry->country_code ?? ''));
@@ -127,7 +142,7 @@
       </div>
       <div style="color: #155724; font-size: 13px;">
         Бонусные баллы: <strong>{{ number_format($bonusPoints, 2, '.', ' ') }}</strong>
-        @if($bonusWallet) {{ ' ' . strtoupper($bonusWallet) }}@endif
+        @if($bonusWalletLabel) {{ ' ' . $bonusWalletLabel }}@endif
       </div>
       @if($bonusRefunded)
         <div style="margin-top: 6px; padding: 6px 10px; background: #fff; border-radius: 4px; color: #6c757d; font-size: 12px;">

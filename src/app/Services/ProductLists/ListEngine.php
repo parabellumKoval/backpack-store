@@ -68,7 +68,7 @@ class ListEngine
             $sortOrder = $sortOrder ? [$sortOrder] : [];
         }
 
-        $items = $this->sortingEngine->sort($items, $sortOrder, $catalogRows);
+        $items = $this->sortingEngine->sort($items, $sortOrder, $catalogRows, $context);
 
         $total = count($items);
         $items = array_slice($items, 0, $capacity);

@@ -82,6 +82,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
   public function register()
   {
+    $this->registerHelpers();
     $this->app->register(ProductListsServiceProvider::class);
     $this->app->register(SearchServiceProvider::class);
     $this->app->register(EventServiceProvider::class);
@@ -249,6 +250,15 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
         __DIR__.'/app/Traits/Controllers/Admin' => base_path('app/Http/Controllers/Admin/Traits'),
       __DIR__.'/app/Traits/Models' => base_path('app/Http/Models/Traits')
     ], 'traits');
+  } 
+
+  private function registerHelpers(): void
+  {
+    $helpersPath = __DIR__ . '/helpers.php';
+
+    if (file_exists($helpersPath)) {
+      require_once $helpersPath;
+    }
   }
 
   protected function registerFacadeAlias()

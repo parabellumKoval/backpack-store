@@ -16,7 +16,11 @@ use Backpack\Store\app\Http\Controllers\Api\ProductController;
 |
 */
 
-Route::prefix('api/product')->middleware(['api', Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class])
+Route::prefix('api/product')->middleware([
+    'api',
+    Backpack\Store\app\Http\Middleware\AddXRegionHeadersToRequest::class,
+    Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class,
+])
   ->controller(ProductController::class)->group(function () {
     Route::get('', 'index');
     Route::get('/random', 'random');

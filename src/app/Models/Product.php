@@ -36,6 +36,7 @@ use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\SupplierProduct;
 use Backpack\Store\app\Models\Catalog;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 // RESOURCES
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
@@ -71,6 +72,7 @@ class Product extends Model
     use \Backpack\Store\app\Traits\Resources;
     use Taggable;
     use Reviewable;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -111,6 +113,13 @@ class Product extends Model
     // protected $hidden = [];
     // protected $dates = [];
     protected $with = ['categories', 'ap', 'suppliers', 'parent'];
+
+    /**
+     * Flag that prevents horizontal modification sync jobs during service merges.
+     *
+     * @var bool
+     */
+    public bool $skipServiceModificationSync = false;
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
@@ -526,6 +535,45 @@ class Product extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        $brand = $this->relationLoaded('brand') ? $this->getRelation('brand') : null;
+        $priceText = $this->price !== null
+            ? sprintf('%s %s', number_format((float) $this->price, 2, '.', ' '), $this->currency_code ?? '')
+            : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            'code: '.($this->code ?? $this->simpleCode ?? '-'),
+            $brand?->name ?? sprintf('brand #%s', $this->brand_id ?? '?'),
+            $priceText ? 'price: '.$priceText : null,
+            sprintf('stock: %s', $this->in_stock ?? 0),
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'hidden'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $brand = $this->relationLoaded('brand') ? $this->getRelation('brand') : null;
+        $priceText = $this->price !== null
+            ? sprintf('%s %s', number_format((float) $this->price, 2, '.', ' '), $this->currency_code ?? '')
+            : null;
+
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            'code: '.($this->code ?? $this->simpleCode ?? '-'),
+            $brand?->name ?? sprintf('brand #%s', $this->brand_id ?? '?'),
+            $priceText ? 'price: '.$priceText : null,
+            sprintf('stock: %s', $this->in_stock ?? 0),
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'hidden'),
+        ]);
+    }
 
     
     public function getUniqTitleAttribute() {

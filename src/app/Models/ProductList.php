@@ -11,6 +11,7 @@ use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
 
 // TRANSLATIONS
 use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class ProductList extends Model
 {
@@ -18,6 +19,7 @@ class ProductList extends Model
     use Sluggable;
     use SluggableScopeHelpers;
     use HasTranslations;
+    use FormatsUniqAttribute;
 
     protected $table = 'ak_product_lists';
     protected $fillable = [
@@ -34,10 +36,10 @@ class ProductList extends Model
 
     protected $translatable = ['title', 'button_text'];
 
-    public function items()
-    {
-        return $this->hasMany(ProductListItem::class, 'list_id');
-    }
+    // public function items()
+    // {
+    //     return $this->hasMany(ProductListItem::class, 'list_id');
+    // }
 
     /** Активные для страны (если countries == null — доступно везде) */
     public function scopeActiveForCountry($q, ?string $country)
@@ -74,4 +76,34 @@ class ProductList extends Model
 
     // public function getPrioritySourcesAttribute() {
     // }
+
+    public function getUniqStringAttribute(): string
+    {
+        $countries = is_array($this->countries) ? implode(', ', $this->countries) : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->title ?? $this->name,
+            $this->slug,
+            $this->page,
+            $countries ? 'countries: '.$countries : null,
+            sprintf('status: %s', $this->is_active ? 'active' : 'hidden'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $countries = is_array($this->countries) ? implode(', ', $this->countries) : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->title ?? $this->name,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $this->slug,
+            $this->page,
+            $countries ? 'countries: '.$countries : null,
+            sprintf('status: %s', $this->is_active ? 'active' : 'hidden'),
+        ]);
+    }
 }

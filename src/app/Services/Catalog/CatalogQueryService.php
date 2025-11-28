@@ -345,8 +345,13 @@ class CatalogQueryService extends AbstractQueryService
             $base->setRelation('modifications', $mods);
 
             // (опционально) можно проставить «активную модификацию» = первая прошедшая фильтр, если нужна
-            $active = $mods->firstWhere('passed_filter', true) ?? $mods->first();
+            $active = $mods->where('in_stock', '>', 0)->firstWhere('passed_filter', true) ?? $mods->first();
             $base->setRelation('active_modification', $active);
+
+            $hasStock = $mods->contains(fn($m) => (int) ($m->in_stock ?? 0) > 0);
+            $maxStock = $mods->max('in_stock') ?? 0;
+            $base->setAttribute('group_has_stock', $hasStock);
+            $base->setAttribute('group_stock_level', $maxStock);
 
             $items->push($base);
         }
@@ -447,7 +452,7 @@ class CatalogQueryService extends AbstractQueryService
 
         if (!$orderBy) {
             return $items->sortBy([
-                fn($a,$b)=>($b->in_stock > 0 <=> $a->in_stock > 0),
+                fn($a,$b)=>($this->groupHasStock($b) ? 1 : 0) <=> ($this->groupHasStock($a) ? 1 : 0),
                 fn($a,$b)=>(count($b->images ?? []) <=> count($a->images ?? [])),
                 fn($a,$b)=>($b->product_id <=> $a->product_id),
             ])->values();
@@ -459,7 +464,7 @@ class CatalogQueryService extends AbstractQueryService
             return $items->sortBy('price', SORT_REGULAR, $reverse)->values();
         }
         if ($orderBy === 'in_stock') {
-            return $items->sortBy(fn($x)=>$x->in_stock > 0 ? 1 : 0, SORT_REGULAR, $reverse)->values();
+            return $items->sortBy(fn($x)=> $this->groupStockLevel($x), SORT_REGULAR, $reverse)->values();
         }
         if ($orderBy === 'sale') {
             return $items->sortBy(fn($x)=>(float)$x->old_price - (float)$x->price, SORT_REGULAR, $reverse)->values();
@@ -470,6 +475,26 @@ class CatalogQueryService extends AbstractQueryService
         }
 
         return $items->sortBy(fn($x)=>$x->{$orderBy} ?? null, SORT_REGULAR, $reverse)->values();
+    }
+
+    protected function groupHasStock(Catalog $item): bool
+    {
+        $value = $item->getAttribute('group_has_stock');
+        if ($value !== null) {
+            return (bool) $value;
+        }
+
+        return (int) ($item->in_stock ?? 0) > 0;
+    }
+
+    protected function groupStockLevel(Catalog $item)
+    {
+        $value = $item->getAttribute('group_stock_level');
+        if ($value !== null) {
+            return $value;
+        }
+
+        return $item->in_stock ?? 0;
     }
 
 

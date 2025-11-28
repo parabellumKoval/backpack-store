@@ -162,6 +162,7 @@ class OrderController extends \App\Http\Controllers\Controller
     try{
       // Get only allowed fields
       $data = $this->validateData($request);
+      $this->ensureCartProductsAvailable($data['products'] ?? []);
       $user = $this->resolveOrderUser($data);
       $this->verifyBonusRequest($data, $user);
       return true;
@@ -228,6 +229,10 @@ class OrderController extends \App\Http\Controllers\Controller
   {
     $order = new $this->ORDER_MODEL;
 
+    if(!$user && ($data['provider'] ?? null) === 'auth') {
+      $data['provider'] = 'data';
+    }
+
     $order = $this->prepareOrder($order);
     $order = $this->setRequestFields($order, $data);
     $order = $this->setUserData($order, $data, $user);
@@ -255,12 +260,14 @@ class OrderController extends \App\Http\Controllers\Controller
     $info = $order->info ?? [];
     $existingBonuses = $info['bonuses'] ?? [];
     $info['bonusesUsed'] = $info['bonusesUsed'] ?? 0;
+    $defaultWalletCurrency = $existingBonuses['wallet_currency'] ?? null;
     $info['bonuses'] = array_merge([
       'points' => 0,
       'fiat_amount' => 0,
       'fiat_currency' => $orderCurrency,
       'order_currency' => $orderCurrency,
-      'wallet_currency' => $existingBonuses['wallet_currency'] ?? null,
+      'wallet_currency' => $defaultWalletCurrency,
+      'wallet_currency_label' => $defaultWalletCurrency ? store_currency_label($defaultWalletCurrency) : null,
       'refunded' => $existingBonuses['refunded'] ?? false,
       'reference_id' => $existingBonuses['reference_id'] ?? null,
     ], $existingBonuses);
@@ -559,6 +566,7 @@ class OrderController extends \App\Http\Controllers\Controller
       'fiat_currency' => $redemption->fiatCurrency,
       'order_currency' => $orderCurrency,
       'wallet_currency' => $walletCurrency,
+      'wallet_currency_label' => $walletCurrency ? store_currency_label($walletCurrency) : null,
       'requested_points' => isset($data['bonus']) ? (float)$data['bonus'] : null,
       'requested_fiat' => isset($data['bonusInFiat']) ? (float)$data['bonusInFiat'] : null,
       'meta' => $redemption->meta,
@@ -584,32 +592,25 @@ class OrderController extends \App\Http\Controllers\Controller
    * @return Backpack\Store\app\Models\Order $order
    */
   protected function setUserData($order, array $data, $user_model = null){
-    // GET USER MODEL IF AUTHED
-    if(($data['provider'] ?? null) === 'auth') {
-      $guard = \Settings::get('dress.store.auth_guard', 'profile');
+    $user = $user_model ?? $this->resolveOrderUser($data);
 
-      if(!$user_model) {
-        if(!Auth::guard($guard)->check()){
-          throw new OrderException('User not authenticated', 401);
-        }
-
-        $user_model = Auth::guard($guard)->user();
-      }
-
-      // User Model have to implement toOrderArray() method that gives:
-      //    array {first_name: string, last_name: string, phone: string, email: string}
-      $user_data = $user_model->toOrderArray();
-
-      $resolved_user_data = $this->resolveUserData($user_data, $data);
-
-      // add user data to info field (json)
-      $info = $order->info;
-      $info['user'] = $resolved_user_data;
-      $order->info = $info;
-
-      $order->orderable_id = isset($user_model)? $user_model->id: null;
-      $order->orderable_type = isset($user_model)? \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile'): null;
+    if(!$user) {
+      return $order;
     }
+
+    // User Model have to implement toOrderArray() method that gives:
+    //    array {first_name: string, last_name: string, phone: string, email: string}
+    $user_data = $user->toOrderArray();
+
+    $resolved_user_data = $this->resolveUserData($user_data, $data);
+
+    // add user data to info field (json)
+    $info = $order->info;
+    $info['user'] = $resolved_user_data;
+    $order->info = $info;
+
+    $order->orderable_id = $user->id ?? null;
+    $order->orderable_type = \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile');
 
     return $order;
   }
@@ -643,7 +644,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $guard = \Settings::get('dress.store.auth_guard', 'profile');
 
     if(!Auth::guard($guard)->check()){
-      throw new OrderException('User not authenticated', 401);
+      return null;
     }
 
     return Auth::guard($guard)->user();
@@ -713,7 +714,7 @@ class OrderController extends \App\Http\Controllers\Controller
    */
   protected function setProductsToOrder($order, array $data){
     // Get products collection
-    $products = Product::whereIn('id', array_keys($data['products']))->available()->get();
+    $products = $this->ensureCartProductsAvailable($data['products'], true);
 
     if(!$products || !$products->count()) {
       throw new OrderException("There are no products found in cart or products does not exist in the database or products don't available.", 404);
@@ -729,6 +730,48 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     return [$order, $products];
+  }
+
+  protected function ensureCartProductsAvailable(array $productAmounts, bool $returnProducts = false)
+  {
+    $requestedIds = array_values(array_map('intval', array_keys($productAmounts ?: [])));
+
+    if(empty($requestedIds)) {
+      return $returnProducts ? collect() : null;
+    }
+
+    $query = Product::whereIn('id', $requestedIds)->available();
+
+    if($returnProducts) {
+      $products = $query->get();
+      $foundIds = $products->pluck('id')->map(function ($id) {
+        return (int)$id;
+      })->all();
+    }else {
+      $foundIds = $query->pluck('id')->map(function ($id) {
+        return (int)$id;
+      })->all();
+    }
+
+    $missing = array_values(array_diff($requestedIds, $foundIds));
+
+    if(!empty($missing)) {
+      $this->throwCartProductsUnavailable($missing);
+    }
+
+    return $returnProducts ? $products : null;
+  }
+
+  protected function throwCartProductsUnavailable(array $missingIds)
+  {
+    throw new DetailedException($this->cartProductsUnavailableMessage(), 422, null, [
+      'missingProducts' => $missingIds
+    ]);
+  }
+
+  protected function cartProductsUnavailableMessage(): string
+  {
+    return 'Product unavailable in your region';
   }
 
   /**

@@ -21,7 +21,8 @@ class ProductCartResource extends BaseResource
         'price' => $this->price,
         'old_price' => $this->oldPrice,
         'image' => $this->getFirstImageSrc22(),
-        'amount' => $this->amount
+        'amount' => $this->amount,
+        'external' => $this->external ?? 0
       ];
     }
 }

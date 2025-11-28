@@ -16,7 +16,9 @@ use Backpack\Store\app\Http\Controllers\Api\AttributeController;
 |
 */
 
-Route::prefix('api/attribute')->controller(AttributeController::class)->group(function () {
+Route::prefix('api/attribute')
+  ->middleware([Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class])
+  ->controller(AttributeController::class)->group(function () {
   Route::get('', 'index');
 
   Route::get('/{id}', 'show');

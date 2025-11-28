@@ -14,12 +14,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Backpack\Store\database\factories\AttributeValueFactory;
 
 use Backpack\Store\app\Models\Attribute;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class AttributeValue extends Model
 {
     use HasFactory;
     use CrudTrait;
     use HasTranslations;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -102,6 +104,31 @@ class AttributeValue extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        $attribute = $this->relationLoaded('attribute') ? $this->getRelation('attribute') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->value,
+            $attribute?->name ?? sprintf('attribute #%s', $this->attribute_id ?? '?'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $attribute = $this->relationLoaded('attribute') ? $this->getRelation('attribute') : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->value,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $attribute?->name ?? sprintf('attribute #%s', $this->attribute_id ?? '?'),
+            $this->transform_value_string ? 'transform: '.$this->transform_value_string : null,
+        ]);
+    }
     
     /**
      * getTransformValueAttribute

@@ -19,6 +19,7 @@ class CategoryController extends \App\Http\Controllers\Controller
     $is_root = $request->input('is_root', true);
     $is_active = $request->input('is_active', true);
     $country = $request->input('country') ?? \Store::country();
+    $extras = $request->input('extras');
 
     $categories = Category::query()
               ->select('ak_product_categories.*')
@@ -36,10 +37,9 @@ class CategoryController extends \App\Http\Controllers\Controller
               })
 
               // Filter by extras field
-              ->when($request->input('extras'), function($query) {
-                $extras = $request->input('extras');
+              ->when($extras, function($query, $extras) {
                 foreach($extras as $key => $value) {
-                  $value = is_numeric($value)? floatval($value): $value;
+                  // $value = is_numeric($value)? floatval($value): $value;
                   $query->whereJsonContains("extras->{$key}", $value);
                 }
               })
@@ -59,6 +59,16 @@ class CategoryController extends \App\Http\Controllers\Controller
 
     return $categories;
   }
+
+  public function main(Request $request) {
+    $request->merge([
+      'is_root' => false,
+      'extras' => ['on_main' => '1']
+    ]);
+
+    return $this->index($request);
+  }
+
 
   // public function indexSimple(Request $request) {
 

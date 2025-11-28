@@ -16,7 +16,9 @@ use Backpack\Store\app\Http\Controllers\Api\PromocodeController;
 |
 */
 
-Route::prefix('api/promocode')->controller(PromocodeController::class)->group(function () {
+Route::prefix('api/promocode')
+  ->middleware([Backpack\Store\app\Http\Middleware\SetLocaleFromHeader::class])
+  ->controller(PromocodeController::class)->group(function () {
   
   Route::get('', 'index')->middleware('api');
   

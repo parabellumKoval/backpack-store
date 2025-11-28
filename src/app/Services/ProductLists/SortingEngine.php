@@ -2,7 +2,10 @@
 
 namespace Backpack\Store\app\Services\ProductLists;
 
+use Backpack\Store\app\Services\ProductLists\ListRequestContext;
 use Backpack\Store\app\Services\ProductLists\Supports\ResolvedItem;
+use Illuminate\Support\Facades\DB;
+
 
 class SortingEngine
 {
@@ -10,9 +13,10 @@ class SortingEngine
      * @param  ResolvedItem[] $items
      * @param  array          $sortOrder
      * @param  array          $catalogRows keyed by product_id
+     * @param  ListRequestContext $context
      * @return ResolvedItem[]
      */
-    public function sort(array $items, array $sortOrder, array $catalogRows): array
+    public function sort(array $items, array $sortOrder, array $catalogRows, ListRequestContext $context): array
     {
         if (empty($items)) {
             return $items;
@@ -22,6 +26,10 @@ class SortingEngine
         if (empty($normalized)) {
             return $items;
         }
+
+        $orderStats = $this->needsOrderStats($normalized)
+            ? $this->fetchOrderStats($items, $context)
+            : [];
 
         if (in_array('random', array_column($normalized, 'criterion'), true)) {
             shuffle($items);
@@ -33,7 +41,7 @@ class SortingEngine
             $scored[] = ['item' => $item, 'index' => $index];
         }
 
-        usort($scored, function ($left, $right) use ($normalized, $catalogRows) {
+        usort($scored, function ($left, $right) use ($normalized, $catalogRows, $orderStats) {
             /** @var ResolvedItem $a */
             $a = $left['item'];
             /** @var ResolvedItem $b */
@@ -48,12 +56,14 @@ class SortingEngine
                     $cmp = $this->compareDiscount($a->productId, $b->productId, $catalogRows);
                 } elseif ($criterion === 'price') {
                     $cmp = $this->comparePrice($a->productId, $b->productId, $catalogRows);
+                } elseif ($criterion === 'orders_count') {
+                    $cmp = $this->compareOrderCount($a->productId, $b->productId, $orderStats);
                 } elseif ($criterion === 'relevance') {
                     continue;
                 }
 
                 if ($cmp !== 0) {
-                    if ($criterion === 'price') {
+                    if (in_array($criterion, ['price', 'orders_count'], true)) {
                         return $direction === 'desc' ? -$cmp : $cmp;
                     }
                     return $cmp;
@@ -71,12 +81,19 @@ class SortingEngine
         $normalized = [];
         foreach ($sortOrder as $entry) {
             if (is_string($entry)) {
-                $normalized[] = $this->mapShortcut($entry);
+                $shortcut = $this->mapShortcut($entry);
+                if ($shortcut) {
+                    $normalized[] = $shortcut;
+                }
             } elseif (is_array($entry) && !empty($entry['criterion'])) {
-                $normalized[] = [
-                    'criterion' => (string) $entry['criterion'],
-                    'direction' => strtolower((string) ($entry['direction'] ?? 'asc')),
-                ];
+                $criterion = (string) $entry['criterion'];
+                $shortcut = $this->mapShortcut($criterion) ?? ['criterion' => $criterion, 'direction' => 'asc'];
+                $direction = strtolower((string) ($entry['direction'] ?? $shortcut['direction'] ?? 'asc'));
+                if (!in_array($direction, ['asc', 'desc'], true)) {
+                    $direction = $shortcut['direction'] ?? 'asc';
+                }
+                $shortcut['direction'] = $direction;
+                $normalized[] = $shortcut;
             }
         }
 
@@ -90,8 +107,10 @@ class SortingEngine
             'discount_first' => ['criterion' => 'discount_first', 'direction' => 'desc'],
             'price', 'price_asc' => ['criterion' => 'price', 'direction' => 'asc'],
             'price_desc' => ['criterion' => 'price', 'direction' => 'desc'],
-            'relevance' => ['criterion' => 'relevance', 'direction' => 'asc'],
+            'relevance', 'source' => ['criterion' => 'relevance', 'direction' => 'asc'],
             'random' => ['criterion' => 'random', 'direction' => 'asc'],
+            'orders', 'orders_desc', 'orders_count' => ['criterion' => 'orders_count', 'direction' => 'desc'],
+            'orders_asc' => ['criterion' => 'orders_count', 'direction' => 'asc'],
             default => null,
         };
     }
@@ -125,6 +144,13 @@ class SortingEngine
         return $a <=> $b;
     }
 
+    protected function compareOrderCount(int $aId, int $bId, array $orderStats): int
+    {
+        $a = (int) ($orderStats[$aId] ?? 0);
+        $b = (int) ($orderStats[$bId] ?? 0);
+        return $a <=> $b;
+    }
+
     protected function hasDiscount($row): bool
     {
         if (!$row) {
@@ -136,5 +162,34 @@ class SortingEngine
             return false;
         }
         return (float) $old > (float) $price;
+    }
+
+    protected function needsOrderStats(array $normalized): bool
+    {
+        foreach ($normalized as $sort) {
+            if (($sort['criterion'] ?? null) === 'orders_count') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param  ResolvedItem[] $items
+     */
+    protected function fetchOrderStats(array $items, ListRequestContext $context): array
+    {
+        $ids = array_values(array_unique(array_map(fn($item) => $item->productId, $items)));
+        if (empty($ids)) {
+            return [];
+        }
+
+        return DB::table('ak_order_product as op')
+            ->whereIn('op.product_id', $ids)
+            ->where('op.country_code', '=', $context->country)
+            ->selectRaw('op.product_id, COUNT(DISTINCT op.order_id) as order_count')
+            ->groupBy('op.product_id')
+            ->pluck('order_count', 'product_id')
+            ->toArray();
     }
 }

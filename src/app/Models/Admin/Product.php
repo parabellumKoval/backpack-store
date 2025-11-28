@@ -216,7 +216,9 @@ class Product extends BaseProduct
                 return [
                     'id' => $product->id,
                     'short_name' => $product->short_name,
+                    'short_name_translations' => $product->getTranslations('short_name'),
                     'name' => $product->name,
+                    'name_translations' => $product->getTranslations('name'),
                     'code' => $product->code,
                     'is_active' => (bool) $product->is_active,
                     'is_base' => $product->id === $rootProduct->id,
@@ -445,7 +447,10 @@ class Product extends BaseProduct
     */
     
     public function getAdminPriceAttribute() {
-      return view('crud::columns.price', ['price' => $this->price, 'currency' => $this->currency]);
+      return view('crud::columns.price', [
+        'price' => $this->price,
+        'currency' => store_currency_label($this->currency)
+      ]);
     }
 
     public function getFillAdminAttribute() {
@@ -758,6 +763,10 @@ class Product extends BaseProduct
         return [
             'label' => 'Слияние товаров',
             'description' => 'Объединяет дубликаты товаров и переносит связанные данные.',
+            'cards' => [
+                'entry' => 'store-crud::service.cards.product-entry',
+                'result' => 'store-crud::service.cards.product',
+            ],
             'candidate_search' => ['name', 'slug', 'code', 'id'],
             'fields' => [
                 'name' => [
@@ -835,6 +844,7 @@ class Product extends BaseProduct
                     'table' => 'ak_attribute_product',
                     'column' => 'product_id',
                     'primary_key' => 'id',
+                    'default' => true,
                     'unique' => ['attribute_id', 'attribute_value_id'],
                 ],
                 'suppliers' => [
@@ -843,6 +853,7 @@ class Product extends BaseProduct
                     'table' => 'ak_supplier_product',
                     'column' => 'product_id',
                     'primary_key' => 'id',
+                    'default' => true,
                     'unique' => ['supplier_id'],
                 ],
                 'taggables' => [
@@ -851,6 +862,7 @@ class Product extends BaseProduct
                     'table' => 'ak_taggables',
                     'column' => 'taggable_id',
                     'primary_key' => 'id',
+                    'default' => true,
                     'unique' => ['tag_id'],
                     'constraints' => [
                         ['column' => 'taggable_type', 'value' => static::class],
@@ -862,8 +874,46 @@ class Product extends BaseProduct
                     'table' => 'ak_products',
                     'column' => 'parent_id',
                     'primary_key' => 'id',
+                    'default' => true,
                     'help' => 'Привязывает дочерние товары к новой базовой записи.',
+                    'merge' => [
+                        'label' => 'Сшивать модификации между собой',
+                        'default' => true,
+                        'default_mode' => 'short_name_similarity',
+                        'modes' => [
+                            'short_name_similarity' => [
+                                'label' => 'Похожие короткие названия',
+                                'description' => 'Игнорирует регистр, пробелы и знаки в short_name, при необходимости сравнивает по цифрам.',
+                                'matcher' => 'normalized_attribute',
+                                'attribute' => 'short_name',
+                            ],
+                        ],
+                    ],
                 ],
+            ],
+            'similar' => [
+                'enabled' => true,
+                'label' => 'Поиск похожих товаров',
+                'description' => 'Использует Meilisearch, чтобы найти потенциальные дубликаты по имени и короткому названию.',
+                'limit' => 20,
+                'fields' => [
+                    'name',
+                    'short_name',
+                ],
+                'provider' => \Backpack\Store\app\Library\ServiceOperation\Similar\Providers\ProductMeilisearchProvider::class,
+                'provider_options' => [
+                    'countries' => array_keys(\Store::countries()),
+                    'index_base' => 'products',
+                    'locale_map' => \Store::defaultCountryLocales(),
+                ],
+                'exclude_children' => [
+                    'enabled' => true,
+                    'default' => true,
+                    'relation' => 'children',
+                    'column' => 'parent_id',
+                    'key' => 'id',
+                ],
+                'card_view' => 'store-crud::service.cards.product',
             ],
         ];
     }

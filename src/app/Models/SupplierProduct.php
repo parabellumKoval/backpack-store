@@ -12,10 +12,12 @@ use Backpack\Store\app\Events\SupplierProductSaved;
 // MODEL
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Supplier;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class SupplierProduct extends Model
 {
     use CrudTrait;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -85,6 +87,39 @@ class SupplierProduct extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        $supplier = $this->relationLoaded('supplier') ? $this->getRelation('supplier') : null;
+        $product = $this->relationLoaded('product') ? $this->getRelation('product') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $supplier?->name ?? sprintf('supplier #%s', $this->supplier_id ?? '?'),
+            $product?->name ?? sprintf('product #%s', $this->product_id ?? '?'),
+            $this->code ? 'code: '.$this->code : null,
+            $this->price !== null ? 'price: '.$this->price : null,
+            'stock: '.($this->in_stock ?? 0),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $supplier = $this->relationLoaded('supplier') ? $this->getRelation('supplier') : null;
+        $product = $this->relationLoaded('product') ? $this->getRelation('product') : null;
+
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $supplier?->name ?? sprintf('supplier #%s', $this->supplier_id ?? '?'),
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $product?->name ?? sprintf('product #%s', $this->product_id ?? '?'),
+            $this->code ? 'code: '.$this->code : null,
+            $this->price !== null ? 'price: '.$this->price : null,
+            'stock: '.($this->in_stock ?? 0),
+        ]);
+    }
 
     /*
     |--------------------------------------------------------------------------

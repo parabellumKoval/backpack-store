@@ -24,6 +24,7 @@ use Backpack\Store\app\Models\OrderInvoice;
 
 //
 use Backpack\Helpers\Traits\HasDisplayLabel;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -33,6 +34,7 @@ class Order extends Model
     use HasDisplayLabel;
     use CrudTrait;
     use HasFactory;
+    use FormatsUniqAttribute;
 
     use OrderModelTrait;
     use \Backpack\Store\app\Traits\Resources;
@@ -289,6 +291,39 @@ class Order extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+
+    public function getUniqStringAttribute(): string
+    {
+        $sum = $this->price !== null
+            ? sprintf('%s %s', number_format((float) $this->price, 2, '.', ' '), $this->currency_code ?? '')
+            : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            'code: '.$this->code,
+            $sum ? 'total: '.$sum : null,
+            sprintf('status: %s', $this->status ?? '-'),
+            $this->created_at ? $this->created_at->format('Y-m-d H:i') : null,
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $sum = $this->price !== null
+            ? sprintf('%s %s', number_format((float) $this->price, 2, '.', ' '), $this->currency_code ?? '')
+            : null;
+
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->code ? 'code: '.$this->code : null,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $sum ? 'total: '.$sum : null,
+            sprintf('status: %s', $this->status ?? '-'),
+            $this->created_at ? $this->created_at->format('Y-m-d H:i') : null,
+        ]);
+    }
     
     /**
      * getUserAttribute
@@ -523,7 +558,12 @@ class Order extends Model
     }
 
     public function getPriceHtmlAttribute() {
-      return view('crud::columns.price', ['price' => $this->price, 'currency' => $this->currency, 'muted' => $this->isMuted]);
+      return view('store-crud::columns.order_price', [
+        'price' => $this->price,
+        'currency' => store_currency_label($this->currency),
+        'muted' => $this->isMuted,
+        'order' => $this,
+      ]);
     }
     /*
     |--------------------------------------------------------------------------

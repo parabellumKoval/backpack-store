@@ -14,6 +14,7 @@ use Backpack\Store\database\factories\PromocodeFactory;
 
 // TRAITS
 use App\Models\Traits\PromocodeModel as PromocodeModelTrait;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 // DATE
 use Carbon\Carbon;
@@ -24,6 +25,7 @@ class Promocode extends Model
     use HasTranslations;
     use HasFactory;
     use PromocodeModelTrait;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -135,6 +137,37 @@ class Promocode extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */    
+
+    public function getUniqStringAttribute(): string
+    {
+        $value = $this->value !== null ? $this->value.($this->type ? ' '.$this->type : '') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->code,
+            $this->name,
+            $value ? 'value: '.$value : null,
+            sprintf('used %s/%s', $this->used_times ?? 0, $this->limit ?? 'unlimited'),
+            $this->valid_until ? 'valid until '.$this->valid_until->format('Y-m-d') : null,
+            sprintf('status: %s', $this->status['status'] ?? ($this->is_active ? 'active' : 'inactive')),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $value = $this->value !== null ? $this->value.($this->type ? ' '.$this->type : '') : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->code,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $value ? 'value: '.$value : null,
+            sprintf('used %s/%s', $this->used_times ?? 0, $this->limit ?? 'unlimited'),
+            $this->valid_until ? 'valid until '.$this->valid_until->format('Y-m-d') : null,
+            sprintf('status: %s', $this->status['status'] ?? ($this->is_active ? 'active' : 'inactive')),
+        ]);
+    }
 
     public function getIsValidUntilAttribute() {
       return Carbon::now()->lt($this->valid_until);

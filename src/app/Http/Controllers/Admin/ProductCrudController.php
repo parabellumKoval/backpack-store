@@ -39,7 +39,7 @@ class ProductCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\FetchOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
-    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation;
+    use \Backpack\CRUD\app\Http\Controllers\Operations\CreateOperation { store as traitStore; }
     use \Backpack\CRUD\app\Http\Controllers\Operations\InlineCreateOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\UpdateOperation { update as traitUpdate; }
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
@@ -149,6 +149,7 @@ class ProductCrudController extends CrudController
         return $response;
 
     }
+
     public function store()
     {  
 
@@ -220,7 +221,7 @@ class ProductCrudController extends CrudController
         return;
       }
 
-        // $this->crud->setValidation(ProductRequest::class);
+        $this->crud->setValidation(ProductRequest::class);
 
         // System Trait
         // $this->setupFields();
@@ -229,7 +230,7 @@ class ProductCrudController extends CrudController
         // $this->createOperation();
 
       // 1) Кладём кастомный шаблон (он один и для create, и для edit)
-      $this->crud->setCreateView('store-crud::create_product');
+      $this->crud->setCreateView('crud::create_product');
 
       // 2) Если передан parent_id — это создание модификации. По умолчанию показываем ЛАЙТ-набор полей.
       $isVariantCreate = request()->filled('parent_id');
@@ -331,7 +332,6 @@ class ProductCrudController extends CrudController
           ->limit($maxModifications)
           ->get()
           ->map(function($p){
-              // $title = trim(($p->short_name ?: '—').' - '.(isset($p->simplePrice) ? $p->simplePrice : '—'), ' -');
               $title = $p->short_name;
               return [
                   'id'    => $p->id,

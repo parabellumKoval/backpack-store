@@ -8,11 +8,13 @@ use Backpack\CRUD\app\Models\Traits\CrudTrait;
 // TRANSLATIONS
 use Backpack\CRUD\app\Models\Traits\SpatieTranslatable\HasTranslations;
 use \Backpack\Store\app\Models\Category;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class SeoPage extends Model
 {
     use HasTranslations;
     use CrudTrait;
+    use FormatsUniqAttribute;
 
     protected $table = 'ak_seo_pages';
     protected $guarded = [];
@@ -36,4 +38,32 @@ class SeoPage extends Model
     }
 
     public function scopeActive($q){ return $q->where('is_active',true); }
+
+    public function getUniqStringAttribute(): string
+    {
+        $category = $this->relationLoaded('category') ? $this->getRelation('category') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->slug,
+            $this->type,
+            $category?->name ?? sprintf('category #%s', $this->category_id ?? '?'),
+            $this->is_active ? 'active' : 'hidden',
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $category = $this->relationLoaded('category') ? $this->getRelation('category') : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $this->slug,
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            $this->type,
+            $category?->name ?? sprintf('category #%s', $this->category_id ?? '?'),
+            $this->is_active ? 'active' : 'hidden',
+        ]);
+    }
 }

@@ -11,11 +11,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 // MODEL
 use Backpack\Store\app\Models\Source;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 class UploadHistory extends Model
 {
     use HasFactory;
     use CrudTrait;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -92,6 +94,34 @@ class UploadHistory extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    
+    public function getUniqStringAttribute(): string
+    {
+        $source = $this->relationLoaded('source') ? $this->getRelation('source') : null;
+
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $source?->name ?? sprintf('source #%s', $this->source_id ?? '?'),
+            sprintf('status: %s', $this->status ?? '-'),
+            sprintf('%s/%s items', $this->processed_items ?? 0, $this->total_items ?? 0),
+            $this->created_at ? $this->created_at->format('Y-m-d H:i') : null,
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $source = $this->relationLoaded('source') ? $this->getRelation('source') : null;
+        $headline = $this->formatUniqString([
+            '#'.$this->id,
+            $source?->name ?? sprintf('source #%s', $this->source_id ?? '?'),
+        ]);
+
+        return $this->formatUniqHtml($headline, [
+            sprintf('status: %s', $this->status ?? '-'),
+            sprintf('%s/%s items', $this->processed_items ?? 0, $this->total_items ?? 0),
+            $this->created_at ? $this->created_at->format('Y-m-d H:i') : null,
+        ]);
+    }
     
     public function getSourceTypeAttribute() {
       return $this->source->type;

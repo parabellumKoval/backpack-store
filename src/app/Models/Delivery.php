@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
+use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 use Cviebrock\EloquentSluggable\Sluggable;
 use Cviebrock\EloquentSluggable\SluggableScopeHelpers;
@@ -14,6 +15,7 @@ class Delivery extends Model
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
+    use FormatsUniqAttribute;
 
     /*
     |--------------------------------------------------------------------------
@@ -80,6 +82,28 @@ class Delivery extends Model
     | ACCESSORS
     |--------------------------------------------------------------------------
     */
+    public function getUniqStringAttribute(): string
+    {
+        return $this->formatUniqString([
+            '#'.$this->id,
+            $this->name,
+            $this->slug,
+            $this->language_abbr,
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'hidden'),
+        ]);
+    }
+
+    public function getUniqHtmlAttribute(): string
+    {
+        $headline = $this->formatUniqString(['#'.$this->id, $this->name]);
+
+        return $this->formatUniqHtml($headline, [
+            $this->slug,
+            $this->language_abbr,
+            sprintf('status: %s', ($this->is_active ?? false) ? 'active' : 'hidden'),
+        ]);
+    }
+
     public function getSlugOrNameAttribute()
     {
         if ($this->slug != '') {

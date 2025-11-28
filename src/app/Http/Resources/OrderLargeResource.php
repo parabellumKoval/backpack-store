@@ -53,6 +53,9 @@ class OrderLargeResource extends BaseResource
         'fiatAmount' => $fiat,
         'fiatCurrency' => $bonuses['fiat_currency'] ?? $this->currency_code,
         'walletCurrency' => $bonuses['wallet_currency'] ?? null,
+        'walletCurrencyLabel' => isset($bonuses['wallet_currency'])
+          ? store_currency_label($bonuses['wallet_currency'])
+          : null,
         'refunded' => (bool)($bonuses['refunded'] ?? false),
       ];
     }

@@ -7,6 +7,8 @@ return [
     'global_region_code' => 'zz',
 
     'base_currency' => 'USD',
+
+    'currency_label_resolver' => env('STORE_CURRENCY_LABEL_RESOLVER', 'Backpack\\Profile\\app\\Contracts\\CurrencyNameResolver'),
     
     'currency' => [
       'value' => 'usd',
