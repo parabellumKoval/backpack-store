@@ -2,7 +2,7 @@
 
 namespace Backpack\Store\app\Services\ProductLists\Sources;
 
-use Backpack\Store\app\Models\ProductListItem;
+use Backpack\Store\app\Models\Catalog;
 use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Services\ProductLists\Contracts\SourceResolver;
 use Backpack\Store\app\Services\ProductLists\ListRequestContext;
@@ -21,8 +21,10 @@ class ManualListItemsResolver implements SourceResolver
     {
         $items = $this->itemsFromConfig($definition);
         if (empty($items)) {
-            $items = $this->itemsFromLegacyTable($list->id ?? 0);
+            return new SourceResult($definition, []);
         }
+
+        $items = $this->filterByCatalogAvailability($items, $context->country);
 
         $limit = (int) ($definition->param('limit') ?? $definition->param('capacity') ?? 0);
         if ($limit > 0) {
@@ -63,20 +65,30 @@ class ManualListItemsResolver implements SourceResolver
         );
     }
 
-    protected function itemsFromLegacyTable(int $listId): array
+    protected function filterByCatalogAvailability(array $items, string $country): array
     {
-        if ($listId <= 0) {
+        $productIds = array_values(array_unique(array_map(fn(ResolvedItem $item) => $item->productId, $items)));
+        if (empty($productIds)) {
             return [];
         }
 
-        return ProductListItem::query()
-            ->where('list_id', $listId)
-            ->orderByDesc('priority')
-            ->get()
-            ->map(fn($row) => new ResolvedItem($row->product_id, [
-                'is_manual' => true,
-                'priority' => (int) $row->priority,
-            ]))
+        $availableIds = Catalog::query()
+            ->where('country_code', $country)
+            ->where('is_available', 1)
+            ->whereIn('product_id', $productIds)
+            ->pluck('product_id')
             ->all();
+
+        if (empty($availableIds)) {
+            return [];
+        }
+
+        if (count($availableIds) === count($productIds)) {
+            return $items;
+        }
+
+        $allowed = array_fill_keys($availableIds, true);
+
+        return array_values(array_filter($items, fn(ResolvedItem $item) => isset($allowed[$item->productId])));
     }
 }

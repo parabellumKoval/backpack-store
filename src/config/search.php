@@ -30,7 +30,7 @@ return [
             ],
             'filterableAttributes' => ['brandName', 'categories', 'in_stock', 'country_code'],
             'sortableAttributes'   => ['price', 'popularity', 'created_at'],
-            'distinctAttribute'    => 'group_id',
+            'distinctAttribute'    => null,
             'pagination'           => ['maxTotalHits' => 20000],
             'typoTolerance'        => ['enabled' => true],
             'synonyms'             => [],

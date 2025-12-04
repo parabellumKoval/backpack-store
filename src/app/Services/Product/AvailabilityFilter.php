@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 use Backpack\Store\app\Contracts\SupplierFilter;
 use Backpack\Store\app\Contracts\VariantAvailability;
+use Backpack\Store\app\Models\Category;
 
 class AvailabilityFilter
 {
@@ -24,9 +25,31 @@ class AvailabilityFilter
         // sp_ok(product_id): активные поставщики (и страна — если мульти)
         $spOk = $sup->spOk($country);
 
+        // активные категории, доступные для страны (или все активные, если страна не задана)
+        $availableCategories = Category::query()
+            ->select('ak_product_categories.id')
+            ->active()
+            ->when($country, function ($q) use ($country) {
+                $q->forCountry($country, false);
+            })
+            ->toBase();
+
         // База для веток: FROM ak_products p WHERE p.is_active=1
         /** @var Qb $base */
-        $base = DB::table("$t as p")->where('p.is_active', 1);
+        $base = DB::table("$t as p")
+            ->where('p.is_active', 1)
+            ->whereExists(function (Qb $cat) use ($availableCategories) {
+                $cat->selectRaw('1')
+                    ->from('ak_category_product as cp')
+                    ->joinSub($availableCategories, 'ac', 'ac.id', '=', 'cp.category_id')
+                    ->where(function ($where) {
+                        $where->whereColumn('cp.product_id', 'p.id')
+                            ->orWhere(function ($parent) {
+                                $parent->whereNotNull('p.parent_id')
+                                    ->whereColumn('cp.product_id', 'p.parent_id');
+                            });
+                    });
+            });
 
         // EXISTS(sp_ok WHERE product_id = p.id)
         $existsSelf = function (Qb $b) use ($spOk) {

@@ -30,7 +30,7 @@ class SearchService
 
         $builder = Catalog::search($norm[0]);
         $this->applyDefaultOptions($builder, $locale, $onlyInStock);
-
+        
         // ранжирование/сортировка — по настройкам
         if ($sort = \Settings::get('dress.search.ranking.sort', [])) {
             // пример: ["price:asc","popularity:desc"]

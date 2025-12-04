@@ -12,12 +12,17 @@ class CategorySmallResource extends BaseResource
      */
     public function toArray($request)
     {
+      $country = $request->input('country') ?? \Store::country();
+      $childrenCollection = $this->resource->childrenForCountry($country, true);
+
       return [
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
         'image' => $this->getFirstImageForApi(),
-        'children' => $this->resource->childrenForCountry($request->input('country') ?? \Store::country(), true),
+        'children' => $childrenCollection->isEmpty()
+          ? []
+          : static::collection($childrenCollection)->resolve($request),
         'extras' => $this->extras,
         'extras_trans' => $this->extrasTransDecoded,
         'tags' => $this->resource->relationLoaded('tags')

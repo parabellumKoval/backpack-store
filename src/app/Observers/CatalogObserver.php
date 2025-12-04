@@ -4,7 +4,7 @@ namespace Backpack\Store\app\Observers;
 
 use Illuminate\Support\Facades\Log;
 use Backpack\Store\app\Models\Product;
-use Backpack\Store\app\Services\Catalog\CatalogProductSync;
+use Backpack\Store\app\Services\Catalog\CatalogCacheService;
 
 /**
  * Триггерит точечную пересборку кеша каталога при любых операциях с товаром:
@@ -15,11 +15,11 @@ use Backpack\Store\app\Services\Catalog\CatalogProductSync;
  */
 class CatalogObserver
 {
-    protected CatalogProductSync $sync;
+    protected CatalogCacheService $catalogCacheService;
 
-    public function __construct(CatalogProductSync $sync)
+    public function __construct(CatalogCacheService $catalogCacheService)
     {
-        $this->sync = $sync;
+        $this->catalogCacheService = $catalogCacheService;
     }
 
     public function created(Product $product): void
@@ -56,11 +56,11 @@ class CatalogObserver
     {
         try {
             // 1) Всегда пересобираем сам товар
-            $this->sync->sync((int)$product->getKey());
+            $this->catalogCacheService->syncProduct((int) $product->getKey());
 
             // 2) Если это ВАРИАНТ (есть parent_id) — тронем ещё и БАЗОВЫЙ товар (меняется «листьяность» группы)
             if (!empty($product->parent_id)) {
-                $this->sync->sync((int)$product->parent_id);
+                $this->catalogCacheService->syncProduct((int) $product->parent_id);
             }
 
             // 3) Если это БАЗОВЫЙ — его изменения уже учтутся внутри (групповые атрибуты)

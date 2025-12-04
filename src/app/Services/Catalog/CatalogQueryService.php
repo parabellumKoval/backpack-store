@@ -149,10 +149,15 @@ class CatalogQueryService extends AbstractQueryService
             $this->query->where('c.in_stock', '>', 0);
         }
         if (in_array('top_sales', $sel, true)) {
-            // по варианту; если нужно по группе — можно заменить на подзапрос с суммой по группе
-            $this->query->join('ak_order_product as op', 'op.product_id', '=', 'c.product_id')
-              ->groupBy('c.product_id')
-              ->havingRaw('SUM(op.amount) >= ?', [$salesMin]);
+            $country = $this->country;
+            $this->query->whereIn('c.group_id', function ($sub) use ($salesMin, $country) {
+                $sub->select('cat.group_id')
+                    ->from('ak_catalog as cat')
+                    ->join('ak_order_product as op', 'op.product_id', '=', 'cat.product_id')
+                    ->where('cat.country_code', $country)
+                    ->groupBy('cat.group_id')
+                    ->havingRaw('SUM(op.amount) >= ?', [$salesMin]);
+            });
         }
 
         return $this;
@@ -353,6 +358,13 @@ class CatalogQueryService extends AbstractQueryService
             $base->setAttribute('group_has_stock', $hasStock);
             $base->setAttribute('group_stock_level', $maxStock);
 
+            $sortMod = $mods->first(function (Catalog $mod) {
+                return $mod->getAttribute('passed_filter') && (int) ($mod->in_stock ?? 0) > 0;
+            });
+            $base->setAttribute('sort_price', $sortMod ? (float) $sortMod->price : null);
+            $base->setAttribute('sort_sale', $sortMod ? ((float) ($sortMod->old_price ?? 0) - (float) ($sortMod->price ?? 0)) : null);
+            $base->setAttribute('sort_reviews', $sortMod ? (int) ($sortMod->reviews ?? 0) : null);
+
             $items->push($base);
         }
 
@@ -388,10 +400,10 @@ class CatalogQueryService extends AbstractQueryService
                 (clone $filtered)
                     ->select([
                         'c.group_id',
-                        DB::raw('MIN(c.price) as sort_price'),
+                        DB::raw('MIN(CASE WHEN c.in_stock > 0 THEN c.price ELSE NULL END) as sort_price'),
                         DB::raw('MAX( IF(c.in_stock>0, 1, 0) ) as sort_stock'),
-                        DB::raw('MAX( (c.old_price - c.price) ) as sort_sale'),
-                        DB::raw('MAX(c.reviews) as sort_reviews'),
+                        DB::raw('MAX(CASE WHEN c.in_stock > 0 THEN (c.old_price - c.price) ELSE NULL END) as sort_sale'),
+                        DB::raw('MAX(CASE WHEN c.in_stock > 0 THEN c.reviews ELSE NULL END) as sort_reviews'),
                     ])
                     ->groupBy('c.group_id'),
                 'g'
@@ -402,17 +414,26 @@ class CatalogQueryService extends AbstractQueryService
 
         // применяем сортировку по группе (price/in_stock/sale/sales/default)
         if ($orderBy === 'in_stock') {
-            $g->orderBy('g.sort_stock', $orderDir)->orderBy('g.sort_price', 'asc');
+            $g->orderBy('g.sort_stock', $orderDir)
+              ->orderByRaw('CASE WHEN g.sort_price IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_price', 'asc');
         } elseif ($orderBy === 'sale') {
-            $g->orderBy('g.sort_sale', $orderDir)->orderBy('g.sort_price', 'asc');
+            $g->orderByRaw('CASE WHEN g.sort_sale IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_sale', $orderDir)
+              ->orderBy('g.sort_price', 'asc');
         } elseif ($orderBy === 'sales') {
             // у нас нет суммарных sales в кэше — используем reviews как прокси, либо sort_reviews
-            $g->orderBy('g.sort_reviews', $orderDir)->orderBy('g.sort_price', 'asc');
+            $g->orderByRaw('CASE WHEN g.sort_reviews IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_reviews', $orderDir)
+              ->orderBy('g.sort_price', 'asc');
         } elseif ($orderBy === 'price') {
-            $g->orderBy('g.sort_price', $orderDir);
+            $g->orderByRaw('CASE WHEN g.sort_price IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_price', $orderDir);
         } else {
             // дефолт: в наличии -> цена возр.
-            $g->orderBy('g.sort_stock', 'desc')->orderBy('g.sort_price', 'asc');
+            $g->orderBy('g.sort_stock', 'desc')
+              ->orderByRaw('CASE WHEN g.sort_price IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_price', 'asc');
         }
 
         // группа id текущей страницы
@@ -461,20 +482,65 @@ class CatalogQueryService extends AbstractQueryService
         $reverse = $orderDir !== 'asc';
 
         if ($orderBy === 'price') {
-            return $items->sortBy('price', SORT_REGULAR, $reverse)->values();
+            return $this->sortByRepresentativeMetric($items, fn (Catalog $item) => $this->representativeSortPrice($item), $reverse);
         }
         if ($orderBy === 'in_stock') {
             return $items->sortBy(fn($x)=> $this->groupStockLevel($x), SORT_REGULAR, $reverse)->values();
         }
         if ($orderBy === 'sale') {
-            return $items->sortBy(fn($x)=>(float)$x->old_price - (float)$x->price, SORT_REGULAR, $reverse)->values();
+            return $this->sortByRepresentativeMetric($items, fn (Catalog $item) => $this->representativeSortSale($item), $reverse);
         }
         if ($orderBy === 'sales') {
             // прокси: reviews
-            return $items->sortBy(fn($x)=>(int)$x->reviews, SORT_REGULAR, $reverse)->values();
+            return $this->sortByRepresentativeMetric($items, fn (Catalog $item) => $this->representativeSortReviews($item), $reverse);
         }
 
         return $items->sortBy(fn($x)=>$x->{$orderBy} ?? null, SORT_REGULAR, $reverse)->values();
+    }
+
+    protected function sortByRepresentativeMetric(Collection $items, callable $resolver, bool $descending): Collection
+    {
+        return $items->sort(function (Catalog $a, Catalog $b) use ($resolver, $descending) {
+            $aVal = $resolver($a);
+            $bVal = $resolver($b);
+
+            $aNull = $aVal === null;
+            $bNull = $bVal === null;
+
+            if ($aNull && $bNull) {
+                return 0;
+            }
+            if ($aNull) {
+                return 1;
+            }
+            if ($bNull) {
+                return -1;
+            }
+
+            if ($aVal == $bVal) {
+                return 0;
+            }
+
+            return $descending ? ($bVal <=> $aVal) : ($aVal <=> $bVal);
+        })->values();
+    }
+
+    protected function representativeSortPrice(Catalog $item): ?float
+    {
+        $value = $item->getAttribute('sort_price');
+        return $value !== null ? (float) $value : null;
+    }
+
+    protected function representativeSortSale(Catalog $item): ?float
+    {
+        $value = $item->getAttribute('sort_sale');
+        return $value !== null ? (float) $value : null;
+    }
+
+    protected function representativeSortReviews(Catalog $item): ?int
+    {
+        $value = $item->getAttribute('sort_reviews');
+        return $value !== null ? (int) $value : null;
     }
 
     protected function groupHasStock(Catalog $item): bool

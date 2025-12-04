@@ -8,7 +8,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-// use Backpack\Store\app\Services\Catalog\CatalogProductSync;
 use Backpack\Store\app\Services\Catalog\CatalogCacheService;
 
 
@@ -43,11 +42,6 @@ class SyncCatalogProductJob implements ShouldQueue, ShouldBeUniqueUntilProcessin
     {
         return 60;
     }
-
-    // public function handle(CatalogProductSync $sync): void
-    // {
-    //     $sync->sync($this->productId);
-    // }
 
     public function handle(CatalogCacheService $sync): void
     {

@@ -228,7 +228,7 @@ class CatalogCacheService
     protected function buildCatalogRow($p, string $countryCode): array
     {
         // категории
-        $category_ids_array = $p->getAllCategoryIds();
+        $category_ids_array = $p->getAllCategoryIds($countryCode);
         $category_ids_json  = $category_ids_array ? json_encode($category_ids_array) : null;
 
         // картинки

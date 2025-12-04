@@ -171,24 +171,26 @@ class Product extends Model
      *
      * @return array Array of unique category IDs
      */
-    public function getAllCategoryIds(): array
+    public function getAllCategoryIds($countryCode = null): array
     {
-        $categoryIds = [];
-        
-        // Get all directly assigned categories
-        $categories = $this->categories;
-        
-        foreach ($categories as $category) {
-            // Add current category ID
-            $categoryIds[] = $category->id;
-            
-            // Get all parent categories
-            $ancestors = $category->getParentNode()->pluck('id')->toArray();
-            $categoryIds = array_merge($categoryIds, $ancestors);
+      $categoryIds = [];
+
+      $categories = $this->categories;
+
+      foreach ($categories as $category) {
+        $ancestors = $category
+          ->getParentNode($category, null, $countryCode)
+          ->pluck('id')
+          ->toArray();
+
+        if (!in_array($category->id, $ancestors, true)) {
+          $ancestors[] = $category->id;
         }
-        
-        // Remove duplicates and reindex array
-        return array_values(array_unique($categoryIds));
+
+        $categoryIds = array_merge($categoryIds, $ancestors);
+      }
+
+      return array_values(array_unique($categoryIds));
     }
 
     /**

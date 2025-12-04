@@ -112,8 +112,17 @@ class ProductQueryService extends AbstractQueryService
 
     // only top sales 
     if(in_array('top_sales', $this->request->input('selections', []))) {
-      $this->query->rightJoin('ak_order_product as op', 'ak_products.id', '=', 'op.product_id')
-                  ->havingRaw("SUM(op.amount) >= ?", [$this->top_sales_count]);
+      $groupExpression = 'COALESCE(ak_products.parent_id, ak_products.id)';
+      $salesThreshold = $this->top_sales_count;
+
+      $this->query->whereIn(DB::raw($groupExpression), function ($sub) use ($salesThreshold) {
+        $groupExpr = 'COALESCE(p.parent_id, p.id)';
+        $sub->select(DB::raw("$groupExpr as grp"))
+            ->from('ak_products as p')
+            ->join('ak_order_product as op', 'op.product_id', '=', 'p.id')
+            ->groupBy(DB::raw($groupExpr))
+            ->havingRaw('SUM(op.amount) >= ?', [$salesThreshold]);
+      });
     }
 
     // only top price 

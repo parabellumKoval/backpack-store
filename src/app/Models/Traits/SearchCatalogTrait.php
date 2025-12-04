@@ -53,7 +53,7 @@ trait SearchCatalogTrait {
     // public static function searchableTranslatableAttributes(): array { return ['name','brand','category','attrs_text']; }
     public static function filterableAttributes(): array { return ['in_stock','country_code','category_ids','brand_id']; }
     public static function sortableAttributes(): array { return ['price','popularity','created_at']; }
-    public static function distinctAttribute(): ?string { return 'group_id'; }
+    public static function distinctAttribute(): ?string { return null; }
     public static function searchRankingRules(): array {
         return \Settings::get('dress.search.ranking.rules', ['words','typo','proximity','attribute','sort','exactness','desc(popularity)']);
     }

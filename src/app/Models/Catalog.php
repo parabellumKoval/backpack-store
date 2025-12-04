@@ -42,7 +42,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
     protected $table = 'ak_catalog';
     protected $primaryKey = 'id';
     public $incrementing = true;
-    protected $keyType = 'int';
+    // protected $keyType = 'int';
 
     public $timestamps = false;
     protected $guarded = [];
