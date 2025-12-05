@@ -71,6 +71,9 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
     const DEFAULT_BY = 'created_at';
     const DEFAULT_DIR = 'desc';
     
+    public function getReviewableKey() {
+      return $this->group_id;
+    }
     /**
      * Method getSortingData
      *
@@ -117,8 +120,9 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         $query->where("{$table}.is_available", 1);
 
         $country = $context['country'] ?? null;
+
         if ($country) {
-            $query->where("{$table}.country_code", $country);
+            $query->where("{$table}.country_code", mb_strtolower($country));
         }
 
         return $query;
@@ -275,6 +279,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         $headline = $this->formatUniqString([
             '#'.$this->id,
             $this->name,
+            $this->short_name,
         ]);
 
         return $this->formatUniqHtml($headline, [

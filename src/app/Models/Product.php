@@ -52,6 +52,9 @@ use Backpack\Store\app\Models\Traits\HasModification;
 use Backpack\Tag\app\Traits\Taggable;
 use Backpack\Reviews\app\Traits\Reviewable;
 
+
+use Backpack\Reviews\app\Contracts\ReviewableAvailabilityScope;
+
 class Product extends Model
 {
     use HasFactory;
@@ -357,7 +360,7 @@ class Product extends Model
     | RELATIONS
     |--------------------------------------------------------------------------
     */
-        
+
     /**
      * categories
      *
