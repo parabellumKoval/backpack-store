@@ -3,8 +3,8 @@
 namespace Backpack\Store\app\Services\Shipping\Providers;
 
 use Backpack\Store\app\Contracts\ShippingProviderInterface;
-use Backpack\Store\app\Dto\ShippingQuoteRequest;
-use Backpack\Store\app\Dto\ShippingQuoteResult;
+use Backpack\Store\app\DTO\ShippingQuoteRequest;
+use Backpack\Store\app\DTO\ShippingQuoteResult;
 
 class PacketaProvider implements ShippingProviderInterface
 {

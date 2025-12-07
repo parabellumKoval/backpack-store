@@ -21,10 +21,9 @@ class ProductMediumResource extends BaseResource
         'oldPrice' => $this->old_price,
         'currency' => $this->currency,
         'rating' => $this->rating,
-        'image' => $this->getFirstImageForApi(),
+        'image' => $this->effective()->getFirstImageForApi(),
         'inStock' => $this->in_stock,
-        'external' => $this->external ?? 0,
-        // 'modifications' => $this->resource_modifications
+        'external' => $this->external ?? 0
       ];
     }
 }

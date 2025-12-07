@@ -5,7 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Backpack\Store\app\Services\Shipping\ShippingCalculator;
-use Backpack\Store\app\Dto\ShippingQuoteRequest;
+use Backpack\Store\app\DTO\ShippingQuoteRequest;
 
 class ShippingController extends Controller
 {

@@ -2,8 +2,8 @@
 
 namespace Backpack\Store\app\Contracts;
 
-use Backpack\Store\app\Dto\ShippingQuoteRequest;
-use Backpack\Store\app\Dto\ShippingQuoteResult;
+use Backpack\Store\app\DTO\ShippingQuoteRequest;
+use Backpack\Store\app\DTO\ShippingQuoteResult;
 
 interface ShippingProviderInterface
 {
