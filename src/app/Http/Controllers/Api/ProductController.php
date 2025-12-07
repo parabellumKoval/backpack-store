@@ -281,7 +281,7 @@ class ProductController extends \App\Http\Controllers\Controller
       $product->external = in_array($product->id, $availableIds, true) ? 0 : 1;
     });
 
-    $collection = self::$resources['product']['medium']::collection($products); 
+    $collection = self::$resources['product']['cart']::collection($products); 
 
     return $collection;
   }

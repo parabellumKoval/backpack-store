@@ -13,15 +13,16 @@ class ProductCartResource extends BaseResource
     public function toArray($request)
     {
       return [
-        'id' => $this->id,
+        'id' => $this->product_id ?? $this->id,
         'name' => $this->name,
+        'shortName' => $this->short_name,
         'slug' => $this->slug,
-        'code' => $this->code,
-        'short_name' => $this->short_name,
         'price' => $this->price,
-        'old_price' => $this->oldPrice,
-        'image' => $this->getFirstImageSrc(),
-        'amount' => $this->amount,
+        'oldPrice' => $this->old_price,
+        'currency' => $this->currency,
+        'rating' => $this->rating,
+        'image' => $this->effective()->getFirstImageForApi(),
+        'inStock' => $this->in_stock,
         'external' => $this->external ?? 0
       ];
     }
