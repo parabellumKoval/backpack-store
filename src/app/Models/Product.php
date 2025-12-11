@@ -166,7 +166,7 @@ class Product extends Model
 
     // public static function imageFieldPrefix(): string
     // {
-    //     return (string) config('services.cdn.articles_url', '/');
+    //     return (string) config('backpack-images.providers.bunny.pull_zone_url', '');
     // }
 
     /**

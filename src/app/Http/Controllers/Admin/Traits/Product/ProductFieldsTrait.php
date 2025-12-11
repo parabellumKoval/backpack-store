@@ -58,6 +58,9 @@ trait ProductFieldsTrait
     }
 
     protected function setSuppliersFields($tab = null){
+        if ($this->shouldHideSuppliersFields()) {
+            return;
+        }
         $field = [
             'name'  => 'suppliersData',
             'label' => trans('backpack-store::product-field.tabs.warehouse'),
@@ -82,6 +85,41 @@ trait ProductFieldsTrait
         ];
 
         $this->crud->addField($field);
+    }
+
+    /**
+     * Hide warehouse/showcase fields for base products that already have modifications.
+     */
+    protected function shouldHideSuppliersFields(): bool
+    {
+        $entry = $this->entry ?? $this->crud->getCurrentEntry();
+
+        if (!$entry instanceof \Illuminate\Database\Eloquent\Model) {
+            return false;
+        }
+
+        // Modifications (parent_id not null) should always manage their own stock.
+        if ((int) ($entry->parent_id ?? 0) > 0) {
+            return false;
+        }
+
+        if (!method_exists($entry, 'children')) {
+            return false;
+        }
+
+        if ($entry->relationLoaded('children')) {
+            $children = $entry->children;
+
+            if ($children instanceof \Illuminate\Support\Collection) {
+                return $children->isNotEmpty();
+            }
+
+            if (is_array($children)) {
+                return !empty($children);
+            }
+        }
+
+        return $entry->children()->exists();
     }
 
     protected function setupFields()

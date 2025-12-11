@@ -16,9 +16,24 @@ class SetLocaleFromHeader
         $locale = $request->header('Accept-Language');
 
         if ($locale) {
-            // Use the first preferred locale value
-            $locale = substr($locale, 0, 2);
-            app()->setLocale($locale);
+            $primary = trim(explode(',', $locale)[0] ?? '');
+
+            if ($primary !== '') {
+                $primary = strtolower($primary);
+
+                if (str_contains($primary, ';')) {
+                    $primary = substr($primary, 0, strpos($primary, ';'));
+                }
+
+                $segments = preg_split('/[-_]/', $primary);
+                $language = $segments[0] ?? null;
+
+                $supported = (array) config('app.supported_locales', []);
+
+                if ($language && (empty($supported) || in_array($language, $supported, true))) {
+                    app()->setLocale($language);
+                }
+            }
         }
 
         return $next($request);
