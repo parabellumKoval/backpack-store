@@ -204,6 +204,22 @@ class CatalogController
         $region = $request->input('country');
 
         $product = Catalog::where('slug', $slug)->where('country_code', $region)->available()->firstOrFail();
+        $availableRegions = Catalog::query()
+            ->where('group_id', $product->group_id)
+            ->where('is_available', 1)
+            ->pluck('country_code')
+            ->map(function ($code) {
+                return strtolower((string) $code);
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        if (empty($availableRegions) && $product->country_code) {
+            $availableRegions = [strtolower((string) $product->country_code)];
+        }
+
+        $product->setAttribute('available_regions', $availableRegions);
         $product_resource = new self::$resources['product']['large']($product);
         return response()->json($product_resource);
     }

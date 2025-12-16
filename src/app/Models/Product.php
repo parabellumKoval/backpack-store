@@ -689,9 +689,21 @@ class Product extends Model
      * )
      */
     public function getSeoArrayAttribute() {
+      $seo = $this->seoDecoded;
+      $extras = $this->extras ?? [];
+      if (is_string($extras)) {
+        $decodedExtras = json_decode($extras, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+          $extras = $decodedExtras;
+        } else {
+          $extras = [];
+        }
+      }
+
       return [
-        'meta_title' => $this->seoDecoded->meta_title ?? null,
-        'meta_description' => $this->seoDecoded->meta_description ?? null,
+        'meta_title' => $seo->meta_title ?? null,
+        'meta_description' => $seo->meta_description ?? null,
+        'disable_base_canonical' => (bool) ($extras['disable_base_canonical'] ?? ($seo->disable_base_canonical ?? false)),
       ];
     }
     
@@ -701,7 +713,29 @@ class Product extends Model
      * @return void
      */
     public function getSeoDecodedAttribute() {
-      return !empty($this->seo)? json_decode($this->seo): null;
+      if (empty($this->seo)) {
+        return null;
+      }
+
+      $seo = $this->seo;
+
+      if (is_object($seo)) {
+        return $seo;
+      }
+
+      if (is_array($seo)) {
+        return json_decode(json_encode($seo));
+      }
+
+      if (is_string($seo)) {
+        $decoded = json_decode($seo);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+          return $decoded;
+        }
+      }
+
+      return null;
     }
     
     /**

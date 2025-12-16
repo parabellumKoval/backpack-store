@@ -22,7 +22,12 @@ trait HasModification
 
         // оставим только доступные
         // $mods = $mods->filter(fn($m) => (int)$m->is_available === 1)->values();
-        $mods = $mods->values();
+        $mods = $mods
+            ->sortBy(function ($mod) {
+                $price = $mod->price ?? null;
+                return $price === null ? INF : (float) $price;
+            })
+            ->values();
 
         if ($mods->isEmpty()) {
             return null;

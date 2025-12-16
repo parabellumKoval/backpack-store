@@ -36,7 +36,7 @@ class CatalogCacheService
     protected array $upsertColumns = [
         'group_id', 'item_type', 'currency_code', 'is_available', 'in_stock',
         'price', 'old_price', 'sale', 'brand_id', 'category_ids',
-        'short_name', 'name', 'excerpt', 'slug', 'images', 'code',
+        'short_name', 'name', 'excerpt', 'slug', 'images', 'code', 'extras',
         'rating', 'reviews', 'ratings', 'content', 'merchant_content', 'seo', 'attrs'
     ];
 
@@ -146,6 +146,7 @@ class CatalogCacheService
     {
         $currency = $this->targetCurrency($countryCode);
 
+
         \Store::withContext($countryCode, $currency, function () use ($productId, $countryCode) {
             DB::transaction(function () use ($productId, $countryCode) {
                 $product = $this->productClass::query()->whereKey($productId)->first();
@@ -227,6 +228,7 @@ class CatalogCacheService
     /** Единое построение строки ak_catalog. */
     protected function buildCatalogRow($p, string $countryCode): array
     {
+
         // категории
         $category_ids_array = $p->getAllCategoryIds($countryCode);
         $category_ids_json  = $category_ids_array ? json_encode($category_ids_array) : null;
@@ -235,12 +237,13 @@ class CatalogCacheService
         $images_array = $p->effective()->images;
         $images_json  = $images_array ? json_encode($images_array) : null;
 
-        
         if($p->price === null) {
             return [];
         }
+        $extrasJson = $p->effective(true)->extras;
 
-        // dd($p->base->rating, $p->base, $p);
+        \Log::info('p - ' . $p->id);
+        \Log::info('extras - ' . print_r($extrasJson, true));
         // цена есть → доступен
         return [
             'product_id'    => $p->id,
@@ -263,6 +266,7 @@ class CatalogCacheService
             'slug'          => $p->slug,
             'images'        => $images_json,
             'code'          => $p->effective()->code,
+            'extras'        => $extrasJson,
 
             // Reviews
             'rating'        => $p->base->rating ?? 0,

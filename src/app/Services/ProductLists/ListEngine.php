@@ -62,6 +62,11 @@ class ListEngine
         $items = $this->applyListFilters($items, $listFilters, $context);
 
         $catalogRows = $this->hydrator->fetchCatalogRows(array_map(fn($i) => $i->productId, $items), $context->country);
+        $items = $this->deduplicateByGroup($items, $catalogRows);
+        if (!empty($items)) {
+            $activeIds = array_map(fn($item) => $item->productId, $items);
+            $catalogRows = array_intersect_key($catalogRows, array_flip($activeIds));
+        }
 
         $sortOrder = $list->sort_order;
         if (!is_array($sortOrder)) {
@@ -230,6 +235,37 @@ class ListEngine
             $unique[] = $item;
             $seen[$item->productId] = true;
         }
+        return $unique;
+    }
+
+    /**
+     * @param  ResolvedItem[] $items
+     * @param  array<int,\Backpack\Store\app\Models\Catalog> $catalogRows
+     * @return ResolvedItem[]
+     */
+    protected function deduplicateByGroup(array $items, array $catalogRows): array
+    {
+        if (empty($items)) {
+            return $items;
+        }
+
+        $unique = [];
+        $seen = [];
+        foreach ($items as $item) {
+            $row = $catalogRows[$item->productId] ?? null;
+            $groupId = $row->group_id ?? null;
+            if ($groupId === null) {
+                $key = "p:{$item->productId}";
+            } else {
+                $key = "g:{$groupId}";
+            }
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $unique[] = $item;
+        }
+
         return $unique;
     }
 

@@ -101,11 +101,16 @@ class ProductQueryService extends AbstractQueryService
     
     // only with rating 
     if(in_array('with_rating', $this->request->input('selections', []))) {
-      $this->query->whereExists(function($subquery) {
+      $baseIdExpr = 'COALESCE(ak_products.parent_id, ak_products.id)';
+      $types = $this->getProductReviewableTypes();
+
+      $this->query->whereExists(function($subquery) use ($baseIdExpr, $types) {
           $subquery->select(DB::raw(1))
               ->from('ak_reviews')
-              ->whereColumn('ak_reviews.reviewable_id', 'ak_products.id')
-              ->where('ak_reviews.reviewable_type', 'Backpack\Store\app\Models\Product')
+              ->whereRaw("ak_reviews.reviewable_id = {$baseIdExpr}")
+              ->when(!empty($types), function ($q) use ($types) {
+                  $q->whereIn('ak_reviews.reviewable_type', $types);
+              })
               ->where('ak_reviews.is_moderated', 1);
       });
     }
@@ -131,6 +136,24 @@ class ProductQueryService extends AbstractQueryService
     }
 
     return $this;
+  }
+
+  protected function getProductReviewableTypes(): array
+  {
+      $types = [
+          \App\Models\Product::class,
+          \Backpack\Store\app\Models\Product::class,
+          \Backpack\Store\app\Models\Catalog::class,
+      ];
+
+      $configured = \Settings::get('backpack.reviews.reviewable_types_list', []);
+      $configuredType = data_get($configured, 'product.model');
+
+      if ($configuredType) {
+          $types[] = ltrim($configuredType, '\\');
+      }
+
+      return array_values(array_unique($types));
   }
   
   /**

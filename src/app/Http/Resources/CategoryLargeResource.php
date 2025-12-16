@@ -43,6 +43,7 @@ class CategoryLargeResource extends BaseResource
               ];
             })->values()
           : [],
+        'available_regions' => $this->resolveAvailableRegions(),
       ];
     }
 
@@ -121,5 +122,55 @@ class CategoryLargeResource extends BaseResource
       ];
 
       return $trail;
+    }
+
+    /**
+     * Normalize available region list for hreflang meta.
+     */
+    protected function resolveAvailableRegions(): array
+    {
+      $raw = $this->resource->countries ?? null;
+
+      if (is_string($raw)) {
+        $decoded = json_decode($raw, true);
+        $raw = json_last_error() === JSON_ERROR_NONE ? $decoded : [$raw];
+      }
+
+      if (is_array($raw) && !empty($raw)) {
+        return $this->normalizeRegions($raw);
+      }
+
+      return $this->fallbackRegions();
+    }
+
+    /**
+     * Collect fallback regions from store settings when category is global.
+     */
+    protected function fallbackRegions(): array
+    {
+      if (!class_exists('Store')) {
+        return [];
+      }
+
+      $countries = \Store::countries() ?? [];
+      if (empty($countries)) {
+        return [];
+      }
+
+      return $this->normalizeRegions(array_keys($countries));
+    }
+
+    /**
+     * Normalize region codes to lower-case unique values.
+     *
+     * @param  array  $regions
+     */
+    protected function normalizeRegions(array $regions): array
+    {
+      $normalized = array_map(function ($value) {
+        return strtolower(trim((string) $value));
+      }, $regions);
+
+      return array_values(array_unique(array_filter($normalized)));
     }
 }

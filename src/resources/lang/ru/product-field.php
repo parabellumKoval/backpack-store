@@ -71,7 +71,11 @@ return [
         ],
         'seo' => [
             'meta_title' => 'Meta Title',
-            'meta_description' => 'Meta Description'
+            'meta_description' => 'Meta Description',
+            'disable_base_canonical' => [
+                'label' => 'Отключить canonical на базовую модификацию',
+                'hint' => 'Эта модификация начнет самостоятельно индексироваться: canonical будет прописан на неё, а не на базовую.'
+            ]
         ],
         'attributes' => [
             'title' => 'Атрибуты',

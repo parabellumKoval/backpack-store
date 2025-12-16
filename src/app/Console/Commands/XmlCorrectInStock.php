@@ -31,9 +31,6 @@ class XmlCorrectInStock extends Command
      */
     protected $description = '';
 
-
-    protected $isSuppliersEnabled = false;
-
     /**
      * Create a new command instance.
      *
@@ -42,7 +39,6 @@ class XmlCorrectInStock extends Command
     public function __construct()
     {
       parent::__construct();
-      $this->isSuppliersEnabled = \Settings::get('dress.supplier.enable', false);
     }
 
 

@@ -126,6 +126,14 @@ trait ProductFieldsTrait
     {
 
         $parentId = $this->entry->parent_id ?? request()->input('parent_id') ?? null;
+
+        if ($parentId) {
+            $this->crud->addField([
+                'name'  => 'parent_id',
+                'type'  => 'hidden',
+                'value' => $parentId,
+            ]);
+        }
         
         $this->getBackToBaseLink($parentId, true);
 
@@ -529,6 +537,20 @@ trait ProductFieldsTrait
             'recommended_length' => 160,
             'tab' => trans('backpack-store::product-field.tabs.seo')
         ]);
+
+        $isVariant = ($this->entry?->parent_id ?? null) || request()->input('parent_id');
+
+        if ($isVariant) {
+            $this->crud->addField([
+                'name' => 'disable_base_canonical',
+                'label' => trans('backpack-store::product-field.fields.seo.disable_base_canonical.label'),
+                'type' => 'checkbox',
+                'fake' => true,
+                'store_in' => 'extras',
+                'hint' => trans('backpack-store::product-field.fields.seo.disable_base_canonical.hint'),
+                'tab' => trans('backpack-store::product-field.tabs.seo'),
+            ]);
+        }
     }
 
     /**

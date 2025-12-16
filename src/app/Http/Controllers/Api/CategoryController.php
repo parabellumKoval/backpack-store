@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 use Illuminate\Http\Request;
 
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Services\Category\CategoryAvailability;
 
 class CategoryController extends \App\Http\Controllers\Controller
 { 
@@ -91,7 +92,9 @@ class CategoryController extends \App\Http\Controllers\Controller
       ->forCountry($country, true)
       ->with('tags')
       ->where('slug', $slug)
-      ->firstOrFail();
+      ->first();
+
+    $category = CategoryAvailability::ensure($category, $country, true, true);
     $resource = new self::$resources['category']['large']($category);
     // return new self::$resources['category']['large']($category);
     return $resource;

@@ -100,4 +100,12 @@ class EventServiceProvider extends ServiceProvider
         ProductList::observe(ProductListObserver::class);
         CurrencyRate::observe(CurrencyRateObserver::class);
     }
+
+    /**
+     * Skip automatic email verification listener registration to prevent duplicate emails.
+     */
+    protected function configureEmailVerification()
+    {
+        // Email verification notifications are managed by the main application.
+    }
 }

@@ -187,8 +187,9 @@ class ProductFilterService extends AbstractFilterService
       $query = $this->product_service->applyAllFiltersExcept('selections')->getQuery()
         //Join reviews
         ->leftJoin('ak_reviews as r', function ($join) {
-          $join->on('r.reviewable_id', '=', 'ak_products.id')
-            ->where('r.reviewable_type', '=', 'Backpack\Store\app\Models\Product')
+          $baseIdExpr = DB::raw('COALESCE(ak_products.parent_id, ak_products.id)');
+          $join->on($baseIdExpr, '=', 'r.reviewable_id')
+            ->whereIn('r.reviewable_type', $this->getProductReviewableTypes())
             ->where('r.is_moderated', '=', 1);
         })
         ->select([
@@ -284,6 +285,24 @@ class ProductFilterService extends AbstractFilterService
     return $attributes;
   } 
   
+  protected function getProductReviewableTypes(): array
+  {
+      $types = [
+          \App\Models\Product::class,
+          \Backpack\Store\app\Models\Product::class,
+          \Backpack\Store\app\Models\Catalog::class,
+      ];
+
+      $configured = \Settings::get('backpack.reviews.reviewable_types_list', []);
+      $configuredType = data_get($configured, 'product.model');
+
+      if ($configuredType) {
+          $types[] = ltrim($configuredType, '\\');
+      }
+
+      return array_values(array_unique($types));
+  }
+
 
 
 }

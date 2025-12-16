@@ -43,6 +43,10 @@
 				@endif
 		  		>
 			  {!! csrf_field() !!}
+              @php
+                  $fullModeValue = filter_var(old('full', request()->input('full')), FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+              @endphp
+              <input type="hidden" name="full" value="{{ $fullModeValue }}">
 		      <!-- load the view from the application if it exists, otherwise load the one in the package -->
 		      @if(view()->exists('vendor.backpack.crud.form_content'))
 		      	@include('vendor.backpack.crud.form_content', [ 'fields' => $crud->fields(), 'action' => 'create' ])
@@ -56,4 +60,3 @@
 </div>
 
 @endsection
-

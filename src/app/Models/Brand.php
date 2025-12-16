@@ -100,6 +100,11 @@ class Brand extends Model
       ];
     }
 
+    public static function imageProviderName(?string $attribute = null): string
+    {
+        return 'bunny';
+    }
+
     public static function imageStorageFolder(?string $attribute = null): string
     {
         return 'brands';

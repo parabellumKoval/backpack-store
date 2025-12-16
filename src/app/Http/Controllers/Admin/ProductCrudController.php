@@ -70,6 +70,7 @@ class ProductCrudController extends CrudController
     private $langs_list = [];
     
     private $product_class = null;
+    private $variantFullModeSessionKey = 'store.product.variant_full_mode';
 
     public function __construct() {
       $this->product_class = \Settings::get('dress.product.model_admin', 'Backpack\Store\app\Models\Admin\Product');
@@ -234,7 +235,9 @@ class ProductCrudController extends CrudController
 
       // 2) Если передан parent_id — это создание модификации. По умолчанию показываем ЛАЙТ-набор полей.
       $isVariantCreate = request()->filled('parent_id');
-      $full = request()->boolean('full'); // ?full=1 для «все поля»
+      $full = $isVariantCreate
+          ? $this->resolveVariantFullMode()
+          : request()->boolean('full'); // ?full=1 для «все поля»
 
       if($isVariantCreate) {
         $this->crud->setValidation(ProductModificationRequest::class);
@@ -288,7 +291,9 @@ class ProductCrudController extends CrudController
 
       $entry = $this->crud->getCurrentEntry();
       $isVariant = (bool) $entry->parent_id;
-      $full = request()->boolean('full'); // ?full=1 для «все поля»
+      $full = $isVariant
+          ? $this->resolveVariantFullMode()
+          : request()->boolean('full'); // ?full=1 для «все поля»
 
       if($isVariant) {
         $this->crud->setValidation(ProductModificationRequest::class);
@@ -616,6 +621,27 @@ class ProductCrudController extends CrudController
     private function setLocale() {
       if(\Request::query('locale'))
         app()->setLocale(\Request::query('locale'));
+    }
+
+    /**
+     * Keep the preferred edit mode for product variants in the user session.
+     */
+    private function resolveVariantFullMode(): bool
+    {
+        $request = request();
+        $sessionKey = $this->variantFullModeSessionKey;
+
+        if ($request->has('full')) {
+            $full = $request->boolean('full');
+            session([$sessionKey => $full]);
+
+            return $full;
+        }
+
+        $full = (bool) session($sessionKey, false);
+        $request->merge(['full' => $full ? 1 : 0]);
+
+        return $full;
     }
 
     

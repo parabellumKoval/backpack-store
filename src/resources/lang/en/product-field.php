@@ -71,7 +71,11 @@ return [
         ],
         'seo' => [
             'meta_title' => 'Meta Title',
-            'meta_description' => 'Meta Description'
+            'meta_description' => 'Meta Description',
+            'disable_base_canonical' => [
+                'label' => 'Disable canonical to base modification',
+                'hint' => 'When enabled, this modification will be indexed on its own and the canonical will point here instead of the base one.'
+            ]
         ],
         'attributes' => [
             'title' => 'Attributes',

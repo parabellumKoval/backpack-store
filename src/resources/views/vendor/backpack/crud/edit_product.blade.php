@@ -40,6 +40,10 @@
 		  		>
 		  {!! csrf_field() !!}
 		  {!! method_field('PUT') !!}
+          @php
+              $fullModeValue = filter_var(old('full', request()->input('full')), FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+          @endphp
+          <input type="hidden" name="full" value="{{ $fullModeValue }}">
 
 		  	@if ($crud->model->translationEnabled())
                 @php

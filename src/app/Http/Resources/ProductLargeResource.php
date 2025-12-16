@@ -27,6 +27,7 @@ class ProductLargeResource extends BaseResource
         'short_name' => $this->short_name,
         'inStock' => $this->in_stock,
         'slug' => $this->slug,
+        'base_modification_slug' => $this->resolveBaseModificationSlug($mods),
         'price' => $this->price,
         'old_price' => $this->old_price,
         'sale' => $this->sale,
@@ -44,7 +45,8 @@ class ProductLargeResource extends BaseResource
         'attrs' => $this->properties,
         'custom_attrs' => $this->customProperties,
         'modifications' => $mods,
-        'seo' => $this->seoArray
+        'seo' => $this->resolveSeo(),
+        'available_regions' => $this->resolveAvailableRegions(),
       ];
     }
 
@@ -163,5 +165,102 @@ class ProductLargeResource extends BaseResource
       }
 
       return collect();
+    }
+
+    /**
+     * Normalize available regions list for hreflang usage.
+     */
+    protected function resolveAvailableRegions(): array
+    {
+      $regions = $this->available_regions ?? null;
+
+      if (is_string($regions)) {
+        $decoded = json_decode($regions, true);
+        $regions = json_last_error() === JSON_ERROR_NONE ? $decoded : [$regions];
+      }
+
+      if (!is_array($regions) || empty($regions)) {
+        $fallback = $this->country_code ? [strtolower((string) $this->country_code)] : [];
+        return $fallback;
+      }
+
+      $normalized = array_map(function ($value) {
+        return strtolower(trim((string) $value));
+      }, $regions);
+
+      return array_values(array_unique(array_filter($normalized)));
+    }
+
+    /**
+     * Resolve seo data including optional canonical flag.
+     */
+    protected function resolveSeo(): array
+    {
+      $seoRaw = $this->seoArray ?? null;
+
+      if (is_null($seoRaw)) {
+        $seoRaw = $this->seo ?? null;
+      }
+
+      $seo = $this->normalizeJsonPayload($seoRaw);
+      $extras = $this->normalizeJsonPayload($this->extras ?? null);
+
+      $disable = $seo['disable_base_canonical'] ?? ($extras['disable_base_canonical'] ?? false);
+
+      return [
+        'meta_title' => $seo['meta_title'] ?? null,
+        'meta_description' => $seo['meta_description'] ?? null,
+        'disable_base_canonical' => (bool) $disable,
+      ];
+    }
+
+    /**
+     * Normalize mixed JSON columns (arrays/objects/strings) into arrays.
+     */
+    protected function normalizeJsonPayload($payload): array
+    {
+      if ($payload instanceof \JsonSerializable) {
+        $payload = $payload->jsonSerialize();
+      } elseif (is_object($payload)) {
+        $payload = (array) $payload;
+      }
+
+      if (is_string($payload)) {
+        $decoded = json_decode($payload, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+          $payload = $decoded;
+        }
+      }
+
+      return is_array($payload) ? $payload : [];
+    }
+
+    /**
+     * Extract base modification slug from modifications list.
+     */
+    protected function resolveBaseModificationSlug($mods): ?string
+    {
+      $baseModel = $this->base ?? null;
+
+      if ($baseModel && isset($baseModel->slug)) {
+        return $baseModel->slug;
+      }
+
+      $collection = $mods instanceof Collection ? $mods : collect($mods ?? []);
+
+      if ($collection->isEmpty()) {
+        return $this->slug ?? null;
+      }
+
+      $base = $collection->first();
+      $slug = null;
+
+      if (is_array($base)) {
+        $slug = $base['slug'] ?? null;
+      } elseif (is_object($base)) {
+        $slug = $base->slug ?? null;
+      }
+
+      return $slug ?? $this->slug ?? null;
     }
 }
