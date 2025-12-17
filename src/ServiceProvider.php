@@ -24,21 +24,27 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
   public function boot()
   {
     // Добавляем кастомный путь для представлений Backpack
-    View::addNamespace('store-crud', [
-        resource_path('views/vendor/backpack/crud'),
-        __DIR__.'/resources/views/crud',
-    ]);
+    $storeCrudPaths = [__DIR__.'/resources/views/crud'];
+    $storeCrudVendorPath = resource_path('views/vendor/backpack/crud');
+    if (is_dir($storeCrudVendorPath)) {
+        array_unshift($storeCrudPaths, $storeCrudVendorPath);
+    }
+    View::addNamespace('store-crud', $storeCrudPaths);
 
     // Добавляем кастомный путь для представлений Backpack
-    View::addNamespace('crud', [
-        resource_path('views/vendor/backpack/crud'),
-        __DIR__.'/resources/views/vendor/backpack/crud',
-    ]);
+    $crudPaths = [__DIR__.'/resources/views/vendor/backpack/crud'];
+    $crudVendorPath = resource_path('views/vendor/backpack/crud');
+    if (is_dir($crudVendorPath)) {
+        array_unshift($crudPaths, $crudVendorPath);
+    }
+    View::addNamespace('crud', $crudPaths);
 
-    View::addNamespace('backpack-store', [
-        resource_path('views/vendor/backpack/store'),
-        __DIR__.'/resources/views',
-    ]);
+    $backpackStorePaths = [__DIR__.'/resources/views'];
+    $backpackStoreVendorPath = resource_path('views/vendor/backpack/store');
+    if (is_dir($backpackStoreVendorPath)) {
+        array_unshift($backpackStorePaths, $backpackStoreVendorPath);
+    }
+    View::addNamespace('backpack-store', $backpackStorePaths);
 
     // Register store namespace for review cards
     View::addNamespace('store', __DIR__.'/resources/views');
