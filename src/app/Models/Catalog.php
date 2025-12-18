@@ -235,7 +235,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
 
     public static function imageProviderName(?string $attribute = null): string
     {
-        return 'local';
+        return 'bunny';
     }
 
     public static function imageStorageFolder(?string $attribute = null): string
