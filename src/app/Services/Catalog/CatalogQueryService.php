@@ -166,26 +166,34 @@ class CatalogQueryService extends AbstractQueryService
     /** Атрибуты (EXISTS к ak_catalog_attr по group_id) */
     public function filterByAttributes($except_attribute_id = null): self
     {
-        $attrs = (array) $this->request->input('attrs', []);
-        if (empty($attrs)) return $this;
+        $prepared = $this->prepareAttributes((array) $this->request->input('attrs', []));
+        if (empty($prepared)) return $this;
 
         // привести к виду [attr_id => ['value_ids'=>[], 'from'=>.., 'to'=>..]]
         $byAttr = [];
-        foreach ($attrs as $item) {
+        foreach ($prepared as $item) {
             $attrId = (int) ($item['attr_id'] ?? 0);
             if (!$attrId) continue;
 
-            if (isset($item['attr_value_id'])) {
-                $vals = (array) $item['attr_value_id'];
-                $vals = array_filter(array_map('intval', $vals));
+            if (!empty($item['attr_value_id'])) {
+                $vals = is_array($item['attr_value_id']) ? $item['attr_value_id'] : [$item['attr_value_id']];
+                $vals = array_values(array_unique(array_filter(array_map('intval', $vals))));
                 if (!empty($vals)) {
-                    $byAttr[$attrId]['value_ids'] = array_values(array_unique(array_merge($byAttr[$attrId]['value_ids'] ?? [], $vals)));
+                    $byAttr[$attrId]['value_ids'] = $vals;
                 }
-            } else {
-                $from = array_key_exists('from', $item) ? $item['from'] : null;
-                $to   = array_key_exists('to', $item)   ? $item['to']   : null;
-                $byAttr[$attrId]['from'] = $from !== null ? (float)$from : null;
-                $byAttr[$attrId]['to']   = $to   !== null ? (float)$to   : null;
+                continue;
+            }
+
+            if (isset($item['from']) || isset($item['to'])) {
+                $byAttr[$attrId]['from'] = array_key_exists('from', $item) && $item['from'] !== null ? (float) $item['from'] : null;
+                $byAttr[$attrId]['to']   = array_key_exists('to', $item) && $item['to'] !== null ? (float) $item['to'] : null;
+                continue;
+            }
+
+            if (isset($item['value']) && $item['value'] !== '') {
+                $value = (float) $item['value'];
+                $byAttr[$attrId]['from'] = $value;
+                $byAttr[$attrId]['to']   = $value;
             }
         }
 

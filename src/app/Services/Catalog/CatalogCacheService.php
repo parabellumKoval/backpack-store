@@ -53,48 +53,83 @@ class CatalogCacheService
     /**
      * Полная пересборка по всем или заданным странам (батчами).
      */
-    public function rebuildAll(?array $countryCodes = null, int $chunk = 1000): void
+    public function rebuildAll(?array $countryCodes = null, int $chunk = 1000, ?callable $heartbeat = null): void
     {
         $countries = $countryCodes ?: $this->availableCountries();
         foreach ($this->extractCodes($countries) as $countryCode) {
-            $this->rebuildCountry($countryCode, $chunk);
-            $this->rebuildAttributesForCountry($countryCode);
+            if ($heartbeat) {
+                $heartbeat();
+            }
+
+            $this->rebuildCountry($countryCode, $chunk, $heartbeat);
+
+            if ($heartbeat) {
+                $heartbeat();
+            }
+
+            $this->rebuildAttributesForCountry($countryCode, $heartbeat);
         }
     }
 
     /**
      * Пересборка каталога по одной стране (батчами) с безопасным disableOthers по стране.
      */
-    public function rebuildCountry(string $countryCode, int $chunk = 1000): void
+    public function rebuildCountry(string $countryCode, int $chunk = 1000, ?callable $heartbeat = null): void
     {
         $processed = []; // product_ids для данной страны
         $currency  = $this->targetCurrency($countryCode);
+        $iteration = 0;
 
-        \Store::withContext($countryCode, $currency, function () use ($countryCode, $chunk, &$processed) {
+        \Store::withContext($countryCode, $currency, function () use ($countryCode, $chunk, &$processed, $heartbeat, &$iteration) {
             $this->productClass::query()
                 ->leafs()
-                ->available()
-                ->chunk($chunk, function ($products) use ($countryCode, &$processed) {
+                ->available($countryCode)
+                ->with(['regionalContents', 'parent.regionalContents'])
+                ->chunk($chunk, function ($products) use ($countryCode, &$processed, $heartbeat, &$iteration) {
                     $rows = [];
 
                     foreach ($products as $p) {
-                        // пропускаем без цены — как в исходном ребилдере
-                        if ($p->price === null) {
+                        $iteration++;
+
+                        try {
+                            $row = $this->buildCatalogRow($p, $countryCode);
+                        } catch (\Throwable $e) {
+                            \Log::error('Catalog rebuild failed for product', [
+                                'product_id' => $p->id ?? null,
+                                'country' => $countryCode,
+                                'error' => $e->getMessage(),
+                            ]);
                             continue;
                         }
 
-                        $rows[]    = $this->buildCatalogRow($p, $countryCode);
+                        if (empty($row)) {
+                            continue;
+                        }
+
+                        $rows[] = $row;
                         $processed[] = (int) $p->id;
+
+                        if ($heartbeat && ($iteration % 25) === 0) {
+                            $heartbeat();
+                        }
                     }
 
                     if (!empty($rows)) {
                         DB::table($this->tblCatalog)->upsert($rows, $this->upsertUnique, $this->upsertColumns);
+                    }
+
+                    if ($heartbeat) {
+                        $heartbeat();
                     }
                 });
         });
 
         // Снимем is_available=0 для ТЕКУЩЕЙ страны, если товар не попал в обработку.
         $this->disableOthers($countryCode, $processed);
+
+        if ($heartbeat) {
+            $heartbeat();
+        }
     }
 
     /**
@@ -146,10 +181,12 @@ class CatalogCacheService
     {
         $currency = $this->targetCurrency($countryCode);
 
-
         \Store::withContext($countryCode, $currency, function () use ($productId, $countryCode) {
             DB::transaction(function () use ($productId, $countryCode) {
-                $product = $this->productClass::query()->whereKey($productId)->first();
+                $product = $this->productClass::query()
+                    ->with(['regionalContents', 'parent.regionalContents'])
+                    ->whereKey($productId)
+                    ->first();
                 $indexAction = 'delete';
 
                 if (!$product) {
@@ -158,11 +195,23 @@ class CatalogCacheService
                     $isLeafAndAvailable = $this->productClass::query()
                         ->whereKey($productId)
                         ->leafs()
-                        ->available()
+                        ->available($countryCode)
                         ->exists();
+                    $isBaseProduct = empty($product->parent_id);
+                    $hasChildren = $isBaseProduct
+                        ? $this->productClass::query()->where('parent_id', $product->id)->exists()
+                        : false;
 
                     if (!$isLeafAndAvailable) {
                         $this->markUnavailableAndDropAttrs_NoTx($productId, $countryCode);
+
+                        if ($isBaseProduct) {
+                            $this->rebuildGroupAttrsForGroup_NoTx((int) $product->id, $countryCode);
+
+                            if ($hasChildren) {
+                                $this->rebuildVariantAttrsForGroup_NoTx((int) $product->id, $countryCode);
+                            }
+                        }
                     } else {
                         // upsert строки каталога
                         $row = $this->buildCatalogRow($product, $countryCode);
@@ -174,23 +223,27 @@ class CatalogCacheService
 
                         // dd($row, $product->id, $product->price, $countryCode);
 
-                        DB::table($this->tblCatalog)->upsert(
-                            [$row],
-                            $this->upsertUnique,
-                            $this->upsertColumns
-                        );
+                            DB::table($this->tblCatalog)->upsert(
+                                [$row],
+                                $this->upsertUnique,
+                                $this->upsertColumns
+                            );
 
-                        // точечная пересборка только атрибутов варианта
-                        $this->rebuildAttrsForProduct_NoTx($product, $countryCode);
+                            // точечная пересборка только атрибутов варианта
+                            $this->rebuildAttrsForProduct_NoTx((int) $product->id, $countryCode);
 
-                        // если это базовый (group) — пересобрать групповые атрибуты
-                        if (empty($product->parent_id)) {
-                            $this->rebuildGroupAttrsForGroup_NoTx((int) $product->id, $countryCode);
+                            // если это базовый (group) — пересобрать групповые атрибуты
+                            if ($isBaseProduct) {
+                                $this->rebuildGroupAttrsForGroup_NoTx((int) $product->id, $countryCode);
+
+                                if ($hasChildren) {
+                                    $this->rebuildVariantAttrsForGroup_NoTx((int) $product->id, $countryCode);
+                                }
+                            }
+
+                            $indexAction = ((int)($row['is_available'] ?? 0) === 1) ? 'upsert' : 'delete';
                         }
-
-                        $indexAction = ((int)($row['is_available'] ?? 0) === 1) ? 'upsert' : 'delete';
                     }
-                }
 
                 // После коммита — управление индексом (Meilisearch/Scout)
                 DB::afterCommit(function () use ($productId, $countryCode, $indexAction) {
@@ -212,13 +265,17 @@ class CatalogCacheService
     /**
      * Полная пересборка атрибутов по стране (truncate-by-country + re-insert).
      */
-    public function rebuildAttributesForCountry(string $country): void
+    public function rebuildAttributesForCountry(string $country, ?callable $heartbeat = null): void
     {
         DB::transaction(function () use ($country) {
             DB::table($this->tblAttr)->where('country_code', $country)->delete();
             $this->insertDiscrete($country);
             $this->insertNumber($country);
         });
+
+        if ($heartbeat) {
+            $heartbeat();
+        }
     }
 
     /* ===========================
@@ -228,6 +285,7 @@ class CatalogCacheService
     /** Единое построение строки ak_catalog. */
     protected function buildCatalogRow($p, string $countryCode): array
     {
+        \Log::info('p - ' . $p->id);
 
         // категории
         $category_ids_array = $p->getAllCategoryIds($countryCode);
@@ -243,7 +301,15 @@ class CatalogCacheService
         $extrasJson = $p->effective(true)->extras;
 
         \Log::info('p - ' . $p->id);
-        \Log::info('extras - ' . print_r($extrasJson, true));
+
+        $contentTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('content', $countryCode));
+        $excerptTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('excerpt', $countryCode));
+        $merchantContentTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('merchant_content', $countryCode));
+
+
+        // \Log::info('contentTranslations - ' . $contentTranslations);
+        // \Log::info('excerptTranslations - ' . $excerptTranslations);
+        // \Log::info('merchantContentTranslations - ' . $merchantContentTranslations);
         // цена есть → доступен
         return [
             'product_id'    => $p->id,
@@ -262,7 +328,7 @@ class CatalogCacheService
 
             
             'name'          => $p->inherited(true)->name,
-            'excerpt'       => $p->effective(true)->excerpt,
+            'excerpt'       => $excerptTranslations,
             'slug'          => $p->slug,
             'images'        => $images_json,
             'code'          => $p->effective()->code,
@@ -274,11 +340,20 @@ class CatalogCacheService
             'ratings'       => $p->base->reviewsWithRatingCount ?? 0,
 
             // Additional
-            'content'       => $p->effective(true)->content,
-            'merchant_content' => $p->effective(true)->merchant_content,
+            'content'       => $contentTranslations,
+            'merchant_content' => $merchantContentTranslations,
             'seo'           => $p->effective(true)->seo,
             'attrs'         => $p->effective(true)->properties,
         ];
+    }
+
+    protected function encodeTranslations(?array $translations): ?string
+    {
+        if (empty($translations)) {
+            return null;
+        }
+
+        return json_encode($translations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /** Снять is_available и удалить атрибуты конкретного товара по стране. */
@@ -339,6 +414,25 @@ class CatalogCacheService
             ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
             $subVariant
         );
+
+        // Наследование групповых значений для модификаций без собственного значения
+        $subVariantInherited = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap_group', 'ap_group.product_id', '=', 'c.group_id')
+            ->leftJoin($this->tblAP.' as ap_variant', function ($join) {
+                $join->on('ap_variant.product_id', '=', 'c.product_id')
+                    ->on('ap_variant.attribute_id', '=', 'ap_group.attribute_id');
+            })
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->whereNotNull('ap_group.attribute_value_id')
+            ->whereNull('ap_variant.id')
+            ->distinct()
+            ->selectRaw('?, c.group_id, c.product_id, ap_group.attribute_id, ap_group.attribute_value_id, NULL as value', [$country]);
+
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subVariantInherited
+        );
     }
 
     /** Полная пересборка ЧИСЛОВЫХ атрибутов по стране (групповые + вариативные). */
@@ -371,12 +465,31 @@ class CatalogCacheService
             ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
             $subVariant
         );
+
+        // Наследование числовых значений базового товара для модификаций
+        $subVariantInherited = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap_group', 'ap_group.product_id', '=', 'c.group_id')
+            ->leftJoin($this->tblAP.' as ap_variant', function ($join) {
+                $join->on('ap_variant.product_id', '=', 'c.product_id')
+                    ->on('ap_variant.attribute_id', '=', 'ap_group.attribute_id');
+            })
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->whereNotNull('ap_group.value')
+            ->whereNull('ap_variant.id')
+            ->distinct()
+            ->selectRaw('?, c.group_id, c.product_id, ap_group.attribute_id, NULL as attribute_value_id, ap_group.value', [$country]);
+
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subVariantInherited
+        );
     }
 
     /** Точечная пересборка атрибутов КОНКРЕТНОГО товара по стране. */
-    protected function rebuildAttrsForProduct_NoTx($product, string $country): void
+    protected function rebuildAttrsForProduct_NoTx(int $productId, string $country): void
     {
-        $pid = (int) $product->id;
+        $pid = $productId;
 
         DB::table($this->tblAttr)
             ->where('country_code', $country)
@@ -398,6 +511,26 @@ class CatalogCacheService
             $subVariantDiscrete
         );
 
+        // наследованные дискретные значения от базового товара
+        $subVariantInheritedDiscrete = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap_group', 'ap_group.product_id', '=', 'c.group_id')
+            ->leftJoin($this->tblAP.' as ap_variant', function ($join) {
+                $join->on('ap_variant.product_id', '=', 'c.product_id')
+                    ->on('ap_variant.attribute_id', '=', 'ap_group.attribute_id');
+            })
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->where('c.product_id', $pid)
+            ->whereNotNull('ap_group.attribute_value_id')
+            ->whereNull('ap_variant.id')
+            ->distinct()
+            ->selectRaw('?, c.group_id, c.product_id, ap_group.attribute_id, ap_group.attribute_value_id, NULL as value', [$country]);
+
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subVariantInheritedDiscrete
+        );
+
         // числовые для варианта
         $subVariantNumber = DB::table($this->tblCatalog.' as c')
             ->join($this->tblAP.' as ap', 'ap.product_id', '=', 'c.product_id')
@@ -411,6 +544,26 @@ class CatalogCacheService
         DB::table($this->tblAttr)->insertUsing(
             ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
             $subVariantNumber
+        );
+
+        // числовые наследованные значения
+        $subVariantInheritedNumber = DB::table($this->tblCatalog.' as c')
+            ->join($this->tblAP.' as ap_group', 'ap_group.product_id', '=', 'c.group_id')
+            ->leftJoin($this->tblAP.' as ap_variant', function ($join) {
+                $join->on('ap_variant.product_id', '=', 'c.product_id')
+                    ->on('ap_variant.attribute_id', '=', 'ap_group.attribute_id');
+            })
+            ->where('c.country_code', $country)
+            ->where('c.is_available', 1)
+            ->where('c.product_id', $pid)
+            ->whereNotNull('ap_group.value')
+            ->whereNull('ap_variant.id')
+            ->distinct()
+            ->selectRaw('?, c.group_id, c.product_id, ap_group.attribute_id, NULL as attribute_value_id, ap_group.value', [$country]);
+
+        DB::table($this->tblAttr)->insertUsing(
+            ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
+            $subVariantInheritedNumber
         );
     }
 
@@ -452,6 +605,29 @@ class CatalogCacheService
             ['country_code','group_id','product_id','attribute_id','attribute_value_id','value'],
             $subGroupNumber
         );
+    }
+
+    /**
+     * Пересобрать атрибуты для всех доступных модификаций указанной группы с учётом наследования.
+     */
+    protected function rebuildVariantAttrsForGroup_NoTx(int $groupId, string $country): void
+    {
+        $productIds = DB::table($this->tblCatalog)
+            ->where('country_code', $country)
+            ->where('group_id', $groupId)
+            ->whereNotNull('product_id')
+            ->pluck('product_id')
+            ->map(function ($id) {
+                return (int) $id;
+            })
+            ->unique()
+            ->filter()
+            ->values()
+            ->all();
+
+        foreach ($productIds as $pid) {
+            $this->rebuildAttrsForProduct_NoTx($pid, $country);
+        }
     }
 
     /* ===========================

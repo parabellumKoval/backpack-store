@@ -36,7 +36,9 @@ class ProductLargeResource extends BaseResource
         'ratings' => $this->ratings,
         // 'reviews_rating_detailes' => $this->reviewsRatingDetailes,
         'images' => $this->getImageSourcesForApi(),
-        'content' => $this->content,
+        'content' => $this->resolveRegionalContentField('content'),
+        'excerpt' => $this->resolveRegionalContentField('excerpt'),
+        'merchant_content' => $this->resolveRegionalContentField('merchant_content'),
         'categories' => $this->resolveCategories(),
         'brand' => $this->formatBrand(),
         // 'categories' => $this->categories && $this->categories->count()? 
@@ -48,6 +50,38 @@ class ProductLargeResource extends BaseResource
         'seo' => $this->resolveSeo(),
         'available_regions' => $this->resolveAvailableRegions(),
       ];
+    }
+
+    protected function resolveRegionalContentField(string $attribute)
+    {
+      $country = \Store::context()->country ?? null;
+      $locale = backpack_translatable_request_locale(null) ?? app()->getLocale();
+
+      if (method_exists($this->resource, 'getRegionalContentValue')) {
+        return $this->resource->getRegionalContentValue($attribute, $country, $locale);
+      }
+
+      $value = $this->{$attribute} ?? null;
+
+      if (is_array($value)) {
+        $targetLocale = $locale ?: config('app.fallback_locale');
+
+        if ($targetLocale && isset($value[$targetLocale]) && trim((string) $value[$targetLocale]) !== '') {
+          return $value[$targetLocale];
+        }
+
+        $fallbackLocale = config('app.fallback_locale');
+
+        if ($fallbackLocale && isset($value[$fallbackLocale]) && trim((string) $value[$fallbackLocale]) !== '') {
+          return $value[$fallbackLocale];
+        }
+
+        $first = reset($value);
+
+        return is_string($first) ? $first : null;
+      }
+
+      return $value;
     }
 
     /**

@@ -514,7 +514,7 @@ class AttributeCrudController extends CrudController
           'transform' => $item->transform,
           'transform_value' => $item->transformValueString
         ];
-      });
+      })->toArray();
     }
         
     /**

@@ -856,6 +856,16 @@ class Product extends BaseProduct
                     'default' => true,
                     'unique' => ['supplier_id'],
                 ],
+                'regional_contents' => [
+                    'label' => 'Региональный контент',
+                    'type' => 'table',
+                    'table' => 'ak_product_regional_contents',
+                    'column' => 'product_id',
+                    'primary_key' => 'id',
+                    'default' => true,
+                    'unique' => ['country_code'],
+                    'handler' => 'mergeRegionalContents',
+                ],
                 'taggables' => [
                     'label' => 'Теги',
                     'type' => 'table',
@@ -963,6 +973,44 @@ class Product extends BaseProduct
                 return $item;
             }
         );
+    }
+
+    public function mergeRegionalContents(self $source, array $payload = []): void
+    {
+        $force = (bool) ($payload['force'] ?? false);
+
+        $this->loadMissing('regionalContents');
+        $source->loadMissing('regionalContents');
+
+        $target = $this->relationLoaded('regionalContents') ? $this->regionalContents : collect();
+        $sourceItems = $source->relationLoaded('regionalContents') ? $source->regionalContents : collect();
+
+        $targetByCountry = $target instanceof \Illuminate\Support\Collection
+            ? $target->keyBy(function ($item) {
+                return strtolower((string) ($item->country_code ?? ''));
+            })
+            : collect();
+
+        foreach ($sourceItems as $item) {
+            $country = strtolower((string) ($item->country_code ?? ''));
+
+            if ($country === '') {
+                continue;
+            }
+
+            if ($targetByCountry->has($country) && !$force) {
+                continue;
+            }
+
+            $this->regionalContents()->updateOrCreate(
+                ['country_code' => $country],
+                [
+                    'content' => $item->getTranslations('content') ?: null,
+                    'excerpt' => $item->getTranslations('excerpt') ?: null,
+                    'merchant_content' => $item->getTranslations('merchant_content') ?: null,
+                ]
+            );
+        }
     }
 
     /**

@@ -45,7 +45,15 @@ class ProductService implements Contract {
     if(!$this->product->supplierProduct) return null;
 
     $prices = $this->resolvePrice();
-    return $prices['price'] ?? null;
+    $price = $prices['price'] ?? null;
+    
+    // Округление цены товара
+    if ($price !== null) {
+        $decimals = \Settings::get('dress.pricing.product_price_decimal_places', 2);
+        $price = round($price, $decimals);
+    }
+    
+    return $price;
   }
 
   public function oldPrice(): ?float {
@@ -53,7 +61,15 @@ class ProductService implements Contract {
     if(!$this->product->supplierProduct) return null;
 
     $prices = $this->resolvePrice();
-    return $prices['old_price'] ?? null;
+    $oldPrice = $prices['old_price'] ?? null;
+    
+    // Округление цены товара
+    if ($oldPrice !== null) {
+        $decimals = \Settings::get('dress.pricing.product_price_decimal_places', 2);
+        $oldPrice = round($oldPrice, $decimals);
+    }
+    
+    return $oldPrice;
   }
 
   public function currency(): ?string {

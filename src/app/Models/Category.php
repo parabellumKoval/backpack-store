@@ -250,19 +250,26 @@ class Category extends Model
         return false;
     }
 
-    public function childrenForCountry(?string $country = null, bool $fallbackToStore = false)
+    public function childrenForCountry(?string $country = null, bool $fallbackToStore = false, array $visited = [])
     {
         $country = static::resolveCountry($country, $fallbackToStore);
+        $currentKey = $this->getKey();
+        if ($currentKey !== null) {
+            $visited[$currentKey] = true;
+        }
 
         $childrenQuery = $this->children()->orderBy('lft')->with('tags');
         if ($country) {
             $childrenQuery->forCountry($country, false);
         }
 
-        $children = $childrenQuery->get();
+        $children = $childrenQuery->get()->reject(function (self $child) use ($visited) {
+            $childKey = $child->getKey();
+            return $childKey !== null && isset($visited[$childKey]);
+        });
 
-        return $children->map(function (self $child) use ($country) {
-            $child->setRelation('children', $child->childrenForCountry($country, false));
+        return $children->map(function (self $child) use ($country, $visited) {
+            $child->setRelation('children', $child->childrenForCountry($country, false, $visited));
             return $child;
         });
     }

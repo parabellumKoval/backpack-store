@@ -199,7 +199,7 @@ class Order extends Model
         return $carry + $item['price'] * $item['amount'];
       }, 0);
 
-      // return order total price
+      // Для заказов всегда две цифры (сотые)
       return round($price, 2);
     }
     
@@ -231,6 +231,7 @@ class Order extends Model
       if($promocode['type'] === 'percent')
         $price = $price - ($price * $promocode['value'] / 100);
 
+      // Для заказов всегда две цифры (сотые)
       return round($price, 2);
     }
 

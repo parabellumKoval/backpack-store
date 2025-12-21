@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Http\Controllers\Admin\Traits\Product;
 
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Supplier;
+use Backpack\Store\app\Models\Product;
 
 trait ProductFieldsTrait
 {
@@ -382,6 +383,21 @@ trait ProductFieldsTrait
             'tab' => 'Google Merchants'
         ]);
 
+        $regionalCountries = $this->getRegionalContentCountries();
+
+        if (!empty($regionalCountries)) {
+            $this->crud->addField([
+                'name' => 'regional_contents',
+                'label' => 'Региональный контент',
+                'type' => 'regional_contents',
+                'tab' => 'Региональный контент',
+                'countries' => $regionalCountries,
+                'locales' => config('backpack.crud.locales', []),
+                'states' => $this->buildRegionalContentStates($regionalCountries),
+                'value' => $this->entry ? $this->entry->getRegionalContentsFormValue() : [],
+            ]);
+        }
+
         // Upsale
         if(\Settings::get('dress.upsell.enabled', true)) {
             $this->setUpsaleFields();
@@ -745,6 +761,40 @@ trait ProductFieldsTrait
             'tab' => trans('backpack-store::product-field.tabs.characteristics')
           ]);
         }
+    }
+
+    protected function getRegionalContentCountries(): array
+    {
+        $countries = \Store::countries();
+        $global = \Store::globalRegion();
+
+        if ($global) {
+            unset($countries[$global]);
+        }
+
+        return $countries;
+    }
+
+    protected function buildRegionalContentStates(array $countries): array
+    {
+        $entry = $this->entry ?? $this->crud->getCurrentEntry();
+
+        if (!$entry instanceof Product) {
+            return [];
+        }
+
+        $attributes = ['content', 'excerpt', 'merchant_content'];
+        $states = [];
+
+        foreach ($countries as $code => $config) {
+            $normalized = strtolower((string) $code);
+
+            foreach ($attributes as $attribute) {
+                $states[$normalized][$attribute] = $entry->getRegionalContentTranslationLocalesState($normalized, $attribute);
+            }
+        }
+
+        return $states;
     }
 
     

@@ -36,6 +36,7 @@ use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\SupplierProduct;
 use Backpack\Store\app\Models\Catalog;
+use Backpack\Store\app\Models\ProductRegionalContent;
 use Backpack\Helpers\Traits\FormatsUniqAttribute;
 
 // RESOURCES
@@ -61,7 +62,9 @@ class Product extends Model
     use CrudTrait;
     use Sluggable;
     use SluggableScopeHelpers;
-    use HasTranslations;
+    use HasTranslations {
+        getTranslation as spatieGetTranslation;
+    }
     use HasModification;
 
     use MultistoreProductTrait;
@@ -139,6 +142,7 @@ class Product extends Model
     ];
     
     protected $translatable = ['name', 'short_name', 'content', 'excerpt', 'merchant_content', 'extras_trans', 'seo'];
+    protected const REGIONAL_CONTENT_FIELDS = ['content', 'excerpt', 'merchant_content'];
     
     public $images_array = [];
     
@@ -436,6 +440,11 @@ class Product extends Model
     {
       return $this->hasMany(\Settings::get('dress.product.model', self::class), 'parent_id')
                   ->where('id', '!=', $this->id); // Предотвращаем циклические ссылки
+    }
+
+    public function regionalContents()
+    {
+      return $this->hasMany(ProductRegionalContent::class, 'product_id');
     }
         
     /**
@@ -865,6 +874,242 @@ class Product extends Model
       }else {
         return json_decode($extras['custom_attrs'], true);
       }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | REGIONAL CONTENT
+    |--------------------------------------------------------------------------
+    */
+
+    public function getTranslation(string $key, string $locale, bool $useFallbackLocale = true)
+    {
+      if ($this->isRegionalContentAttribute($key)) {
+        $country = $this->normalizeCountryCode(\Store::context()->country ?? null);
+        $value = $this->getRegionalContentValue($key, $country, $locale, $useFallbackLocale);
+
+        if ($this->translationValueIsFilled($value)) {
+          return $value;
+        }
+      }
+
+      return $this->spatieGetTranslation($key, $locale, $useFallbackLocale);
+    }
+
+    public function getRegionalContentValue(string $attribute, ?string $countryCode = null, ?string $locale = null, bool $useFallbackLocale = true): ?string
+    {
+      if (!$this->isRegionalContentAttribute($attribute)) {
+        return $this->spatieGetTranslation($attribute, $locale ?? app()->getLocale(), $useFallbackLocale);
+      }
+
+      $country = $this->normalizeCountryCode($countryCode ?? (\Store::context()->country ?? null));
+      $translations = $this->getEffectiveRegionalizedTranslations($attribute, $country);
+
+      if (!$translations) {
+        return null;
+      }
+
+      $resolvedLocale = $locale
+        ?? backpack_translatable_request_locale(null)
+        ?? app()->getLocale()
+        ?? config('app.fallback_locale');
+
+      return $this->resolveTranslationFromArray($translations, $attribute, (string) $resolvedLocale, $useFallbackLocale);
+    }
+
+    public function getEffectiveRegionalizedTranslations(string $attribute, ?string $countryCode = null): ?array
+    {
+      if (!$this->isRegionalContentAttribute($attribute)) {
+        return $this->getTranslations($attribute);
+      }
+
+      $country = $this->normalizeCountryCode($countryCode ?? (\Store::context()->country ?? null));
+      $current = $this->resolveRegionalizedTranslationsForProduct($this, $attribute, $country);
+
+      if ($this->translationsFilled($current)) {
+        return $current;
+      }
+
+      if ($this->parent_id) {
+        $parent = $this->relationLoaded('parent') ? $this->parent : $this->parent()->first();
+        $fallback = $this->resolveRegionalizedTranslationsForProduct($parent, $attribute, $country);
+
+        if ($this->translationsFilled($fallback)) {
+          return $fallback;
+        }
+      }
+
+      return $current ?: null;
+    }
+
+    public function getRegionalContentTranslationLocalesState(string $countryCode, string $attribute): array
+    {
+      $country = $this->normalizeCountryCode($countryCode);
+
+      if (!$country || !$this->isRegionalContentAttribute($attribute)) {
+        return [];
+      }
+
+      $translations = $this->getRegionalTranslationsForCountry($attribute, $country);
+      $locales = $this->getTranslatableLocaleKeys();
+      $state = [];
+
+      foreach ($locales as $locale) {
+        $value = $translations[$locale] ?? null;
+        $length = $this->calculateTranslationValueLength($value);
+
+        $state[$locale] = [
+          'filled' => $length > 0,
+          'length' => $length,
+        ];
+      }
+
+      return $state;
+    }
+
+    public function getRegionalContentsFormValue(): array
+    {
+      $this->loadMissing('regionalContents');
+
+      if (!$this->relationLoaded('regionalContents')) {
+        return [];
+      }
+
+      $values = [];
+
+      foreach ($this->regionalContents as $item) {
+        $code = $this->normalizeCountryCode($item->country_code);
+
+        if (!$code) {
+          continue;
+        }
+
+        $values[$code] = [
+          'content' => $item->getTranslations('content'),
+          'excerpt' => $item->getTranslations('excerpt'),
+          'merchant_content' => $item->getTranslations('merchant_content'),
+        ];
+      }
+
+      return $values;
+    }
+
+    protected function resolveRegionalizedTranslationsForProduct(?self $product, string $attribute, ?string $countryCode): array
+    {
+      if (!$product) {
+        return [];
+      }
+
+      $regionalTranslations = $this->getRegionalTranslationsForProduct($product, $attribute, $countryCode);
+      $baseTranslations = $product->getTranslations($attribute);
+
+      return $this->mergeTranslationArrays($regionalTranslations, $baseTranslations);
+    }
+
+    protected function getRegionalTranslationsForProduct(self $product, string $attribute, ?string $countryCode): array
+    {
+      $country = $this->normalizeCountryCode($countryCode);
+
+      if (!$country || !$this->isRegionalContentAttribute($attribute)) {
+        return [];
+      }
+
+      if ($product->relationLoaded('regionalContents')) {
+        $regional = $product->regionalContents->firstWhere('country_code', $country);
+      } else {
+        $regional = $product->regionalContents()->where('country_code', $country)->first();
+      }
+
+      if (!$regional) {
+        return [];
+      }
+
+      return $regional->getTranslations($attribute);
+    }
+
+    protected function getRegionalTranslationsForCountry(string $attribute, string $countryCode): array
+    {
+      return $this->getRegionalTranslationsForProduct($this, $attribute, $countryCode);
+    }
+
+    protected function mergeTranslationArrays(?array $primary, ?array $fallback): array
+    {
+      $primary = $this->normalizeTranslationArray($primary);
+      $fallback = $this->normalizeTranslationArray($fallback);
+
+      $merged = $primary;
+
+      foreach ($fallback as $locale => $value) {
+        if (!array_key_exists($locale, $merged)) {
+          $merged[$locale] = $value;
+        }
+      }
+
+      return $merged;
+    }
+
+    protected function normalizeTranslationArray($translations): array
+    {
+      if (!is_array($translations)) {
+        return [];
+      }
+
+      $normalized = [];
+
+      foreach ($translations as $locale => $value) {
+        if (!is_string($locale) || $locale === '') {
+          continue;
+        }
+
+        if ($this->calculateTranslationValueLength($value) === 0) {
+          continue;
+        }
+
+        $normalized[$locale] = $value;
+      }
+
+      return $normalized;
+    }
+
+    protected function translationsFilled(?array $translations): bool
+    {
+      return $this->normalizeTranslationArray($translations) !== [];
+    }
+
+    protected function translationValueIsFilled($value): bool
+    {
+      return $this->calculateTranslationValueLength($value) > 0;
+    }
+
+    protected function resolveTranslationFromArray(array $translations, string $attribute, string $locale, bool $useFallbackLocale = true): ?string
+    {
+      $model = new ProductRegionalContent();
+
+      $model->setTranslations($attribute, $translations);
+
+      $value = $model->getTranslation($attribute, $locale, $useFallbackLocale);
+
+      return $value === '' ? null : $value;
+    }
+
+    protected function isRegionalContentAttribute(?string $attribute): bool
+    {
+      if (!$attribute) {
+        return false;
+      }
+
+      return in_array($attribute, self::REGIONAL_CONTENT_FIELDS, true);
+    }
+
+    protected function normalizeCountryCode(?string $countryCode): ?string
+    {
+      if (!is_string($countryCode)) {
+        return null;
+      }
+
+      $normalized = strtolower(trim($countryCode));
+
+      return $normalized === '' ? null : $normalized;
     }
     
     /**

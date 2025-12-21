@@ -58,51 +58,94 @@ abstract class AbstractQueryService implements QueryService
      * @return void
      */
     public function prepareAttributes($data) {
-      $attrs = [];
-      $values = array_values($data);
+      if(empty($data) || !is_array($data)) {
+        return [];
+      }
 
-      for($i = 0; $i < count($values); $i++) {
-        $attr = $values[$i];
+      $chunks = array_values($data);
+      $normalized = [];
+      $currentAttrId = null;
 
-        // if attribute is not isset yet
-        if(!isset($attrs[$attr['attr_id']])) {
-          
-          // if attribute type is number (range)
-          if(isset($attr['from']) && isset($attr['to'])){
-            $attrs[$attr['attr_id']] = [
-              'attr_id' => (int)$attr['attr_id'],
-              'to' => floatval($attr['to']),
-              'from' => floatval($attr['from']),
-            ];
-          }
-          // if attribute type is checkbox / radio
-          elseif(isset($attr['attr_value_id'])) {
-            $attrs[$attr['attr_id']] = [
-              'attr_id' => (int)$attr['attr_id'],
-              'attr_value_id' => [(int)$attr['attr_value_id']]
-            ];
-          
-          }
-          // if attribute type is number (strict)
-          else {
-            $attrs[$attr['attr_id']] = [
-              'attr_id' => (int)$attr['attr_id'],
-              'value' => floatval($attr['value']),
-            ];
+      foreach ($chunks as $chunk) {
+        if(!is_array($chunk)) {
+          continue;
+        }
+
+        if(array_key_exists('attr_id', $chunk) && $chunk['attr_id'] !== null && $chunk['attr_id'] !== '') {
+          $currentAttrId = (int)$chunk['attr_id'];
+
+          if(!isset($normalized[$currentAttrId])) {
+            $normalized[$currentAttrId] = ['attr_id' => $currentAttrId];
           }
         }
-        // addding values to array
-        else {
-          if(isset($attr['attr_value_id'])) {
-            $attrs[$attr['attr_id']]['attr_value_id'][] = (int)$attr['attr_value_id'];
-          }else {
-            // multiple values allowed only for checkbox / radio
+
+        if($currentAttrId === null) {
+          continue;
+        }
+
+        foreach ($chunk as $key => $value) {
+          if($key === 'attr_id') {
             continue;
           }
+
+          if($key === 'attr_value_id') {
+            $existing = $normalized[$currentAttrId][$key] ?? [];
+            $existing = is_array($existing) ? $existing : [$existing];
+            $value = is_array($value) ? $value : [$value];
+            $value = array_filter($value, static function($item) {
+              return $item !== null && $item !== '';
+            });
+
+            $normalized[$currentAttrId][$key] = array_merge($existing, $value);
+            continue;
+          }
+
+          $normalized[$currentAttrId][$key] = $value;
         }
       }
 
-      return array_values($attrs);
+      $attrs = [];
+
+      foreach ($normalized as $attr) {
+        $attrId = $attr['attr_id'] ?? null;
+
+        if(!$attrId) {
+          continue;
+        }
+
+        if(isset($attr['from']) && isset($attr['to'])) {
+          $attrs[] = [
+            'attr_id' => $attrId,
+            'to' => floatval($attr['to']),
+            'from' => floatval($attr['from']),
+          ];
+
+          continue;
+        }
+
+        if(!empty($attr['attr_value_id'])) {
+          $valueIds = is_array($attr['attr_value_id']) ? $attr['attr_value_id'] : [$attr['attr_value_id']];
+          $valueIds = array_values(array_unique(array_map('intval', $valueIds)));
+
+          if(!empty($valueIds)) {
+            $attrs[] = [
+              'attr_id' => $attrId,
+              'attr_value_id' => $valueIds,
+            ];
+          }
+
+          continue;
+        }
+
+        if(isset($attr['value']) && $attr['value'] !== '') {
+          $attrs[] = [
+            'attr_id' => $attrId,
+            'value' => floatval($attr['value']),
+          ];
+        }
+      }
+
+      return $attrs;
     }
 
     /**

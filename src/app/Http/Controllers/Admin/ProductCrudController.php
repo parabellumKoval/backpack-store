@@ -143,6 +143,8 @@ class ProductCrudController extends CrudController
     {
         $response = $this->traitUpdate();
 
+        $this->syncRegionalContents($this->crud->entry);
+
         // Upsell
         $links = request()->input('linksData', []);
         $this->syncLinks($this->crud->entry->id, $links);
@@ -155,6 +157,8 @@ class ProductCrudController extends CrudController
     {  
 
         $response = $this->traitStore();
+
+        $this->syncRegionalContents($this->crud->entry);
 
         // Upsell
         $links = request()->input('linksData', []);
@@ -454,6 +458,102 @@ class ProductCrudController extends CrudController
         'currentProductId',
         'baseProductId'
       ));
+    }
+
+    protected function syncRegionalContents($product): void
+    {
+        if (!$product instanceof \Backpack\Store\app\Models\Product) {
+            return;
+        }
+
+        $payload = request()->input('regional_contents', []);
+        $data = is_array($payload) ? $payload : [];
+
+        $countries = array_keys($this->getRegionalContentCountries());
+        $allowed = array_map(function ($code) {
+            return strtolower((string) $code);
+        }, $countries);
+
+        $normalized = [];
+
+        foreach ($data as $countryCode => $translations) {
+            $code = strtolower(trim((string) $countryCode));
+
+            if ($code === '' || ($allowed && !in_array($code, $allowed, true))) {
+                continue;
+            }
+
+            $content = $this->normalizeTranslationInput($translations['content'] ?? []);
+            $excerpt = $this->normalizeTranslationInput($translations['excerpt'] ?? []);
+            $merchant = $this->normalizeTranslationInput($translations['merchant_content'] ?? []);
+
+            if ($content === [] && $excerpt === [] && $merchant === []) {
+                continue;
+            }
+
+            $normalized[$code] = [
+                'content' => $content,
+                'excerpt' => $excerpt,
+                'merchant_content' => $merchant,
+            ];
+        }
+
+        $codes = array_keys($normalized);
+
+        if ($codes === []) {
+            $product->regionalContents()->delete();
+            return;
+        }
+
+        $product->regionalContents()
+            ->whereNotIn('country_code', $codes)
+            ->delete();
+
+        foreach ($normalized as $code => $translations) {
+            $product->regionalContents()->updateOrCreate(
+                ['country_code' => $code],
+                [
+                    'content' => $translations['content'] ?: null,
+                    'excerpt' => $translations['excerpt'] ?: null,
+                    'merchant_content' => $translations['merchant_content'] ?: null,
+                ]
+            );
+        }
+    }
+
+    protected function normalizeTranslationInput($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($value as $locale => $translation) {
+            if (!is_string($locale)) {
+                continue;
+            }
+
+            $locale = trim($locale);
+
+            if ($locale === '') {
+                continue;
+            }
+
+            if (is_string($translation) || is_numeric($translation)) {
+                $translation = (string) $translation;
+            } elseif (is_array($translation) || is_object($translation)) {
+                $translation = json_encode($translation);
+            }
+
+            if (!is_string($translation) || trim($translation) === '') {
+                continue;
+            }
+
+            $normalized[$locale] = $translation;
+        }
+
+        return $normalized;
     }
 
     // Upsell
