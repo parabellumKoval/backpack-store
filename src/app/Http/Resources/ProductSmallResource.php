@@ -26,6 +26,8 @@ class ProductSmallResource extends BaseResource
         'old_price' => $this->old_price,
         'rating' => $this->rating,
         'inStock' => $this->in_stock,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
         'image' => $this->image,
         'excerpt' => substr(strip_tags($this->content), 0, 500).'...',
         'modifications' => $this->resource_modifications

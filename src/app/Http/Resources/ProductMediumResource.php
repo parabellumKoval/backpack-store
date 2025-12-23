@@ -23,6 +23,8 @@ class ProductMediumResource extends BaseResource
         'rating' => $this->rating,
         'image' => $this->getFirstImageForApi(),
         'inStock' => $this->in_stock,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
         'external' => $this->external ?? 0
       ];
     }

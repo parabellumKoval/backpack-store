@@ -23,6 +23,8 @@ class ProductListResource extends \Backpack\Store\app\Http\Resources\BaseResourc
         // 'reviews_rating_detailes' => $this->reviewsRatingDetailes,
         'images' => $this->getImageSourcesForApi(2),
         'inStock' => $this->in_stock,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
         'modifications' => $this->resource_modifications
       ];
     }

@@ -13,7 +13,7 @@ class CategoryObserver
     {
         event(CategoryChanged::for($category, 'saved'));
 
-        if ($category->wasChanged('countries')) {
+        if ($category->wasChanged('countries') || $category->wasChanged('store_only_countries')) {
             $this->touchCatalogProducts($category);
         }
     }

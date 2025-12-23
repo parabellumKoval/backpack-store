@@ -23,6 +23,8 @@ class ProductCartResource extends BaseResource
         'rating' => $this->rating,
         'image' => $this->effective()->getFirstImageForApi(),
         'inStock' => $this->in_stock,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
         'external' => $this->external ?? 0
       ];
     }

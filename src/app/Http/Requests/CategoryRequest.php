@@ -28,6 +28,8 @@ class CategoryRequest extends FormRequest
         return [
             'countries' => 'nullable|array',
             'countries.*' => 'string|min:2|max:3',
+            'store_only_countries' => 'nullable|array',
+            'store_only_countries.*' => 'string|min:2|max:3',
         ];
     }
 

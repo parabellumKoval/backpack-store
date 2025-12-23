@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Services\Catalog;
 
 use Illuminate\Support\Facades\DB;
 use Backpack\Store\app\Models\Catalog;
+use Backpack\Store\app\Models\Category;
 
 /**
  * Единый сервис пересборки кеша каталога:
@@ -35,10 +36,16 @@ class CatalogCacheService
 
     protected array $upsertColumns = [
         'group_id', 'item_type', 'currency_code', 'is_available', 'in_stock',
-        'price', 'old_price', 'sale', 'brand_id', 'category_ids',
+        'store_only', 'price', 'old_price', 'sale', 'brand_id', 'category_ids',
         'short_name', 'name', 'excerpt', 'slug', 'images', 'code', 'extras',
         'rating', 'reviews', 'ratings', 'content', 'merchant_content', 'seo', 'attrs'
     ];
+
+    /** @var array<int,array{parent_id:int|null,countries:array}> */
+    protected array $storeOnlyCache = [];
+
+    /** @var array<string,bool> */
+    protected array $storeOnlyFlagCache = [];
 
     public function __construct()
     {
@@ -290,6 +297,7 @@ class CatalogCacheService
         // категории
         $category_ids_array = $p->getAllCategoryIds($countryCode);
         $category_ids_json  = $category_ids_array ? json_encode($category_ids_array) : null;
+        $storeOnly = $this->isStoreOnlyProduct($category_ids_array, $countryCode);
 
         // картинки
         $images_array = $p->effective()->images;
@@ -318,6 +326,7 @@ class CatalogCacheService
             'country_code'  => $countryCode,
             'currency_code' => \Store::context()->currency,
             'is_available'  => 1,
+            'store_only'    => $storeOnly ? 1 : 0,
             'in_stock'      => (int) ($p->inStock ?? 0),
             'price'         => $p->price,
             'old_price'     => $p->oldPrice,
@@ -633,6 +642,111 @@ class CatalogCacheService
     /* ===========================
      * ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ
      * =========================== */
+
+    protected function isStoreOnlyProduct(array $categoryIds, string $countryCode): bool
+    {
+        $country = $this->normalizeCountryCode($countryCode);
+        if (!$country) {
+            return false;
+        }
+
+        $candidates = [$country];
+
+        foreach ($categoryIds as $categoryId) {
+            $id = (int) $categoryId;
+            if ($id <= 0) {
+                continue;
+            }
+
+            if ($this->categoryHasStoreOnly($id, $candidates)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function categoryHasStoreOnly(int $categoryId, array $candidates): bool
+    {
+        $cacheKey = $categoryId.':'.implode('|', $candidates);
+        if (array_key_exists($cacheKey, $this->storeOnlyFlagCache)) {
+            return $this->storeOnlyFlagCache[$cacheKey];
+        }
+
+        $map = $this->storeOnlyMap();
+        $visited = [];
+        $current = $categoryId;
+        $found = false;
+
+        while ($current && !isset($visited[$current]) && isset($map[$current])) {
+            $visited[$current] = true;
+            $data = $map[$current];
+
+            foreach ($candidates as $candidate) {
+                if (in_array($candidate, $data['countries'], true)) {
+                    $found = true;
+                    break 2;
+                }
+            }
+
+            $current = $data['parent_id'] ?? null;
+        }
+
+        $this->storeOnlyFlagCache[$cacheKey] = $found;
+
+        return $found;
+    }
+
+    protected function storeOnlyMap(): array
+    {
+        if (!empty($this->storeOnlyCache)) {
+            return $this->storeOnlyCache;
+        }
+
+        $this->storeOnlyCache = Category::query()
+            ->select(['id', 'parent_id', 'store_only_countries'])
+            ->get()
+            ->mapWithKeys(function (Category $category) {
+                return [
+                    (int) $category->id => [
+                        'parent_id' => $category->parent_id ? (int) $category->parent_id : null,
+                        'countries' => $this->normalizeCountryList($category->store_only_countries),
+                    ],
+                ];
+            })
+            ->all();
+
+        return $this->storeOnlyCache;
+    }
+
+    protected function normalizeCountryList($raw): array
+    {
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = json_last_error() === JSON_ERROR_NONE ? $decoded : [$raw];
+        }
+
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $normalized = array_map(function ($value) {
+            return $this->normalizeCountryCode((string) $value);
+        }, $raw);
+
+        return array_values(array_filter(array_unique($normalized)));
+    }
+
+    protected function normalizeCountryCode(?string $code): ?string
+    {
+        if ($code === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($code));
+
+        return $normalized === '' ? null : $normalized;
+    }
 
     protected function availableCountries(): array
     {

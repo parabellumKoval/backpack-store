@@ -20,6 +20,8 @@ class ProductTinyResource extends BaseResource
         'price' => $this->price,
         'oldPrice' => $this->oldPrice,
         'currency' => $this->currency,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
       ];
     }
 }

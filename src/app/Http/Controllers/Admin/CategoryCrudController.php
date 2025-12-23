@@ -207,6 +207,14 @@ class CategoryCrudController extends CrudController
             'limit' => 255,
         ]);
 
+        $this->crud->addColumn([
+            'name' => 'admin_store_only_countries_label',
+            'label' => 'Оффлайн страны',
+            'type' => 'model_function',
+            'function_name' => 'getAdminStoreOnlyCountriesLabel',
+            'limit' => 255,
+        ]);
+
         $this->setupTagColumns();
 
         $this->listOperation();
@@ -254,6 +262,16 @@ class CategoryCrudController extends CrudController
                 'options' => $this->countryOptions(),
                 'allows_null' => true,
                 'hint' => 'Пусто — категория доступна во всех странах',
+                'tab' => trans('backpack-store::category.tabs.main')
+            ],
+            [
+                'name' => 'store_only_countries',
+                'label' => 'Только офлайн (страны)',
+                'type' => 'select2_from_array',
+                'allows_multiple' => true,
+                'options' => $this->countryOptions(),
+                'allows_null' => true,
+                'hint' => 'В выбранных странах товары этой категории и подкатегорий доступны только в физических магазинах',
                 'tab' => trans('backpack-store::category.tabs.main')
             ],
             [

@@ -49,6 +49,8 @@ trait HasModification
                 'price'      => $price,
                 'oldPrice'   => $m->old_price,
                 'inStock'    => $m->in_stock,
+                'store_only' => (bool) ($m->store_only ?? false),
+                'storeOnly'  => (bool) ($m->store_only ?? false),
                 'slug'       => $m->slug,
                 'name'       => $m->name,
                 'short_name' => $m->short_name,

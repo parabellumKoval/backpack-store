@@ -18,6 +18,7 @@ class ProductLargeResource extends BaseResource
     {
       // $mods = $this->modifications ?? [];
       $mods = $this->resource_modifications ?? [];
+      $storeOnly = (bool) ($this->store_only ?? false);
 
       return [
         'id' => $this->product_id ?? $this->id,
@@ -26,6 +27,8 @@ class ProductLargeResource extends BaseResource
         'name' => $this->name,
         'short_name' => $this->short_name,
         'inStock' => $this->in_stock,
+        'store_only' => $storeOnly,
+        'storeOnly' => $storeOnly,
         'slug' => $this->slug,
         'base_modification_slug' => $this->resolveBaseModificationSlug($mods),
         'price' => $this->price,

@@ -18,6 +18,8 @@ class ProductSimpleResource extends BaseResource
         'id' => $repr->id,
         'name' => $this->name,
         'slug' => $repr->slug,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
       ];
     }
 }

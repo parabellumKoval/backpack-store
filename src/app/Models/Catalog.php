@@ -64,6 +64,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         'rating'       => 'float',
         'reviews'      => 'integer',
         'ratings'      => 'integer',
+        'store_only'   => 'boolean',
     ];
 
     protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray', 'content', 'merchant_content', 'seo', 'attrs'];

@@ -50,6 +50,7 @@ class Category extends Model
         'extras' => 'array',
         'images' => 'array',
         'countries' => 'array',
+        'store_only_countries' => 'array',
         'is_active' => 'boolean',
     ];
 
@@ -182,6 +183,26 @@ class Category extends Model
         $normalized = trim($code);
 
         return $normalized === '' ? null : $normalized;
+    }
+
+    protected function prepareCountryCodes($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = $decoded === null && json_last_error() !== JSON_ERROR_NONE ? [$value] : $decoded;
+        }
+
+        return collect($value ?? [])
+            ->filter(function ($code) {
+                return $code !== null && $code !== '';
+            })
+            ->map(function ($code) {
+                return static::normalizeCountryCode($code);
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     protected static function countryCandidates(?string $country = null): array
@@ -318,24 +339,32 @@ class Category extends Model
 
     public function setCountriesAttribute($value): void
     {
-        if (is_string($value)) {
-            $decoded = json_decode($value, true);
-            $value = $decoded === null && json_last_error() !== JSON_ERROR_NONE ? [$value] : $decoded;
+        $codes = $this->prepareCountryCodes($value);
+        $this->attributes['countries'] = empty($codes) ? null : json_encode($codes);
+    }
+
+    public function getStoreOnlyCountriesListAttribute(): ?array
+    {
+        if (empty($this->store_only_countries)) {
+            return null;
         }
 
-        $codes = collect($value ?? [])
-            ->filter(function ($code) {
-                return $code !== null && $code !== '';
-            })
-            ->map(function ($code) {
-                return static::normalizeCountryCode($code);
-            })
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        if (!class_exists(\Backpack\Store\app\Services\Store::class)) {
+            return $this->store_only_countries;
+        }
 
-        $this->attributes['countries'] = empty($codes) ? null : json_encode($codes);
+        $options = \Store::countryOptions();
+
+        return array_values(array_map(function ($code) use ($options) {
+            $code = static::normalizeCountryCode($code);
+            return $options[$code] ?? $code;
+        }, $this->store_only_countries));
+    }
+
+    public function setStoreOnlyCountriesAttribute($value): void
+    {
+        $codes = $this->prepareCountryCodes($value);
+        $this->attributes['store_only_countries'] = empty($codes) ? null : json_encode($codes);
     }
     
     /**
@@ -540,6 +569,17 @@ class Category extends Model
       }
 
       return implode(', ', $list);
+    }
+
+    public function getAdminStoreOnlyCountriesLabel(): string
+    {
+        $list = $this->storeOnlyCountriesList;
+
+        if (!$list || empty($list)) {
+            return 'Нет';
+        }
+
+        return implode(', ', $list);
     }
 
     /**

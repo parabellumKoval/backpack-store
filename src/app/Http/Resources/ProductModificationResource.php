@@ -19,7 +19,9 @@ class ProductModificationResource extends BaseResource
         'oldPrice' => $this->old_price,
         'currency' => $this->currency,
         'inStock' => $this->in_stock,
-        'passed' => $this->passedFilter
+        'passed' => $this->passedFilter,
+        'store_only' => (bool) ($this->store_only ?? false),
+        'storeOnly' => (bool) ($this->store_only ?? false),
       ];
     }
 }
