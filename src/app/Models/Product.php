@@ -608,6 +608,11 @@ class Product extends Model
       return $this->categories[0] ?? null;
     }
 
+    public function getStoreOnlyAttribute(): bool
+    {
+        return $this->isStoreOnlyForCountry();
+    }
+
         
     /**
      * getCategoryOrParentCategory
@@ -620,6 +625,65 @@ class Product extends Model
       }
 
       return $this->category;
+    }
+
+    protected function isStoreOnlyForCountry(?string $country = null): bool
+    {
+        $country = $this->resolveCountryCode($country);
+        if (!$country) {
+            return false;
+        }
+
+        $categories = $this->categories ?? [];
+
+        foreach ($categories as $category) {
+            if (!$category instanceof Category) {
+                continue;
+            }
+
+            $nodes = method_exists($category, 'getParentNode')
+                ? $category->getParentNode($category, null, $country)
+                : collect([$category]);
+
+            foreach ($nodes as $node) {
+                $list = $node->store_only_countries ?? [];
+
+                if (is_string($list)) {
+                    $decoded = json_decode($list, true);
+                    $list = json_last_error() === JSON_ERROR_NONE ? $decoded : [$list];
+                }
+
+                if (is_array($list) && in_array($country, array_filter($list), true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    protected function resolveCountryCode(?string $country = null): ?string
+    {
+        $candidate = $country;
+
+        if ($candidate === null && app()->bound('request')) {
+            $requestCountry = request()->get('country');
+            if ($requestCountry !== null && $requestCountry !== '') {
+                $candidate = $requestCountry;
+            }
+        }
+
+        if ($candidate === null) {
+            $candidate = \Store::context()->country ?? null;
+        }
+
+        if ($candidate === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $candidate));
+
+        return $normalized === '' ? null : $normalized;
     }
     
     /**
