@@ -20,6 +20,15 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                 // Вкладка: ОБЩЕЕ
                 // ────────────────────────────────────────────────
                 ->page('Общее', function ($page) {
+                    $page->add(Field::make('shipping.add_to_order_enabled', 'checkbox')
+                        ->label('Добавлять стоимость доставки к заказу')
+                        ->hint('Если выключено, стоимость доставки не рассчитывается и не добавляется к сумме заказа.')
+                        ->default(false)
+                        ->regionable(true)
+                        ->cast('bool')
+                        ->tab('Основное')
+                    );
+
                     $page->add(Field::make('shipping.free_enabled', 'checkbox')
                         ->label('Бесплатная доставка')
                         ->hint('Активировать бесплатную доставку от определенной суммы заказа?')
