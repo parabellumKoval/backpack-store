@@ -228,6 +228,7 @@ class OrderController extends \App\Http\Controllers\Controller
   protected function persistOrder(array $data, $user = null): array
   {
     $order = new $this->ORDER_MODEL;
+    $includeShipping = $this->shouldIncludeShippingCost($data, $order);
 
     if(!$user && ($data['provider'] ?? null) === 'auth') {
       $data['provider'] = 'data';
@@ -245,7 +246,11 @@ class OrderController extends \App\Http\Controllers\Controller
 
     $this->applyPersonalDiscount($order, $user);
 
-    $shippingQuote = $this->calculateShippingQuote($order, $data);
+    if ($includeShipping) {
+      $shippingQuote = $this->calculateShippingQuote($order, $data);
+    } else {
+      $this->disableShippingCost($order);
+    }
 
     $totals = $this->calculateBaseTotals($order);
 
@@ -332,6 +337,37 @@ class OrderController extends \App\Http\Controllers\Controller
     $order->info = $info;
 
     return $quote;
+  }
+
+  protected function shouldIncludeShippingCost(array $data, ?Order $order = null): bool
+  {
+    $country = $this->resolveShippingCountry($data, $order);
+
+    if ($country) {
+      return (bool) \Settings::get('shipping.add_to_order_enabled', false, ['country' => $country]);
+    }
+
+    return (bool) \Settings::get('shipping.add_to_order_enabled', false);
+  }
+
+  protected function resolveShippingCountry(array $data, ?Order $order = null): ?string
+  {
+    $country = data_get($data, 'destinationCountry')
+      ?? data_get($data, 'shipping_country_code')
+      ?? ($order ? $order->country_code : null)
+      ?? \Store::country();
+
+    $country = $country ? strtoupper((string) $country) : null;
+
+    return $country ?: null;
+  }
+
+  protected function disableShippingCost(Order $order): void
+  {
+    $info = $order->info ?? [];
+    unset($info['shippingQuote']);
+    $order->info = $info;
+    $order->shipping_total = 0.0;
   }
 
   protected function buildShippingMeta(Order $order, array $data): array
