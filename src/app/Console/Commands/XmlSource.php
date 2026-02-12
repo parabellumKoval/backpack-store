@@ -50,6 +50,7 @@ class XmlSource extends Command
     protected $settings = null;
     protected $rules = null;
     protected $stockRules = [];
+    protected $xmlAttributeFields = [];
     protected $cs = null;
 
     protected $isSuppliersEnabled = false;
@@ -82,7 +83,7 @@ class XmlSource extends Command
       $this->PRODUCT_CLASS = config('backpack.store.product.class', 'Backpack\Store\app\Models\Product');
 
       $this->IS_TEST_MODE = config('backpack.store.source.test.enable', false);
-      $this->TEST_ITEMS = config('backpack.store.source.test.items', -1);
+      $this->TEST_ITEMS = (int) config('backpack.store.source.test.items', -1);
     }
 
     /**
@@ -609,6 +610,7 @@ class XmlSource extends Command
 
       // Fill Settings
       $this->settings = $source->settings;
+      $this->xmlAttributeFields = $this->normalizeListSetting($this->settings['fieldsInAttributes'] ?? []);
 
       // Clear force update
       $source->clearForceUpdateAndSave();
@@ -662,6 +664,55 @@ class XmlSource extends Command
       if($source->cs->count()) {
         $this->cs = $source->cs;
       }
+    }
+
+    /**
+     * normalizeListSetting
+     *
+     * @param  mixed $value
+     * @return array
+     */
+    private function normalizeListSetting($value) {
+      if(empty($value)) {
+        return [];
+      }
+
+      if(is_string($value)) {
+        $decoded = json_decode($value, true);
+        if(json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+          $value = $decoded;
+        } else {
+          $value = explode(',', $value);
+        }
+      }
+
+      if(!is_array($value)) {
+        return [];
+      }
+
+      $normalized = [];
+      foreach($value as $item) {
+        if(!is_scalar($item)) {
+          continue;
+        }
+
+        $item = trim((string)$item);
+        if($item !== '') {
+          $normalized[] = $item;
+        }
+      }
+
+      return $normalized;
+    }
+
+    /**
+     * isFieldInAttributes
+     *
+     * @param  string $fieldSettingName
+     * @return bool
+     */
+    private function isFieldInAttributes($fieldSettingName) {
+      return in_array($fieldSettingName, $this->xmlAttributeFields, true);
     }
     
     /**

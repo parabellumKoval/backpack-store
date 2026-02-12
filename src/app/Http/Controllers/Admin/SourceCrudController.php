@@ -531,6 +531,35 @@ class SourceCrudController extends CrudController
         ]);
 
         $this->crud->addField([
+          'name' => 'fieldsInAttributes',
+          'label' => 'Поле находится в атрибутах',
+          'type' => 'select2_from_array',
+          'options' => [
+            'fieldName' => 'Название',
+            'fieldCode' => 'Артикул',
+            'fieldBarcode' => 'Код/баркод',
+            'fieldPrice' => 'Цена',
+            'fieldBrand' => 'Бренд',
+            'fieldCategory' => 'Категория',
+            'fieldInStock' => 'Наличие товара',
+            'fieldImage' => 'Картинка'
+          ],
+          'allows_null' => true,
+          'default' => null,
+          'allows_multiple' => true,
+          'fake' => true,
+          'store_in' => 'settings',
+          'hint' => 'Отметьте поля, значения которых нужно читать из атрибутов главного тега товара (например: <offer available="false">), а не из вложенных тегов.',
+          'wrapper' => [
+            'class' => 'form-group col-md-12',
+            'data-field-purpose' => 'link'
+          ] + $this->getStylesArray('xml_link'),
+          'attributes' => [
+          ] + $this->getAttributesArray('xml_link'),
+          'tab' => 'Настройки'
+        ]);
+
+        $this->crud->addField([
           'name' => 'inStockRules',
           'label' => 'Правила наличия товара',
           'type' => 'repeatable',
