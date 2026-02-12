@@ -29,7 +29,7 @@ trait FileSourceTrait {
 
       if($this->IS_TEST_MODE) {
         // if $TEST_ITEMS === -1 it means all items
-        $this->totalRecords = $this->TEST_ITEMS === -1? $highestRow: $this->TEST_ITEMS;
+        $this->totalRecords = $this->TEST_ITEMS < 0? $highestRow: $this->TEST_ITEMS;
       }else {
         $this->totalRecords =  $highestRow;
       }

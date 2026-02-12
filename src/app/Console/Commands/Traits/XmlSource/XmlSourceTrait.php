@@ -195,6 +195,71 @@ trait XmlSourceTrait {
         return null;
     }
 
+    /**
+     * getItemFieldValue
+     *
+     * @param  mixed $item
+     * @param  string $settingFieldName
+     * @param  mixed $default
+     * @return mixed
+     */
+    private function getItemFieldValue($item, $settingFieldName, $default = '') {
+      $fieldName = $this->settings[$settingFieldName] ?? null;
+      if(empty($fieldName)) {
+        return $default;
+      }
+
+      if($this->isFieldInAttributes($settingFieldName)) {
+        $attributeValue = $this->getItemAttributeValue($item, $fieldName);
+        return $attributeValue === null ? $default : $attributeValue;
+      }
+
+      if(!isset($item->{$fieldName})) {
+        return $default;
+      }
+
+      return $item->{$fieldName}->__toString();
+    }
+
+    /**
+     * getItemImagesValue
+     *
+     * @param  mixed $item
+     * @return mixed
+     */
+    private function getItemImagesValue($item) {
+      $fieldName = $this->settings['fieldImage'] ?? null;
+      if(empty($fieldName)) {
+        return null;
+      }
+
+      if($this->isFieldInAttributes('fieldImage')) {
+        return $this->getItemAttributeValue($item, $fieldName);
+      }
+
+      if(!isset($item->{$fieldName})) {
+        return null;
+      }
+
+      return $item->{$fieldName};
+    }
+
+    /**
+     * getItemAttributeValue
+     *
+     * @param  mixed $item
+     * @param  string $attributeName
+     * @return string|null
+     */
+    private function getItemAttributeValue($item, $attributeName) {
+      $attributes = $item->attributes();
+      if(!$attributes || !isset($attributes[$attributeName])) {
+        return null;
+      }
+
+      return (string)$attributes[$attributeName];
+    }
+
 
     private function loadFromXml($source) {
         $this->bootSource($source);
