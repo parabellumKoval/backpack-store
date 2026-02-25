@@ -27,6 +27,10 @@ return [
             'label' => 'Quantity in Stock',
             'hint' => 'The quantity of goods will be automatically deducted when orders are placed on the site.'
         ],
+        'manual_sort' => [
+            'label' => 'Manual sorting',
+            'hint' => 'The higher the value, the higher the product appears in lists. Decimal values are allowed, for example 200.5.'
+        ],
         'categories' => [
             'label' => 'Categories',
             'hint' => 'Product characteristics depend on selected categories. After saving the entry, characteristics will be synchronized with categories.'

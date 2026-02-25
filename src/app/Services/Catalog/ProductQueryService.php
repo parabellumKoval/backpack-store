@@ -360,17 +360,17 @@ class ProductQueryService extends AbstractQueryService
       if(\Settings::get('dress.supplier.enable', false)) {
         $this->query
           ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) DESC', [0, 1, 0])
+          ->orderByRaw('CASE WHEN MAX(ak_products.manual_sort) IS NULL THEN 1 ELSE 0 END ASC')
+          ->orderByRaw('MAX(ak_products.manual_sort) DESC')
+          ->orderBy('ak_products.created_at', 'desc')
           ->groupBy('ak_products.id');
       }else {
         $this->query
-          ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0]);
+          ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
+          ->orderByRaw('CASE WHEN ak_products.manual_sort IS NULL THEN 1 ELSE 0 END ASC')
+          ->orderBy('ak_products.manual_sort', 'desc')
+          ->orderBy('ak_products.created_at', 'desc');
       }
-
-      $this->query
-        // at first with images
-        ->orderBy('images', 'desc')
-        // new at first
-        ->orderBy('created_at', 'desc');
     }
 
 

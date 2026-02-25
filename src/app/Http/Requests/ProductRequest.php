@@ -28,6 +28,12 @@ class ProductRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('manual_sort')) {
+            $this->merge([
+                'manual_sort' => $this->normalizeManualSortInput($this->input('manual_sort')),
+            ]);
+        }
+
         if ($this->shouldValidateStockFields() && $this->shouldProcessSuppliersData()) {
             $this->merge([
                 'suppliersData' => $this->normalizeSuppliersData($this->input('suppliersData', [])),
@@ -45,6 +51,7 @@ class ProductRequest extends FormRequest
     {
         $rules = [
           'name' => 'required|min:1|max:255',
+          'manual_sort' => 'nullable|numeric',
         ];
 
 
@@ -160,5 +167,19 @@ class ProductRequest extends FormRequest
         }
 
         return null;
+    }
+
+    protected function normalizeManualSortInput($value)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim(str_replace(',', '.', $value));
+            return $value === '' ? null : $value;
+        }
+
+        return $value;
     }
 }

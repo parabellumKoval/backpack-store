@@ -250,7 +250,9 @@ class CatalogQueryService extends AbstractQueryService
 
         if (!$orderBy) {
             $this->query->orderByRaw('IF(c.in_stock > 0, 1, 0) DESC');
-            $this->query->orderByRaw('JSON_LENGTH(c.images) DESC');
+            $this->query->orderByRaw('CASE WHEN c.manual_sort IS NULL THEN 1 ELSE 0 END ASC');
+            $this->query->orderBy('c.manual_sort', 'desc');
+            $this->query->orderByRaw("COALESCE(c.created_at, '1970-01-01 00:00:00') DESC");
             $this->query->orderBy('c.product_id', 'desc');
             return $this;
         }
@@ -275,7 +277,9 @@ class CatalogQueryService extends AbstractQueryService
     public function getSortingData(): array
     {
         $activeBy  = $this->request->input('order_by');
-        $activeDir = strtolower($this->request->input('order_dir','desc')) === 'asc' ? 'asc' : 'desc';
+        $activeDir = $activeBy
+            ? (strtolower($this->request->input('order_dir', 'desc')) === 'asc' ? 'asc' : 'desc')
+            : null;
 
         $list = [
             ['id'=>'default', 'name'=>__('backpack-store::filter.sorting.default'), 'by'=>null,        'dir'=>null],
@@ -372,6 +376,8 @@ class CatalogQueryService extends AbstractQueryService
             $base->setAttribute('sort_price', $sortMod ? (float) $sortMod->price : null);
             $base->setAttribute('sort_sale', $sortMod ? ((float) ($sortMod->old_price ?? 0) - (float) ($sortMod->price ?? 0)) : null);
             $base->setAttribute('sort_reviews', $sortMod ? (int) ($sortMod->reviews ?? 0) : null);
+            $base->setAttribute('sort_manual', $this->resolveRepresentativeManualSort($mods));
+            $base->setAttribute('sort_created_at', $this->resolveRepresentativeCreatedAt($mods));
 
             $items->push($base);
         }
@@ -410,6 +416,8 @@ class CatalogQueryService extends AbstractQueryService
                         'c.group_id',
                         DB::raw('MIN(CASE WHEN c.in_stock > 0 THEN c.price ELSE NULL END) as sort_price'),
                         DB::raw('MAX( IF(c.in_stock>0, 1, 0) ) as sort_stock'),
+                        DB::raw('MAX(CASE WHEN c.in_stock > 0 THEN c.manual_sort ELSE NULL END) as sort_manual'),
+                        DB::raw('MAX(CASE WHEN c.in_stock > 0 THEN c.created_at ELSE NULL END) as sort_created_at'),
                         DB::raw('MAX(CASE WHEN c.in_stock > 0 THEN (c.old_price - c.price) ELSE NULL END) as sort_sale'),
                         DB::raw('MAX(CASE WHEN c.in_stock > 0 THEN c.reviews ELSE NULL END) as sort_reviews'),
                     ])
@@ -438,8 +446,12 @@ class CatalogQueryService extends AbstractQueryService
             $g->orderByRaw('CASE WHEN g.sort_price IS NULL THEN 1 ELSE 0 END ASC')
               ->orderBy('g.sort_price', $orderDir);
         } else {
-            // дефолт: в наличии -> цена возр.
+            // дефолт: в наличии -> manual_sort desc -> created_at desc
             $g->orderBy('g.sort_stock', 'desc')
+              ->orderByRaw('CASE WHEN g.sort_manual IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_manual', 'desc')
+              ->orderByRaw('CASE WHEN g.sort_created_at IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderBy('g.sort_created_at', 'desc')
               ->orderByRaw('CASE WHEN g.sort_price IS NULL THEN 1 ELSE 0 END ASC')
               ->orderBy('g.sort_price', 'asc');
         }
@@ -480,11 +492,32 @@ class CatalogQueryService extends AbstractQueryService
         $orderDir = strtolower($this->request->input('order_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
         if (!$orderBy) {
-            return $items->sortBy([
-                fn($a,$b)=>($this->groupHasStock($b) ? 1 : 0) <=> ($this->groupHasStock($a) ? 1 : 0),
-                fn($a,$b)=>(count($b->images ?? []) <=> count($a->images ?? [])),
-                fn($a,$b)=>($b->product_id <=> $a->product_id),
-            ])->values();
+            return $items->sort(function (Catalog $a, Catalog $b) {
+                $stockCmp = ($this->groupHasStock($b) ? 1 : 0) <=> ($this->groupHasStock($a) ? 1 : 0);
+                if ($stockCmp !== 0) {
+                    return $stockCmp;
+                }
+
+                $manualCmp = $this->compareNullableMetric(
+                    $this->representativeSortManual($a),
+                    $this->representativeSortManual($b),
+                    true
+                );
+                if ($manualCmp !== 0) {
+                    return $manualCmp;
+                }
+
+                $createdCmp = $this->compareNullableMetric(
+                    $this->representativeSortCreatedAt($a),
+                    $this->representativeSortCreatedAt($b),
+                    true
+                );
+                if ($createdCmp !== 0) {
+                    return $createdCmp;
+                }
+
+                return ((int) $b->product_id) <=> ((int) $a->product_id);
+            })->values();
         }
 
         $reverse = $orderDir !== 'asc';
@@ -549,6 +582,110 @@ class CatalogQueryService extends AbstractQueryService
     {
         $value = $item->getAttribute('sort_reviews');
         return $value !== null ? (int) $value : null;
+    }
+
+    protected function representativeSortManual(Catalog $item): ?float
+    {
+        $value = $item->getAttribute('sort_manual');
+        if ($value === null) {
+            $value = $item->manual_sort ?? null;
+        }
+
+        return $value !== null ? (float) $value : null;
+    }
+
+    protected function representativeSortCreatedAt(Catalog $item): ?int
+    {
+        $value = $item->getAttribute('sort_created_at');
+        if ($value === null) {
+            $value = $item->created_at ?? null;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+
+        $timestamp = strtotime((string) $value);
+
+        return $timestamp === false ? null : $timestamp;
+    }
+
+    protected function resolveRepresentativeManualSort(Collection $mods): ?float
+    {
+        $candidate = $mods
+            ->where('passed_filter', true)
+            ->filter(function ($mod) {
+                return (int) ($mod->in_stock ?? 0) > 0 && $mod->manual_sort !== null;
+            })
+            ->max('manual_sort');
+
+        if ($candidate === null) {
+            return null;
+        }
+
+        return (float) $candidate;
+    }
+
+    protected function resolveRepresentativeCreatedAt(Collection $mods): ?int
+    {
+        $preferred = $mods
+            ->where('passed_filter', true)
+            ->filter(fn($mod) => (int) ($mod->in_stock ?? 0) > 0);
+
+        $fallback = $mods->where('passed_filter', true);
+        $all = $mods;
+
+        foreach ([$preferred, $fallback, $all] as $set) {
+            $timestamps = $set
+                ->map(function ($mod) {
+                    $value = $mod->created_at ?? null;
+                    if ($value instanceof \DateTimeInterface) {
+                        return $value->getTimestamp();
+                    }
+
+                    if ($value === null) {
+                        return null;
+                    }
+
+                    $timestamp = strtotime((string) $value);
+                    return $timestamp === false ? null : $timestamp;
+                })
+                ->filter(function ($value) {
+                    return $value !== null;
+                });
+
+            if ($timestamps->isNotEmpty()) {
+                return (int) $timestamps->max();
+            }
+        }
+
+        return null;
+    }
+
+    protected function compareNullableMetric($left, $right, bool $descending): int
+    {
+        $leftNull = $left === null;
+        $rightNull = $right === null;
+
+        if ($leftNull && $rightNull) {
+            return 0;
+        }
+        if ($leftNull) {
+            return 1;
+        }
+        if ($rightNull) {
+            return -1;
+        }
+
+        if ($left == $right) {
+            return 0;
+        }
+
+        return $descending ? ($right <=> $left) : ($left <=> $right);
     }
 
     protected function groupHasStock(Catalog $item): bool

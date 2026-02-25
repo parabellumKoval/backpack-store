@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Admin\Traits\Product;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Supplier;
 use Backpack\Store\app\Models\Product;
+use Backpack\Store\app\Services\Product\ProductManualSortCacheService;
 
 trait ProductFieldsTrait
 {
@@ -372,6 +373,9 @@ trait ProductFieldsTrait
         // SEO FIELDS
         $this->setSeoFields();
 
+        // Manual sorting
+        $this->setManualSortFields('Дополнительно');
+
         // Google Merchant
         $this->crud->addField([
             'name' => 'merchant_content',
@@ -445,6 +449,144 @@ trait ProductFieldsTrait
             'init_rows' => 0,
             'min_rows'  => 0,
         ]);
+    }
+
+    private function setManualSortFields(string $tab = 'Дополнительно'): void
+    {
+        $this->crud->addField([
+            'name' => 'manual_sort',
+            'label' => trans('backpack-store::product-field.fields.manual_sort.label'),
+            'type' => 'text',
+            'tab' => $tab,
+            'hint' => trans('backpack-store::product-field.fields.manual_sort.hint'),
+            'wrapper' => [
+                'class' => 'form-group col-md-6',
+            ],
+            'attributes' => [
+                'inputmode' => 'decimal',
+                'placeholder' => 'Например: 200,5',
+            ],
+        ]);
+
+        /** @var ProductManualSortCacheService $cacheService */
+        $cacheService = app(ProductManualSortCacheService::class);
+        $stats = $cacheService->getStatsForProduct($this->entry instanceof Product ? $this->entry : null);
+
+        $this->crud->addField([
+            'name' => 'manual_sort_stats',
+            'type' => 'custom_html',
+            'value' => $this->renderManualSortStatsHtml($stats),
+            'tab' => $tab,
+            'wrapper' => [
+                'class' => 'form-group col-md-12',
+            ],
+        ]);
+    }
+
+    private function renderManualSortStatsHtml(array $stats): string
+    {
+        $global = $stats['global'] ?? [];
+        $globalMin = $this->formatManualSortNumber($global['min'] ?? null);
+        $globalMax = $this->formatManualSortNumber($global['max'] ?? null);
+        $globalCurrent = $global['current_value'] ?? null;
+        $globalList = $this->renderManualSortList($global['values'] ?? [], $globalCurrent);
+        $globalPosition = $this->renderManualSortPosition($global['current_position'] ?? null, count($global['values'] ?? []));
+
+        $categoriesHtml = '';
+        $categories = $stats['categories'] ?? [];
+
+        if (!empty($categories)) {
+            foreach ($categories as $category) {
+                $categoryName = e((string) ($category['name'] ?? ('#'.($category['id'] ?? ''))));
+                $min = $this->formatManualSortNumber($category['min'] ?? null);
+                $max = $this->formatManualSortNumber($category['max'] ?? null);
+                $current = $category['current_value'] ?? null;
+                $list = $this->renderManualSortList($category['values'] ?? [], $current);
+                $position = $this->renderManualSortPosition($category['current_position'] ?? null, count($category['values'] ?? []));
+
+                $categoriesHtml .= "
+                    <div class='mb-2'>
+                        <div><strong>{$categoryName}</strong></div>
+                        <div style='color:#495057;'>Мин: {$min}, Макс: {$max}</div>
+                        <div style='color:#495057;'>{$position}</div>
+                        <div>{$list}</div>
+                    </div>
+                ";
+            }
+        } else {
+            $categoriesHtml = "<div style='color:#495057;'>По категориям значений пока нет.</div>";
+        }
+
+        $updatedAt = e((string) ($stats['updated_at'] ?? ''));
+        $updatedAtHtml = $updatedAt !== '' ? "<div class='mt-2' style='color:#495057;'>Кеш обновлён: {$updatedAt}</div>" : '';
+
+        return "
+            <div class='alert alert-light mb-0' style='color:#212529;'>
+                <div><strong>Сортировка по всем товарам</strong></div>
+                <div style='color:#495057;'>Мин: {$globalMin}, Макс: {$globalMax}</div>
+                <div style='color:#495057;'>{$globalPosition}</div>
+                <div>{$globalList}</div>
+                <hr class='my-2'>
+                <div><strong>Сортировка по категориям товара</strong></div>
+                {$categoriesHtml}
+                {$updatedAtHtml}
+            </div>
+        ";
+    }
+
+    private function renderManualSortList(array $values, $currentValue = null): string
+    {
+        if (empty($values)) {
+            return "<span class='text-muted'>Нет установленных значений.</span>";
+        }
+
+        $items = [];
+        $current = $currentValue !== null ? (float) $currentValue : null;
+
+        foreach ($values as $value) {
+            $label = $this->formatManualSortNumber($value);
+            if ($label === '—') {
+                continue;
+            }
+
+            $isCurrent = $current !== null && (float) $value === $current;
+            $style = $isCurrent
+                ? "display:inline-block;padding:2px 8px;margin:0 4px 4px 0;border-radius:999px;background:#198754;color:#fff;font-weight:600;"
+                : "display:inline-block;padding:2px 8px;margin:0 4px 4px 0;border-radius:999px;background:#e9ecef;color:#212529;";
+
+            $items[] = "<span style='{$style}'>".e($label)."</span>";
+        }
+
+        if (empty($items)) {
+            return "<span class='text-muted'>Нет установленных значений.</span>";
+        }
+
+        return implode('', $items);
+    }
+
+    private function renderManualSortPosition(?int $position, int $total): string
+    {
+        if ($position === null || $total <= 0) {
+            return 'Позиция текущего товара: не задана';
+        }
+
+        return "Позиция текущего товара: {$position} из {$total}";
+    }
+
+    private function formatManualSortNumber($value): string
+    {
+        if ($value === null || $value === '') {
+            return '—';
+        }
+
+        $float = (float) $value;
+        $normalized = rtrim(rtrim(number_format($float, 4, '.', ''), '0'), '.');
+
+        if ($normalized === '') {
+            $normalized = '0';
+        }
+
+        return str_replace('.', ',', $normalized);
     }
 
 

@@ -18,6 +18,19 @@ class CategoryRequest extends FormRequest
         return backpack_auth()->check();
     }
 
+    protected function prepareForValidation(): void
+    {
+        foreach (['countries', 'store_only_countries'] as $field) {
+            if (!$this->has($field)) {
+                continue;
+            }
+
+            $this->merge([
+                $field => $this->normalizeCountryList($this->input($field)),
+            ]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -55,5 +68,27 @@ class CategoryRequest extends FormRequest
         return [
             //
         ];
+    }
+
+    protected function normalizeCountryList($value): ?array
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $items = is_array($value) ? $value : [$value];
+
+        $normalized = collect($items)
+            ->map(function ($item) {
+                return is_string($item) ? trim($item) : $item;
+            })
+            ->filter(function ($item) {
+                return $item !== null && $item !== '';
+            })
+            ->unique()
+            ->values()
+            ->all();
+
+        return empty($normalized) ? null : $normalized;
     }
 }

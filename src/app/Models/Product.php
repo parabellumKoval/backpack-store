@@ -55,8 +55,9 @@ use Backpack\Reviews\app\Traits\Reviewable;
 
 
 use Backpack\Reviews\app\Contracts\ReviewableAvailabilityScope;
+use Backpack\Schedule\Contracts\HasCrudCardInterface;
 
-class Product extends Model
+class Product extends Model implements HasCrudCardInterface
 {
     use HasFactory;
     use CrudTrait;
@@ -104,6 +105,7 @@ class Product extends Model
       'price',
       'old_price',
       'in_stock',
+      'manual_sort',
       'is_active',
       'seo',
       'extras',
@@ -129,6 +131,7 @@ class Product extends Model
     protected $casts = [
       'extras' => 'array',
       'images' => 'array',
+      'manual_sort' => 'float',
     ];
 
     protected $fakeColumns = [
@@ -542,6 +545,66 @@ class Product extends Model
     public function scopeBase($query)
     {
       return $query->where('parent_id', null);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | HasCrudCardInterface Implementation
+    |--------------------------------------------------------------------------
+    */
+    
+    /**
+     * Получить HTML карточки для отображения в CRUD списке
+     */
+    public function getCrudCardHtml(array $options = []): string
+    {
+        $compact = $options['compact'] ?? true;
+        
+        $image = $this->getFirstImageForApi()['src'] ?? null;
+        $name = $this->name ?? 'Без названия';
+        $code = $this->code ?? '—';
+        $price = $this->price ?? null;
+        $editUrl = $this->getCrudEditUrl();
+        
+        // Format price
+        $formattedPrice = $price ? number_format($price, 2, ',', ' ') . ' ₴' : '—';
+        
+        $html = '<div class="product-crud-card" style="display: flex; align-items: center; gap: 10px; padding: 6px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fafafa; ' . ($compact ? 'max-width: 300px;' : '') . '">';
+        
+        // Image
+        if ($image) {
+            $html .= '<div style="flex-shrink: 0;"><img src="' . e($image) . '" alt="' . e($name) . '" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;"></div>';
+        } else {
+            $html .= '<div style="flex-shrink: 0; width: 50px; height: 50px; background: #f5f5f5; border-radius: 4px; display: flex; align-items: center; justify-content: center; border: 1px solid #e0e0e0;"><i class="la la-image" style="font-size: 20px; color: #ccc;"></i></div>';
+        }
+        
+        // Info
+        $html .= '<div style="flex-grow: 1; min-width: 0;">';
+        $html .= '<a href="' . e($editUrl) . '" style="color: #333; font-weight: 600; text-decoration: none; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="' . e($name) . '">' . e($name) . '</a>';
+        $html .= '<div style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #666; margin-top: 4px;">';
+        $html .= '<span style="color: #28a745; font-weight: 600;"><i class="la la-tag"></i> ' . e($formattedPrice) . '</span>';
+        if ($code !== '—') {
+            $html .= '<span><i class="la la-barcode"></i> ' . e($code) . '</span>';
+        }
+        $html .= '</div></div></div>';
+        
+        return $html;
+    }
+
+    /**
+     * Получить URL для редактирования записи в админке
+     */
+    public function getCrudEditUrl(): ?string
+    {
+        return backpack_url('product/' . $this->id . '/edit');
+    }
+
+    /**
+     * Получить название записи для отображения
+     */
+    public function getCrudCardTitle(): string
+    {
+        return $this->name ?? 'Товар #' . $this->id;
     }
 
     /*

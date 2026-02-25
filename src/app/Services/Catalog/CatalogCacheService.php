@@ -36,9 +36,9 @@ class CatalogCacheService
 
     protected array $upsertColumns = [
         'group_id', 'item_type', 'currency_code', 'is_available', 'in_stock',
-        'store_only', 'price', 'old_price', 'sale', 'brand_id', 'category_ids',
+        'manual_sort', 'store_only', 'price', 'old_price', 'sale', 'brand_id', 'category_ids',
         'short_name', 'name', 'excerpt', 'slug', 'images', 'code', 'extras',
-        'rating', 'reviews', 'ratings', 'content', 'merchant_content', 'seo', 'attrs'
+        'rating', 'reviews', 'ratings', 'content', 'merchant_content', 'seo', 'attrs', 'created_at'
     ];
 
     /** @var array<int,array{parent_id:int|null,countries:array}> */
@@ -313,6 +313,13 @@ class CatalogCacheService
         $contentTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('content', $countryCode));
         $excerptTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('excerpt', $countryCode));
         $merchantContentTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('merchant_content', $countryCode));
+        $manualSort = $p->manual_sort;
+        if ($manualSort === null && !empty($p->parent_id)) {
+            $parent = $p->relationLoaded('parent') ? $p->parent : $p->parent()->first();
+            if ($parent) {
+                $manualSort = $parent->manual_sort;
+            }
+        }
 
 
         // \Log::info('contentTranslations - ' . $contentTranslations);
@@ -328,6 +335,7 @@ class CatalogCacheService
             'is_available'  => 1,
             'store_only'    => $storeOnly ? 1 : 0,
             'in_stock'      => (int) ($p->inStock ?? 0),
+            'manual_sort'   => $manualSort !== null ? (float) $manualSort : null,
             'price'         => $p->price,
             'old_price'     => $p->oldPrice,
             'sale'          => $p->getModificationSale(), // <-- унификация: всегда есть в строке
@@ -353,6 +361,7 @@ class CatalogCacheService
             'merchant_content' => $merchantContentTranslations,
             'seo'           => $p->effective(true)->seo,
             'attrs'         => $p->effective(true)->properties,
+            'created_at'    => $p->created_at,
         ];
     }
 

@@ -2,11 +2,12 @@
  
 namespace Backpack\Store\app\Http\Resources;
  
-use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
  
-class BrandCollection extends ResourceCollection
+class BrandCollection extends JsonResource
 {
-  private $resource_class;  
+  private $resource_class;
+  private $items;
 
   public function __construct($resource, Array $options)
   {
@@ -54,7 +55,10 @@ class BrandCollection extends ResourceCollection
       }
     }
 
-    parent::__construct($collection);
+    $this->items = $collection;
+    
+    // Передаём null в parent, чтобы избежать вызова resolve() на моделях
+    parent::__construct(null);
   }
 
   /**
@@ -66,7 +70,7 @@ class BrandCollection extends ResourceCollection
   public function toArray($request)
   {
     return [
-      'data' => $this->collection,
+      'data' => $this->items,
     ];
   }
 }

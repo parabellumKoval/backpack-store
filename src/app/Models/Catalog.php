@@ -53,6 +53,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
     protected $casts = [
         'is_available' => 'boolean',
         'in_stock'     => 'integer',
+        'manual_sort'  => 'float',
         'price'        => 'decimal:2',
         'old_price'    => 'decimal:2',
         'name'         => 'array',
@@ -65,6 +66,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         'reviews'      => 'integer',
         'ratings'      => 'integer',
         'store_only'   => 'boolean',
+        'created_at'   => 'datetime',
     ];
 
     protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray', 'content', 'merchant_content', 'seo', 'attrs'];
