@@ -69,10 +69,10 @@ class CatalogQueryService extends AbstractQueryService
             /** @var SlugMapCache $map */
             $map = app(SlugMapCache::class);
             if ($id = $map->brandIdBySlug($slug)) {
-                $q->where('c.brand_id', $id);
+                $this->query->where('c.brand_id', $id);
             } else {
                 // не найден — гарантированно пустой результат
-                $q->whereRaw('1=0');
+                $this->query->whereRaw('1=0');
             }
         }
 
