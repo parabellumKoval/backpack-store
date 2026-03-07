@@ -283,10 +283,9 @@ class CategoryCrudController extends CrudController
             [
                 'name' => 'short_text',
                 'label' => 'Короткий текст под заголовком',
-                'type' => 'countable_textarea',
+                'type' => 'textarea',
                 'rows' => 2,
                 'resizable' => true,
-                'recommended_length' => 180,
                 'fake' => true,
                 'store_in' => 'extras_trans',
                 'tab' => trans('backpack-store::category.tabs.main'),

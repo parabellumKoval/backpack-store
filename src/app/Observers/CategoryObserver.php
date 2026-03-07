@@ -10,6 +10,16 @@ use Illuminate\Support\Facades\DB;
 
 class CategoryObserver
 {
+    /**
+     * Only changes that alter product availability/category ancestry in ak_catalog
+     * should trigger touching linked products.
+     */
+    protected const CATALOG_RELEVANT_FIELDS = [
+        'countries',
+        'store_only_countries',
+        'parent_id',
+    ];
+
     public function saved(Category $category): void
     {
         event(CategoryChanged::for($category, 'saved'));
@@ -125,8 +135,12 @@ class CategoryObserver
             return false;
         }
 
-        // Категории влияют на активацию/видимость/FAQ и структуру каталога;
-        // пересобираем привязанные товары на каждое сохранение категории.
-        return true;
+        foreach (self::CATALOG_RELEVANT_FIELDS as $field) {
+            if ($category->wasChanged($field)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
