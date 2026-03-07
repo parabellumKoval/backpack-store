@@ -2,6 +2,8 @@
 
 namespace Backpack\Store\app\Http\Resources;
 
+use Backpack\Store\app\Services\Campaign\CampaignPayloadService;
+
 class ProductSmallResource extends BaseResource
 {
     /**
@@ -24,6 +26,9 @@ class ProductSmallResource extends BaseResource
         'slug' => $this->slug,
         'price' => $this->price,
         'old_price' => $this->old_price,
+        'base_price' => $this->base_price ?? ($this->campaign ? $this->old_price : $this->price),
+        'campaign_discount_amount' => $this->campaign_discount_amount ?? 0,
+        'campaign' => app(CampaignPayloadService::class)->make($this->campaign),
         'rating' => $this->rating,
         'inStock' => $this->in_stock,
         'store_only' => (bool) ($this->store_only ?? false),

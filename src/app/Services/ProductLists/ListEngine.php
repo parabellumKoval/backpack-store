@@ -62,11 +62,6 @@ class ListEngine
         $items = $this->applyListFilters($items, $listFilters, $context);
 
         $catalogRows = $this->hydrator->fetchCatalogRows(array_map(fn($i) => $i->productId, $items), $context->country);
-        $items = $this->deduplicateByGroup($items, $catalogRows);
-        if (!empty($items)) {
-            $activeIds = array_map(fn($item) => $item->productId, $items);
-            $catalogRows = array_intersect_key($catalogRows, array_flip($activeIds));
-        }
 
         $sortOrder = $list->sort_order;
         if (!is_array($sortOrder)) {
@@ -74,6 +69,11 @@ class ListEngine
         }
 
         $items = $this->sortingEngine->sort($items, $sortOrder, $catalogRows, $context);
+        $items = $this->deduplicateByGroup($items, $catalogRows);
+        if (!empty($items)) {
+            $activeIds = array_map(fn($item) => $item->productId, $items);
+            $catalogRows = array_intersect_key($catalogRows, array_flip($activeIds));
+        }
 
         $total = count($items);
         $items = array_slice($items, 0, $capacity);

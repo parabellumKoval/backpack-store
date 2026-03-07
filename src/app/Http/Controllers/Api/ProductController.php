@@ -82,6 +82,7 @@ class ProductController extends \App\Http\Controllers\Controller
         ->filterByPrice()
         ->filterByAttributes()
         ->filterBySelections()
+        ->filterByCampaign()
         ->filterBySearch()
         ->sorting()
         ->getProducts();
@@ -157,6 +158,7 @@ class ProductController extends \App\Http\Controllers\Controller
           ->filterByPrice()
           ->filterByAttributes()
           ->filterBySelections()
+          ->filterByCampaign()
           ->filterBySearch()
           ->sorting()
           ->getProducts();
@@ -185,6 +187,7 @@ class ProductController extends \App\Http\Controllers\Controller
       ->filterByPrice()
       ->filterByAttributes()
       ->filterBySelections()
+      ->filterByCampaign()
       ->filterBySearch()
       ->sorting()
       ->getProducts();

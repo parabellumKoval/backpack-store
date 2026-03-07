@@ -515,7 +515,7 @@ class ProductListCrudController extends CrudController
                     'options'=>['asc'=>'ASC','desc'=>'DESC'],'wrapper'=>['class'=>'form-group col-md-6'],
                 ],
             ],
-            // 'value'=>fn($e)=>$this->sortAssocToRows($e->sort_order ?? []),
+            'value'=>$this->entry ? $this->sortAssocToRows($this->entry->sort_order ?? []) : [],
             'hint'=>'Если направление пустое — используется направление по умолчанию для критерия.',
         ]);
     }
@@ -868,9 +868,8 @@ class ProductListCrudController extends CrudController
             'source'         => 'Источники данных (по приоритету)',
             'discount_first' => 'Наличие скидок',
             'random'         => 'Случайный',
-            'price_asc'      => 'Цена (по-возрастанию)',
-            'price_desc'     => 'Цена (по-убыванию)',
-            'orders_count'   => 'По кол-ву заказов',
+            'price'          => 'Цена',
+            'orders_count'   => 'Кол-во заказов',
         ];
     }
 
@@ -923,12 +922,47 @@ class ProductListCrudController extends CrudController
         $out = [];
         foreach ($arr as $row) {
             if (is_string($row)) {
-                $out[] = ['criterion'=>$row,'direction'=>null];
+                $normalized = $this->normalizeSortCriterionAndDirection($row, null);
+                if (!empty($normalized['criterion'])) {
+                    $out[] = $normalized;
+                }
             } elseif (is_array($row)) {
-                $out[] = ['criterion'=>$row['criterion'] ?? '', 'direction'=>$row['direction'] ?? null];
+                $normalized = $this->normalizeSortCriterionAndDirection(
+                    $row['criterion'] ?? null,
+                    $row['direction'] ?? null
+                );
+                if (!empty($normalized['criterion'])) {
+                    $out[] = $normalized;
+                }
             }
         }
         return $out;
+    }
+
+    protected function normalizeSortCriterionAndDirection(?string $criterion, ?string $direction): array
+    {
+        $criterion = strtolower(trim((string) $criterion));
+        $direction = strtolower(trim((string) $direction));
+        $direction = in_array($direction, ['asc', 'desc'], true) ? $direction : null;
+
+        $legacy = [
+            'price_asc' => ['criterion' => 'price', 'direction' => 'asc'],
+            'price_desc' => ['criterion' => 'price', 'direction' => 'desc'],
+            'orders' => ['criterion' => 'orders_count', 'direction' => 'desc'],
+            'orders_desc' => ['criterion' => 'orders_count', 'direction' => 'desc'],
+            'orders_asc' => ['criterion' => 'orders_count', 'direction' => 'asc'],
+        ];
+
+        $normalized = $legacy[$criterion] ?? [
+            'criterion' => $criterion,
+            'direction' => null,
+        ];
+
+        if ($direction !== null) {
+            $normalized['direction'] = $direction;
+        }
+
+        return $normalized;
     }
 
     protected function foundationAssocToRows(?array $assoc): array

@@ -29,6 +29,7 @@
 
   $promocodeDiscount = $order ? max(0, (float) ($order->promocode_discount_total ?? 0)) : 0;
   $personalDiscount = $order ? max(0, (float) ($order->personal_discount_total ?? 0)) : 0;
+  $campaignDiscount = $order ? max(0, (float) ($order->campaign_discount_total ?? 0)) : 0;
 
   $displayPrice = is_numeric($price ?? null)
       ? number_format((float) $price, 2, '.', ' ')
@@ -45,7 +46,7 @@
     @endif
   </div>
 
-  @if($bonusPoints !== null || $promocodeDiscount > 0 || $personalDiscount > 0)
+  @if($bonusPoints !== null || $promocodeDiscount > 0 || $personalDiscount > 0 || $campaignDiscount > 0)
     <div class="text-muted small" style="margin-top: 6px; display: flex; flex-direction: column; gap: 2px;">
       @if($bonusPoints !== null)
         <div style="display: flex; justify-content: space-between;">
@@ -63,6 +64,13 @@
         <div style="display: flex; justify-content: space-between;">
           <span>🎟️ Промокод</span>
           <span>-{{ $formatMoney($promocodeDiscount) }}</span>
+        </div>
+      @endif
+
+      @if($campaignDiscount > 0)
+        <div style="display: flex; justify-content: space-between;">
+          <span>⚡ Акция</span>
+          <span>-{{ $formatMoney($campaignDiscount) }}</span>
         </div>
       @endif
 

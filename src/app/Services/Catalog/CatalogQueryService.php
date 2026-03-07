@@ -9,6 +9,8 @@ use Illuminate\Support\Collection;
 
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Catalog;
+use Backpack\Store\app\Models\Campaign;
+use Backpack\Store\app\Services\Campaign\CampaignResolverService;
 use Backpack\Store\app\Services\Cache\SlugMapCache;
 
 use Backpack\Store\app\Services\Catalog\AbstractQueryService;
@@ -163,6 +165,36 @@ class CatalogQueryService extends AbstractQueryService
         return $this;
     }
 
+    public function filterByCampaign(): self
+    {
+        $campaignSlug = $this->request->input('campaign');
+        if (!$campaignSlug || !is_string($campaignSlug)) {
+            return $this;
+        }
+
+        $campaign = Campaign::query()
+            ->activeAt()
+            ->where('slug', $campaignSlug)
+            ->first();
+
+        if (!$campaign) {
+            $this->query->whereRaw('1=0');
+            return $this;
+        }
+
+        $country = $this->country;
+        $campaignId = (int) $campaign->id;
+
+        $this->query->whereIn('c.product_id', function ($sub) use ($country, $campaignId) {
+            $sub->select('cp.product_id')
+                ->from('ak_campaign_product as cp')
+                ->where('cp.country_code', $country)
+                ->where('cp.campaign_id', $campaignId);
+        });
+
+        return $this;
+    }
+
     /** Атрибуты (EXISTS к ak_catalog_attr по group_id) */
     public function filterByAttributes($except_attribute_id = null): self
     {
@@ -242,7 +274,7 @@ class CatalogQueryService extends AbstractQueryService
         return $this;
     }
 
-    /** Сортировка (по умолчанию: в наличии -> с картинкой -> id desc (приближение к новизне)) */
+    /** Сортировка (по умолчанию: в наличии -> manual_sort (>=0, <0, null) -> created_at desc -> id desc) */
     public function sorting(): self
     {
         $orderBy  = $this->request->input('order_by');
@@ -250,7 +282,7 @@ class CatalogQueryService extends AbstractQueryService
 
         if (!$orderBy) {
             $this->query->orderByRaw('IF(c.in_stock > 0, 1, 0) DESC');
-            $this->query->orderByRaw('CASE WHEN c.manual_sort IS NULL THEN 1 ELSE 0 END ASC');
+            $this->query->orderByRaw('CASE WHEN c.manual_sort IS NULL THEN 2 WHEN c.manual_sort < 0 THEN 1 ELSE 0 END ASC');
             $this->query->orderBy('c.manual_sort', 'desc');
             $this->query->orderByRaw("COALESCE(c.created_at, '1970-01-01 00:00:00') DESC");
             $this->query->orderBy('c.product_id', 'desc');
@@ -313,6 +345,7 @@ class CatalogQueryService extends AbstractQueryService
                           ->filterByPrice()
                           ->filterByAttributes()
                           ->filterBySelections()
+                          ->filterByCampaign()
                           ->filterBySearch()
                           ->getQuery();
 
@@ -446,9 +479,9 @@ class CatalogQueryService extends AbstractQueryService
             $g->orderByRaw('CASE WHEN g.sort_price IS NULL THEN 1 ELSE 0 END ASC')
               ->orderBy('g.sort_price', $orderDir);
         } else {
-            // дефолт: в наличии -> manual_sort desc -> created_at desc
+            // дефолт: в наличии -> manual_sort (>=0, <0, null) -> created_at desc
             $g->orderBy('g.sort_stock', 'desc')
-              ->orderByRaw('CASE WHEN g.sort_manual IS NULL THEN 1 ELSE 0 END ASC')
+              ->orderByRaw('CASE WHEN g.sort_manual IS NULL THEN 2 WHEN g.sort_manual < 0 THEN 1 ELSE 0 END ASC')
               ->orderBy('g.sort_manual', 'desc')
               ->orderByRaw('CASE WHEN g.sort_created_at IS NULL THEN 1 ELSE 0 END ASC')
               ->orderBy('g.sort_created_at', 'desc')
@@ -477,9 +510,59 @@ class CatalogQueryService extends AbstractQueryService
             ->whereIn('c.group_id', $groupIds)
             ->get(['c.*']);
 
-        return Catalog::hydrate($rows->map(fn($r)=>(array)$r)->all())
+        $grouped = Catalog::hydrate($rows->map(fn($r)=>(array)$r)->all())
             ->groupBy('group_id')
-            ->all(); // [group_id => Collection<Catalog>]
+            ->all();
+
+        foreach ($grouped as $groupId => $mods) {
+            $grouped[$groupId] = $this->applyCampaignPricingToMods($mods);
+        }
+
+        return $grouped; // [group_id => Collection<Catalog>]
+    }
+
+    protected function applyCampaignPricingToMods(Collection $mods): Collection
+    {
+        if ($mods->isEmpty()) {
+            return $mods;
+        }
+
+        $resolver = app(CampaignResolverService::class);
+        $productIds = $mods->pluck('product_id')->map(fn($id) => (int) $id)->all();
+        $campaignMap = $resolver->forProducts($productIds, $this->country);
+
+        return $mods->map(function (Catalog $mod) use ($resolver, $campaignMap) {
+            $productId = (int) $mod->product_id;
+            $campaign = $campaignMap[$productId] ?? null;
+
+            $price = (float) $mod->price;
+            $oldPrice = $mod->old_price !== null ? (float) $mod->old_price : null;
+
+            $applied = $resolver->applyPricing(
+                productId: $productId,
+                price: $price,
+                oldPrice: $oldPrice,
+                countryCode: $this->country
+            );
+
+            $mod->setAttribute('price', $applied['price']);
+            $mod->setAttribute('old_price', $applied['old_price']);
+            $mod->setAttribute('base_price', $applied['base_price']);
+            $mod->setAttribute('campaign_discount_amount', $applied['campaign_discount_amount']);
+            $mod->setAttribute('campaign', $campaign);
+            $mod->setAttribute('sale', $this->calculateSalePercent($applied['price'], $applied['old_price']));
+
+            return $mod;
+        });
+    }
+
+    protected function calculateSalePercent(?float $price, ?float $oldPrice): ?float
+    {
+        if ($price === null || $oldPrice === null || $oldPrice <= 0 || $price >= $oldPrice) {
+            return null;
+        }
+
+        return round((1 - ($price / $oldPrice)) * 100, 2);
     }
 
     /**
@@ -498,10 +581,9 @@ class CatalogQueryService extends AbstractQueryService
                     return $stockCmp;
                 }
 
-                $manualCmp = $this->compareNullableMetric(
+                $manualCmp = $this->compareManualSortForDefault(
                     $this->representativeSortManual($a),
-                    $this->representativeSortManual($b),
-                    true
+                    $this->representativeSortManual($b)
                 );
                 if ($manualCmp !== 0) {
                     return $manualCmp;
@@ -686,6 +768,35 @@ class CatalogQueryService extends AbstractQueryService
         }
 
         return $descending ? ($right <=> $left) : ($left <=> $right);
+    }
+
+    protected function compareManualSortForDefault(?float $left, ?float $right): int
+    {
+        $leftBucket = $this->manualSortBucket($left);
+        $rightBucket = $this->manualSortBucket($right);
+
+        if ($leftBucket !== $rightBucket) {
+            return $leftBucket <=> $rightBucket;
+        }
+
+        if ($left === null && $right === null) {
+            return 0;
+        }
+
+        if ($left == $right) {
+            return 0;
+        }
+
+        return $right <=> $left;
+    }
+
+    protected function manualSortBucket(?float $value): int
+    {
+        if ($value === null) {
+            return 2;
+        }
+
+        return $value < 0 ? 1 : 0;
     }
 
     protected function groupHasStock(Catalog $item): bool

@@ -29,7 +29,7 @@ return [
         ],
         'manual_sort' => [
             'label' => 'Manual sorting',
-            'hint' => 'The higher the value, the higher the product appears in lists. Decimal values are allowed, for example 200.5.'
+            'hint' => 'The higher the value, the higher the product appears in lists. Negative values move products to the end of the in-stock block, but above products without a value. Decimal values are allowed, for example 200.5.'
         ],
         'categories' => [
             'label' => 'Categories',

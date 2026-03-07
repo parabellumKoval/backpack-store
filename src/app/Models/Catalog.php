@@ -16,6 +16,7 @@ use Backpack\Store\app\Models\Brand;
 
 use Backpack\Store\app\Models\Traits\SearchCatalogTrait;
 use Backpack\Store\app\Services\Search\SearchConfigurableAbstract;
+use Backpack\Store\app\Services\Campaign\CampaignResolverService;
 
 // Images
 use ParabellumKoval\BackpackImages\Traits\HasImages;
@@ -255,6 +256,37 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
 
     public function getCurrencyAttribute() {
       return $this->currency_code;
+    }
+
+    public function getCampaignAttribute()
+    {
+        return app(CampaignResolverService::class)->forProduct((int) ($this->product_id ?? $this->id), $this->country_code);
+    }
+
+    public function getCampaignDiscountAmountAttribute(): float
+    {
+        if (!$this->campaign) {
+            return 0.0;
+        }
+
+        $old = $this->old_price;
+        $price = $this->price;
+
+        if ($old === null || $price === null) {
+            return 0.0;
+        }
+
+        $value = round((float) $old - (float) $price, 2);
+        return $value > 0 ? $value : 0.0;
+    }
+
+    public function getBasePriceAttribute(): ?float
+    {
+        if ($this->campaign) {
+            return $this->old_price;
+        }
+
+        return $this->price;
     }
 
     public function getUniqStringAttribute(): string

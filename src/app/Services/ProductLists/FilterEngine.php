@@ -70,26 +70,13 @@ class FilterEngine
             }
         }
 
-        $includeSets = [];
-        foreach ($normalized as $filter) {
-            if ($filter['direction'] !== 'include') {
-                continue;
-            }
-            $ids = $this->collectMatchingIds($filter, $context, null, $limit * 8);
-            if ($ids === null) {
-                continue;
-            }
-            $includeSets[] = $ids;
-        }
+        $includeFilters = array_values(array_filter($normalized, fn($filter) => $filter['direction'] === 'include'));
+        usort(
+            $includeFilters,
+            fn(array $left, array $right): int => $this->includeFilterPriority($left['type']) <=> $this->includeFilterPriority($right['type'])
+        );
 
-        if (!empty($includeSets)) {
-            $candidates = array_shift($includeSets);
-            foreach ($includeSets as $set) {
-                $candidates = array_values(array_intersect($candidates, $set));
-            }
-        } else {
-            $candidates = $this->pullAvailableIds($context, $limit * 8);
-        }
+        $candidates = $this->collectIncludeCandidates($includeFilters, $context, $limit);
 
         if (empty($candidates)) {
             return [];
@@ -134,6 +121,10 @@ class FilterEngine
 
     protected function collectMatchingIds(array $filter, ListRequestContext $context, ?array $restrict = null, ?int $limit = null): ?array
     {
+        if (is_array($restrict) && empty($restrict)) {
+            return [];
+        }
+
         return match ($filter['type']) {
             'categories' => $this->filterByCategories($filter, $context, $restrict, $limit),
             'brands', 'brand' => $this->filterByBrands($filter, $context, $restrict, $limit),
@@ -146,6 +137,74 @@ class FilterEngine
             'orders' => $this->filterByOrders($filter, $context, $restrict, $limit),
             default => null,
         };
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $includeFilters
+     * @return int[]
+     */
+    protected function collectIncludeCandidates(array $includeFilters, ListRequestContext $context, int $limit): array
+    {
+        if (empty($includeFilters)) {
+            return $this->pullAvailableIds($context, $this->candidateWindow($limit));
+        }
+
+        $seedFilter = array_shift($includeFilters);
+        $window = $this->candidateWindow($limit);
+        $maxWindow = $this->maxCandidateWindow($limit);
+        $isExplicitSeed = in_array($seedFilter['type'], ['products', 'product'], true);
+
+        while (true) {
+            $seedLimit = $isExplicitSeed ? null : $window;
+            $seedCandidates = $this->collectMatchingIds($seedFilter, $context, null, $seedLimit) ?? [];
+            if (empty($seedCandidates)) {
+                return [];
+            }
+
+            $candidates = array_values(array_unique($seedCandidates));
+
+            foreach ($includeFilters as $filter) {
+                $matched = $this->collectMatchingIds($filter, $context, $candidates, null);
+                if ($matched === null) {
+                    continue;
+                }
+                if (empty($matched)) {
+                    $candidates = [];
+                    break;
+                }
+
+                $matchedSet = array_fill_keys($matched, true);
+                $candidates = array_values(array_filter($candidates, fn($id) => isset($matchedSet[$id])));
+                if (empty($candidates)) {
+                    break;
+                }
+            }
+
+            if ($isExplicitSeed || count($candidates) >= $limit || $window >= $maxWindow || count($seedCandidates) < $window) {
+                return $candidates;
+            }
+
+            $window = min($window * 2, $maxWindow);
+        }
+    }
+
+    protected function includeFilterPriority(string $type): int
+    {
+        return match ($type) {
+            'products', 'product' => 0,
+            'orders' => 1,
+            default => 10,
+        };
+    }
+
+    protected function candidateWindow(int $limit): int
+    {
+        return max($limit, $limit * 8, 64);
+    }
+
+    protected function maxCandidateWindow(int $limit): int
+    {
+        return min(max($this->candidateWindow($limit), $limit * 128), 5000);
     }
 
     protected function catalogBaseQuery(ListRequestContext $context): \Illuminate\Database\Query\Builder
@@ -199,6 +258,8 @@ class FilterEngine
             $query->limit($limit);
         }
 
+        $query->orderBy('c.product_id');
+
         return $query->pluck('c.product_id')->toArray();
     }
 
@@ -224,6 +285,8 @@ class FilterEngine
         if ($limit) {
             $query->limit($limit);
         }
+
+        $query->orderBy('c.product_id');
 
         return $query->pluck('c.product_id')->toArray();
     }
@@ -260,6 +323,8 @@ class FilterEngine
         if ($limit) {
             $query->limit($limit);
         }
+
+        $query->orderBy('c.product_id');
 
         return $query->pluck('c.product_id')->toArray();
     }
@@ -330,6 +395,8 @@ class FilterEngine
             $query->limit($limit);
         }
 
+        $query->orderBy('c.product_id');
+
         return $query->pluck('c.product_id')->toArray();
     }
 
@@ -355,6 +422,8 @@ class FilterEngine
         if ($limit) {
             $query->limit($limit);
         }
+
+        $query->orderBy('c.product_id');
 
         return $query->pluck('c.product_id')->toArray();
     }
@@ -382,6 +451,8 @@ class FilterEngine
             $query->limit($limit);
         }
 
+        $query->orderBy('c.product_id');
+
         return $query->pluck('c.product_id')->toArray();
     }
 
@@ -408,6 +479,8 @@ class FilterEngine
         if ($limit) {
             $query->limit($limit);
         }
+
+        $query->orderBy('c.product_id');
 
         return $query->pluck('c.product_id')->toArray();
     }
@@ -468,7 +541,8 @@ class FilterEngine
             ->selectRaw($metricSelect.' as metric_value')
             ->groupBy('c.product_id')
             ->having('metric_value', '>=', $minCount)
-            ->orderByDesc('metric_value');
+            ->orderByDesc('metric_value')
+            ->orderBy('c.product_id');
 
         if ($limit) {
             $query->limit($limit);

@@ -106,21 +106,59 @@ class OrderCrudController extends CrudController
           return $carry + $item->price * $plucked_products[$item->id];
         }, 0);
 
+        $campaign_discount_total = $products->reduce(function ($carry, $item) use ($plucked_products) {
+          $amount = (float) ($plucked_products[$item->id] ?? 1);
+          $discount = max(0, (float) ($item->campaign_discount_amount ?? 0));
+          return $carry + ($discount * $amount);
+        }, 0);
+
         $entry->subtotal = $total_sum;
         $entry->promocode_discount_total = $entry->promocode_discount_total ?? 0;
+        $entry->personal_discount_total = $entry->personal_discount_total ?? 0;
+        $entry->campaign_discount_total = $entry->campaign_discount_total ?? round($campaign_discount_total, 2);
         $entry->bonus_discount_total = $entry->bonus_discount_total ?? 0;
-        $entry->discount_total = round(($entry->promocode_discount_total ?? 0) + ($entry->bonus_discount_total ?? 0), 2);
+        $entry->discount_total = round(
+          ($entry->promocode_discount_total ?? 0)
+          + ($entry->personal_discount_total ?? 0)
+          + ($entry->campaign_discount_total ?? 0)
+          + ($entry->bonus_discount_total ?? 0),
+          2
+        );
         $entry->shipping_total = $entry->shipping_total ?? 0;
         $entry->tax_total = $entry->tax_total ?? 0;
-        $entry->grand_total = max(0, ($entry->subtotal - $entry->discount_total) + $entry->shipping_total + $entry->tax_total);
+        $entry->grand_total = max(
+          0,
+          (
+            $entry->subtotal
+            - ($entry->promocode_discount_total ?? 0)
+            - ($entry->personal_discount_total ?? 0)
+            - ($entry->bonus_discount_total ?? 0)
+          )
+          + $entry->shipping_total
+          + $entry->tax_total
+        );
         $entry->price = $entry->grand_total;
 
 
         // Save products to info field (json)
+        $campaigns = [];
         foreach($products as $key => $product) {
           $product->amount = $plucked_products[$product->id];
           $info = $entry->info;
           $info['products'][$key] = new ProductCartResource($product);
+
+          if ($product->campaign) {
+            $campaignId = (int) ($product->campaign->id ?? 0);
+            if ($campaignId > 0 && !isset($campaigns[$campaignId])) {
+              $campaigns[$campaignId] = [
+                'id' => $campaignId,
+                'slug' => $product->campaign->slug ?? null,
+                'name' => $product->campaign->name ?? null,
+                'discount_percent' => (float) ($product->campaign->discount_percent ?? 0),
+              ];
+            }
+          }
+
           $info['bonusesUsed'] = $info['bonusesUsed'] ?? 0;
           $existingBonuses = $info['bonuses'] ?? [];
           $currencyCode = $entry->currency_code ?? \Store::countryCurrency($entry->country_code);
@@ -137,6 +175,7 @@ class OrderCrudController extends CrudController
             'reference_id' => $existingBonuses['reference_id'] ?? null,
           ], $existingBonuses);
           $info['bonusesUsed'] = $bonusFiat;
+          $info['campaigns'] = array_values($campaigns);
           $entry->info = $info;
         }
       }

@@ -57,13 +57,13 @@ class SortingEngine
                 } elseif ($criterion === 'price') {
                     $cmp = $this->comparePrice($a->productId, $b->productId, $catalogRows);
                 } elseif ($criterion === 'orders_count') {
-                    $cmp = $this->compareOrderCount($a->productId, $b->productId, $orderStats);
+                    $cmp = $this->compareOrderCount($a->productId, $b->productId, $orderStats, $direction);
                 } elseif ($criterion === 'relevance') {
                     continue;
                 }
 
                 if ($cmp !== 0) {
-                    if (in_array($criterion, ['price', 'orders_count'], true)) {
+                    if ($criterion === 'price') {
                         return $direction === 'desc' ? -$cmp : $cmp;
                     }
                     return $cmp;
@@ -144,11 +144,34 @@ class SortingEngine
         return $a <=> $b;
     }
 
-    protected function compareOrderCount(int $aId, int $bId, array $orderStats): int
+    protected function compareOrderCount(int $aId, int $bId, array $orderStats, string $direction): int
     {
-        $a = (int) ($orderStats[$aId] ?? 0);
-        $b = (int) ($orderStats[$bId] ?? 0);
-        return $a <=> $b;
+        $a = $orderStats[$aId] ?? null;
+        $b = $orderStats[$bId] ?? null;
+
+        $aCount = (int) ($a['orders'] ?? 0);
+        $bCount = (int) ($b['orders'] ?? 0);
+
+        $cmp = $aCount <=> $bCount;
+        if ($cmp !== 0) {
+            return $direction === 'desc' ? -$cmp : $cmp;
+        }
+
+        $aLastOrder = (int) ($a['last_order_id'] ?? 0);
+        $bLastOrder = (int) ($b['last_order_id'] ?? 0);
+        $cmp = $bLastOrder <=> $aLastOrder;
+        if ($cmp !== 0) {
+            return $cmp;
+        }
+
+        $aQty = (int) ($a['quantity'] ?? 0);
+        $bQty = (int) ($b['quantity'] ?? 0);
+        $cmp = $bQty <=> $aQty;
+        if ($cmp !== 0) {
+            return $cmp;
+        }
+
+        return $aId <=> $bId;
     }
 
     protected function hasDiscount($row): bool
@@ -187,9 +210,21 @@ class SortingEngine
         return DB::table('ak_order_product as op')
             ->whereIn('op.product_id', $ids)
             ->where('op.country_code', '=', $context->country)
-            ->selectRaw('op.product_id, COUNT(DISTINCT op.order_id) as order_count')
+            ->selectRaw('op.product_id')
+            ->selectRaw('COUNT(DISTINCT op.order_id) as orders')
+            ->selectRaw('COALESCE(SUM(op.amount), 0) as quantity')
+            ->selectRaw('MAX(op.order_id) as last_order_id')
             ->groupBy('op.product_id')
-            ->pluck('order_count', 'product_id')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                return [
+                    (int) $row->product_id => [
+                        'orders' => (int) ($row->orders ?? 0),
+                        'quantity' => (int) ($row->quantity ?? 0),
+                        'last_order_id' => (int) ($row->last_order_id ?? 0),
+                    ],
+                ];
+            })
             ->toArray();
     }
 }

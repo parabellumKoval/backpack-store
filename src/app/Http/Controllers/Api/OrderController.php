@@ -239,6 +239,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $order = $this->setUserData($order, $data, $user);
 
     [$order, $products] = $this->setProductsToOrder($order, $data);
+    $this->syncCampaignInfoFromProducts($order);
 
     if(!empty($data['promocode'])) {
       $order->promocode = $data['promocode'];
@@ -259,6 +260,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $order->tax_total = $totals['tax_total'];
     $order->promocode_discount_total = $totals['promocode_discount'];
     $order->personal_discount_total = $totals['personal_discount'];
+    $order->campaign_discount_total = $totals['campaign_discount'];
     $order->grand_total = $totals['grand_total'];
 
     $orderCurrency = $order->currency_code ?? \Store::countryCurrency($order->country_code);
@@ -278,13 +280,17 @@ class OrderController extends \App\Http\Controllers\Controller
     ], $existingBonuses);
     $order->info = $info;
     $order->bonus_discount_total = 0;
-    $order->discount_total = round($order->promocode_discount_total + $order->personal_discount_total, 2);
+    $order->discount_total = round(
+      $order->promocode_discount_total + $order->personal_discount_total + $order->campaign_discount_total,
+      2
+    );
     $order->price = $order->grand_total;
 
     $bonusResult = $this->handleBonusSpending(
       $order,
       $data,
       $user,
+      $totals['campaign_discount'],
       $totals['promocode_discount'],
       $totals['personal_discount'],
       $totals['grand_total']
@@ -377,6 +383,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $meta = [
       'order_code' => $order->code,
       'subtotal' => $subtotal,
+      'campaign_discount' => $this->calculateCampaignDiscount($order),
       'promocode_discount' => $this->calculatePromocodeDiscount($order),
       'bonus_discount' => $this->resolveBonusDiscountPreview($data, $order),
       'personal_discount' => round((float)($order->personal_discount_total ?? 0), 2),
@@ -422,6 +429,41 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     return $discount;
+  }
+
+  protected function calculateCampaignDiscount(Order $order): float
+  {
+    $products = (array) data_get($order->info, 'products', []);
+    if (empty($products)) {
+      return 0.0;
+    }
+
+    $total = 0.0;
+
+    foreach ($products as $item) {
+      if (!is_array($item)) {
+        continue;
+      }
+
+      $amount = max(1, (float) ($item['amount'] ?? 1));
+
+      if (isset($item['campaignDiscount'])) {
+        $total += max(0, (float) $item['campaignDiscount']) * $amount;
+        continue;
+      }
+
+      $basePrice = $item['basePrice'] ?? null;
+      $price = $item['price'] ?? null;
+
+      if ($basePrice === null || $price === null) {
+        continue;
+      }
+
+      $lineDiscount = max(0, (float) $basePrice - (float) $price);
+      $total += $lineDiscount * $amount;
+    }
+
+    return round(max(0, $total), 2);
   }
 
   protected function applyPersonalDiscount(Order $order, $user = null): float
@@ -528,6 +570,8 @@ class OrderController extends \App\Http\Controllers\Controller
     $shipping = round((float)($order->shipping_total ?? 0), 2);
     $tax = round((float)($order->tax_total ?? 0), 2);
 
+    $campaignDiscount = $this->calculateCampaignDiscount($order);
+    $campaignDiscount = min($campaignDiscount, $subtotal);
     $promocodeDiscount = $this->calculatePromocodeDiscount($order);
     $personalDiscount = round((float)($order->personal_discount_total ?? 0), 2);
     $personalDiscount = min($personalDiscount, $subtotal);
@@ -541,13 +585,22 @@ class OrderController extends \App\Http\Controllers\Controller
       'subtotal' => $subtotal,
       'shipping_total' => $shipping,
       'tax_total' => $tax,
+      'campaign_discount' => $campaignDiscount,
       'promocode_discount' => $promocodeDiscount,
       'personal_discount' => $personalDiscount,
       'grand_total' => $grandTotal,
     ];
   }
 
-  protected function handleBonusSpending(Order $order, array $data, $user, float $promocodeDiscount, float $personalDiscount, float $baseGrandTotal): array
+  protected function handleBonusSpending(
+    Order $order,
+    array $data,
+    $user,
+    float $campaignDiscount,
+    float $promocodeDiscount,
+    float $personalDiscount,
+    float $baseGrandTotal
+  ): array
   {
     $bonusPoints = isset($data['bonus']) ? (float)$data['bonus'] : 0.0;
     $info = $order->info ?? [];
@@ -555,7 +608,7 @@ class OrderController extends \App\Http\Controllers\Controller
     if(!$this->bonusFeatureEnabled() || $bonusPoints <= 0 || !$user) {
       return [
         'bonus_discount' => 0.0,
-        'total_discount' => round($promocodeDiscount + $personalDiscount, 2),
+        'total_discount' => round($campaignDiscount + $promocodeDiscount + $personalDiscount, 2),
         'grand_total' => $baseGrandTotal,
         'info' => $info,
       ];
@@ -582,7 +635,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $availableToDiscount = max(0, $order->subtotal - $promocodeDiscount - $personalDiscount);
     $bonusFiat = min(round($redemption->fiatAmount, 2), round($availableToDiscount, 2));
 
-    $totalDiscount = round($promocodeDiscount + $personalDiscount + $bonusFiat, 2);
+    $totalDiscount = round($campaignDiscount + $promocodeDiscount + $personalDiscount + $bonusFiat, 2);
     $grandTotal = max(0, round(
       $order->subtotal
       - $promocodeDiscount
@@ -616,6 +669,37 @@ class OrderController extends \App\Http\Controllers\Controller
       'grand_total' => $grandTotal,
       'info' => $info,
     ];
+  }
+
+  protected function syncCampaignInfoFromProducts(Order $order): void
+  {
+    $products = (array) data_get($order->info, 'products', []);
+    $campaigns = [];
+
+    foreach ($products as $product) {
+      if (!is_array($product) || empty($product['campaign']) || !is_array($product['campaign'])) {
+        continue;
+      }
+
+      $campaign = $product['campaign'];
+      $id = (int) ($campaign['id'] ?? 0);
+      if ($id <= 0) {
+        continue;
+      }
+
+      if (!isset($campaigns[$id])) {
+        $campaigns[$id] = [
+          'id' => $id,
+          'slug' => $campaign['slug'] ?? null,
+          'name' => $campaign['name'] ?? null,
+          'discount_percent' => (float) ($campaign['discount_percent'] ?? 0),
+        ];
+      }
+    }
+
+    $info = $order->info ?? [];
+    $info['campaigns'] = array_values($campaigns);
+    $order->info = $info;
   }
 
   /**

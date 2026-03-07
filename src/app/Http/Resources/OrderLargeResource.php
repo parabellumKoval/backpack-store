@@ -18,6 +18,7 @@ class OrderLargeResource extends BaseResource
         'price' => $this->price,
         'subtotal' => $this->subtotal,
         'discountTotal' => $this->discount_total,
+        'campaignDiscountTotal' => $this->campaign_discount_total,
         'promocodeDiscountTotal' => $this->promocode_discount_total,
         'bonusDiscountTotal' => $this->bonus_discount_total,
         'personalDiscountTotal' => $this->personal_discount_total,
@@ -35,6 +36,7 @@ class OrderLargeResource extends BaseResource
         'invoiceDownloadUrl' => $this->invoiceDownloadUrl,
         'invoiceQrUrl' => $this->invoiceQrUrl,
         'products' => $this->productsAnyway,
+        'campaigns' => $this->campaignsSummary(),
         'bonuses' => $this->bonusSummary(),
         'personalDiscount' => $this->personalDiscountSummary(),
         'created_at' => $this->created_at,
@@ -71,5 +73,33 @@ class OrderLargeResource extends BaseResource
         'currency' => $discount['currency'] ?? $this->currency_code,
         'applied' => (bool)($discount['applied'] ?? false),
       ];
+    }
+
+    protected function campaignsSummary(): array
+    {
+      $info = $this->info ?? [];
+      $campaigns = $info['campaigns'] ?? [];
+
+      if (!is_array($campaigns)) {
+        return [];
+      }
+
+      return array_values(array_filter(array_map(function ($item) {
+        if (!is_array($item)) {
+          return null;
+        }
+
+        $id = (int) ($item['id'] ?? 0);
+        if ($id <= 0) {
+          return null;
+        }
+
+        return [
+          'id' => $id,
+          'slug' => $item['slug'] ?? null,
+          'name' => $item['name'] ?? null,
+          'discountPercent' => (float) ($item['discount_percent'] ?? 0),
+        ];
+      }, $campaigns)));
     }
 }

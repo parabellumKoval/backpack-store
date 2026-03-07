@@ -3,6 +3,7 @@
 namespace Backpack\Store\app\Http\Resources;
 
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
+use Backpack\Store\app\Services\Campaign\CampaignPayloadService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 
@@ -33,7 +34,13 @@ class ProductLargeResource extends BaseResource
         'base_modification_slug' => $this->resolveBaseModificationSlug($mods),
         'price' => $this->price,
         'old_price' => $this->old_price,
+        'base_price' => $this->base_price ?? ($this->campaign ? $this->old_price : $this->price),
+        'oldPrice' => $this->old_price,
+        'basePrice' => $this->base_price ?? ($this->campaign ? $this->old_price : $this->price),
+        'campaign_discount_amount' => $this->campaign_discount_amount ?? 0,
+        'campaignDiscount' => $this->campaign_discount_amount ?? 0,
         'sale' => $this->sale,
+        'campaign' => app(CampaignPayloadService::class)->make($this->campaign),
         'rating' => $this->rating,
         'reviews' => $this->reviews,
         'ratings' => $this->ratings,

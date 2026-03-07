@@ -24,6 +24,7 @@ Route::group([
     // Route::crud('payment', 'PaymentCrudController');
     Route::crud('order', 'OrderCrudController');
     Route::crud('promocode', 'PromocodeCrudController');
+    Route::crud('campaign', 'CampaignCrudController');
     Route::post('promocode/{id}/toggle', [
         'as' => 'promocode.toggle',
         'uses' => 'PromocodeCrudController@toggleColumnRouter',

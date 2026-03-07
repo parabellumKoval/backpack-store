@@ -9,10 +9,14 @@
   $imageUrl = $imagePath ? url($imagePath) : null;
 
   $name = $product['name'] ?? 'Товар без названия';
-  $shortName = $product['short_name'] ?? null;
+  $shortName = $product['short_name'] ?? ($product['shortName'] ?? null);
   $code = $product['code'] ?? $product['sku'] ?? null;
   $price = (float) ($product['price'] ?? 0);
-  $oldPrice = (float) ($product['old_price'] ?? 0);
+  $oldPrice = (float) ($product['old_price'] ?? ($product['oldPrice'] ?? 0));
+  $basePrice = (float) ($product['base_price'] ?? ($product['basePrice'] ?? $oldPrice));
+  $campaign = $product['campaign'] ?? null;
+  $campaignName = is_array($campaign) ? ($campaign['name'] ?? null) : null;
+  $campaignDiscount = (float) ($product['campaign_discount_amount'] ?? ($product['campaignDiscount'] ?? 0));
   $amount = (float) ($product['amount'] ?? 0);
   $total = $price * $amount;
 @endphp
@@ -48,13 +52,22 @@
       </div>
     @endif
 
+    @if($campaignName)
+      <div style="font-size: 12px; color: #7a4b00;">
+        ⚡ Акция: <strong>{{ $campaignName }}</strong>
+        @if($campaignDiscount > 0)
+          <span style="color: #9a6a00;">(скидка {{ $formatMoney($campaignDiscount) }} / шт.)</span>
+        @endif
+      </div>
+    @endif
+
     <div style="display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #495057;">
       <div>
         Цена:
         <strong style="color: #28a745;">{{ $formatMoney($price) }}</strong>
-        @if($oldPrice > 0)
+        @if($basePrice > 0 && $basePrice > $price)
           <span style="color: #adb5bd; font-size: 12px;">
-            <s>{{ $formatMoney($oldPrice) }}</s>
+            <s>{{ $formatMoney($basePrice) }}</s>
           </span>
         @endif
       </div>

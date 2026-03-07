@@ -49,7 +49,7 @@ class Order extends Model
     // public $timestamps = false;
     protected $guarded = ['id'];
     protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status','country_code', 'currency_code', 'fx_rate',
-        'subtotal','discount_total','promocode_discount_total','bonus_discount_total','personal_discount_total','shipping_total','tax_total','grand_total',];
+        'subtotal','discount_total','promocode_discount_total','bonus_discount_total','personal_discount_total','campaign_discount_total','shipping_total','tax_total','grand_total',];
     // protected $hidden = [];
     // protected $dates = [];
     protected $casts = [
@@ -168,6 +168,7 @@ class Order extends Model
       $this->promocode_discount_total = 0;
       $this->bonus_discount_total = 0;
       $this->personal_discount_total = 0;
+      $this->campaign_discount_total = 0;
       $this->discount_total = 0;
       $this->shipping_total = 0;
       $this->tax_total = 0;

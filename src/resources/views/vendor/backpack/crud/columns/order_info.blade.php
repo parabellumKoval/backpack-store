@@ -57,6 +57,12 @@
 
   $promoDiscount = max(0, (float)($entry->promocode_discount_total ?? 0));
   $personalDiscount = max(0, (float)($entry->personal_discount_total ?? 0));
+  $campaignDiscount = max(0, (float)($entry->campaign_discount_total ?? 0));
+
+  $campaigns = $rawInfo['campaigns'] ?? [];
+  if (!is_array($campaigns)) {
+    $campaigns = [];
+  }
   
   $subtotal = (float)($entry->subtotal ?? 0);
   $discountTotal = (float)($entry->discount_total ?? 0);
@@ -170,6 +176,22 @@
     </div>
   @endif
 
+  @if(!empty($campaigns))
+    <div style="margin-bottom: 20px; padding: 12px; background: #fff3cd; border-radius: 6px; border-left: 3px solid #ff9800;">
+      <div style="color: #6f4b00; font-weight: 600; margin-bottom: 6px;">
+        ⚡ Акции в заказе:
+      </div>
+      @foreach($campaigns as $campaign)
+        <div style="font-size: 13px; color: #6f4b00; margin-bottom: 2px;">
+          {{ $campaign['name'] ?? 'Акция' }}
+          @if(isset($campaign['discount_percent']) && (float)$campaign['discount_percent'] > 0)
+            <span style="color: #856404;">(-{{ number_format((float)$campaign['discount_percent'], 2, '.', ' ') }}%)</span>
+          @endif
+        </div>
+      @endforeach
+    </div>
+  @endif
+
   {{-- Разделитель --}}
   <hr style="margin: 24px 0; border: none; border-top: 2px solid #e9ecef;">
 
@@ -205,6 +227,13 @@
             <div style="display: flex; justify-content: space-between; color: #6c757d; margin-bottom: 4px;">
               <span>Промокоды:</span>
               <span>-{{ $formatMoney($promoDiscount) }}</span>
+            </div>
+          @endif
+
+          @if($campaignDiscount > 0)
+            <div style="display: flex; justify-content: space-between; color: #6c757d; margin-bottom: 4px;">
+              <span>Акции:</span>
+              <span>-{{ $formatMoney($campaignDiscount) }}</span>
             </div>
           @endif
           

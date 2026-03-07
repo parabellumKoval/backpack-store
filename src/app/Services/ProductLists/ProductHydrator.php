@@ -33,8 +33,18 @@ class ProductHydrator
         if (empty($ids)) {
             return [];
         }
-        $rows = $this->fetchCatalogRows($ids, $country);
-        return self::$resources['product']['small']::collection($rows);
+        $rowsById = $this->fetchCatalogRows($ids, $country);
+
+        // Preserve sorting resolved by ListEngine.
+        $orderedRows = [];
+        foreach ($ids as $id) {
+            if (!isset($rowsById[$id])) {
+                continue;
+            }
+            $orderedRows[] = $rowsById[$id];
+        }
+
+        return self::$resources['product']['small']::collection($orderedRows);
     }
 
 

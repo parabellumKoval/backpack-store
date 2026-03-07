@@ -45,6 +45,7 @@ use Backpack\Store\app\Http\Resources\AttributeProductResource;
 // CONTRACTS
 use \Backpack\Store\app\Contracts\ProductService;
 use \Backpack\Store\app\Services\Product\SupplierProductResolver;
+use \Backpack\Store\app\Services\Campaign\CampaignResolverService;
 
 // Images
 use ParabellumKoval\BackpackImages\Traits\HasImages;
@@ -1339,6 +1340,37 @@ class Product extends Model implements HasCrudCardInterface
 
     public function getOldPriceAttribute() {
       return $this->productService()->oldPrice();
+    }
+
+    public function getCampaignAttribute()
+    {
+      return app(CampaignResolverService::class)->forProduct((int) $this->id);
+    }
+
+    public function getCampaignDiscountAmountAttribute(): float
+    {
+      if (!$this->campaign) {
+        return 0.0;
+      }
+
+      $old = $this->old_price;
+      $price = $this->price;
+
+      if ($old === null || $price === null) {
+        return 0.0;
+      }
+
+      $value = round((float) $old - (float) $price, 2);
+      return $value > 0 ? $value : 0.0;
+    }
+
+    public function getBasePriceAttribute(): ?float
+    {
+      if ($this->campaign) {
+        return $this->old_price;
+      }
+
+      return $this->price;
     }
 
     public function getInStockAttribute() {

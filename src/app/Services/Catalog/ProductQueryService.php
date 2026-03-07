@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Campaign;
 
 use Backpack\Store\app\Http\Resources\ProductCollection;
 
@@ -134,6 +135,35 @@ class ProductQueryService extends AbstractQueryService
     if(in_array('top_price', $this->request->input('selections', []))) {
       $this->query->whereRaw("(sp.old_price - sp.price) > sp.price / ?", [$this->top_price_sale_percent]);
     }
+
+    return $this;
+  }
+
+  public function filterByCampaign(): self
+  {
+    $campaignSlug = $this->request->input('campaign');
+    if(!$campaignSlug || !is_string($campaignSlug)) {
+      return $this;
+    }
+
+    $campaign = Campaign::query()
+      ->activeAt()
+      ->where('slug', $campaignSlug)
+      ->first();
+
+    if(!$campaign) {
+      $this->query->whereRaw('1=0');
+      return $this;
+    }
+
+    $country = strtolower((string) (\Store::context()->country ?: \Store::country()));
+
+    $this->query->whereIn('ak_products.id', function($sub) use ($campaign, $country) {
+      $sub->select('cp.product_id')
+        ->from('ak_campaign_product as cp')
+        ->where('cp.campaign_id', (int) $campaign->id)
+        ->where('cp.country_code', $country);
+    });
 
     return $this;
   }
@@ -360,14 +390,14 @@ class ProductQueryService extends AbstractQueryService
       if(\Settings::get('dress.supplier.enable', false)) {
         $this->query
           ->orderByRaw('IF(SUM(sp.in_stock) > ?, ?, ?) DESC', [0, 1, 0])
-          ->orderByRaw('CASE WHEN MAX(ak_products.manual_sort) IS NULL THEN 1 ELSE 0 END ASC')
+          ->orderByRaw('CASE WHEN MAX(ak_products.manual_sort) IS NULL THEN 2 WHEN MAX(ak_products.manual_sort) < 0 THEN 1 ELSE 0 END ASC')
           ->orderByRaw('MAX(ak_products.manual_sort) DESC')
           ->orderBy('ak_products.created_at', 'desc')
           ->groupBy('ak_products.id');
       }else {
         $this->query
           ->orderByRaw('IF(ak_products.in_stock > ?, ?, ?) DESC', [0, 1, 0])
-          ->orderByRaw('CASE WHEN ak_products.manual_sort IS NULL THEN 1 ELSE 0 END ASC')
+          ->orderByRaw('CASE WHEN ak_products.manual_sort IS NULL THEN 2 WHEN ak_products.manual_sort < 0 THEN 1 ELSE 0 END ASC')
           ->orderBy('ak_products.manual_sort', 'desc')
           ->orderBy('ak_products.created_at', 'desc');
       }

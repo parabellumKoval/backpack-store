@@ -8,6 +8,7 @@ use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\SupplierProduct;
 
 use Backpack\Store\app\Services\Currency\CurrencyConverter;
+use Backpack\Store\app\Services\Campaign\CampaignResolverService;
 use Backpack\Store\app\Services\Product\SupplierProductResolver;
 
 use Illuminate\Support\Facades\DB;
@@ -113,13 +114,13 @@ class ProductService implements Contract {
     }
   }
 
-private function resolvePrice() {
+  private function resolvePrice() {
     $countryCode = \Store::context()->country;
     $targetCurrency = \Store::context()->currency;
 
     $override = $this->getOverridesInTargetCurrency($countryCode, $targetCurrency);
 
-    if($override) return $override;
+    if($override) return $this->applyCampaignPricing($override, $countryCode);
 
     $originCurrency = $this->product->supplierProduct->supplier->currency_code ?? $targetCurrency;
     $originPrice = $this->product->supplierProduct->price;
@@ -129,19 +130,42 @@ private function resolvePrice() {
         $converted_price = $this->converter()->convert($originPrice, $originCurrency, $targetCurrency);
         $converted_old_price = $this->converter()->convert($originOldPrice, $originCurrency, $targetCurrency);
 
-        return [
+        $payload = [
             'price'      => $converted_price,
             'old_price'  => $converted_old_price,
             'currency'   => $targetCurrency,
             'source'     => 'supplier-converted'
         ];
+        return $this->applyCampaignPricing($payload, $countryCode);
     }else {
-        return [
+        $payload = [
             'price'      => $originPrice,
             'old_price'  => $originOldPrice,
             'currency'   => $targetCurrency,
             'source'     => 'supplier'
         ];
+        return $this->applyCampaignPricing($payload, $countryCode);
     }
+  }
+
+  private function applyCampaignPricing(array $payload, string $countryCode): array
+  {
+    if (!$this->product || !isset($payload['price']) || $payload['price'] === null) {
+      return $payload;
+    }
+
+    $applied = app(CampaignResolverService::class)->applyPricing(
+      productId: (int) $this->product->id,
+      price: (float) $payload['price'],
+      oldPrice: isset($payload['old_price']) ? (float) $payload['old_price'] : null,
+      countryCode: $countryCode
+    );
+
+    $payload['price'] = $applied['price'];
+    $payload['old_price'] = $applied['old_price'];
+    $payload['campaign_discount_amount'] = $applied['campaign_discount_amount'];
+    $payload['campaign'] = $applied['campaign'];
+
+    return $payload;
   }
 }
