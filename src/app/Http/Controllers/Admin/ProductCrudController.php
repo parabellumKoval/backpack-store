@@ -20,6 +20,7 @@ use Backpack\Store\app\Models\AttributeValue;
 use Backpack\Store\app\Models\SupplierProduct;
 use Backpack\Store\Facades\ProductOrders;
 use Backpack\Store\app\Services\Product\ProductOrdersReportService;
+use Backpack\Store\app\Services\Catalog\CatalogSyncTouch;
 
 //EVENTS
 use Backpack\Store\app\Events\ProductSaving;
@@ -148,6 +149,7 @@ class ProductCrudController extends CrudController
         // Upsell
         $links = request()->input('linksData', []);
         $this->syncLinks($this->crud->entry->id, $links);
+        $this->touchCatalogAfterCrudSave();
 
         return $response;
 
@@ -163,8 +165,38 @@ class ProductCrudController extends CrudController
         // Upsell
         $links = request()->input('linksData', []);
         $this->syncLinks($this->crud->entry->id, $links);
+        $this->touchCatalogAfterCrudSave();
 
         return $response;
+    }
+
+    protected function touchCatalogAfterCrudSave(): void
+    {
+        $entry = $this->crud->entry;
+        if (!$entry || empty($entry->id)) {
+            return;
+        }
+
+        $entryId = (int) $entry->id;
+        CatalogSyncTouch::touch($entryId, 0, true);
+
+        $parentId = (int) ($entry->parent_id ?? 0);
+        if ($parentId > 0) {
+            CatalogSyncTouch::touch($parentId, 0, true);
+            return;
+        }
+
+        $childIds = $entry->children()
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        foreach ($childIds as $childId) {
+            CatalogSyncTouch::touch($childId, 0, true);
+        }
     }
 
     /**

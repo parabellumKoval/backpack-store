@@ -4,6 +4,7 @@ namespace Backpack\Store\app\Http\Resources;
 
 use Backpack\Store\app\Http\Resources\AttributeProductResource;
 use Backpack\Store\app\Services\Campaign\CampaignPayloadService;
+use Backpack\Store\app\Services\Faq\ProductFaqResolver;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 
@@ -57,6 +58,7 @@ class ProductLargeResource extends BaseResource
         'attrs' => $this->properties,
         'custom_attrs' => $this->customProperties,
         'modifications' => $mods,
+        'faq' => app(ProductFaqResolver::class)->resolveForProduct($this->resource),
         'seo' => $this->resolveSeo(),
         'available_regions' => $this->resolveAvailableRegions(),
       ];

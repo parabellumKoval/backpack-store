@@ -298,6 +298,8 @@ trait ProductFieldsTrait
             ],
             'tab' => trans('backpack-store::product-field.tabs.main')
         ]);
+
+        $this->setFaqFields('FAQ');
         
         
         // CUSTOM PROPERTIES
@@ -587,6 +589,68 @@ trait ProductFieldsTrait
         }
 
         return str_replace('.', ',', $normalized);
+    }
+
+    private function setFaqFields(string $tab = 'FAQ'): void
+    {
+        $this->crud->addField([
+            'name' => 'faq_items',
+            'label' => 'FAQ: локальные пункты',
+            'type' => 'repeatable',
+            'new_item_label' => 'Добавить пункт FAQ',
+            'init_rows' => 0,
+            'min_rows' => 0,
+            'fake' => true,
+            'store_in' => 'extras_trans',
+            'tab' => $tab,
+            'fields' => [
+                [
+                    'name' => 'group_title',
+                    'label' => 'Группа',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-md-4'],
+                ],
+                [
+                    'name' => 'question',
+                    'label' => 'Вопрос',
+                    'type' => 'text',
+                    'wrapper' => ['class' => 'form-group col-md-8'],
+                ],
+                [
+                    'name' => 'answer',
+                    'label' => 'Ответ',
+                    'type' => 'textarea',
+                    'wrapper' => ['class' => 'form-group col-md-12'],
+                    'attributes' => ['rows' => 4],
+                ],
+            ],
+            'hint' => 'Пункты сортируются перетаскиванием. Группировка на фронте выполняется по полю «Группа».',
+        ]);
+
+        $this->crud->addField([
+            'name' => 'faq_template_links',
+            'label' => 'FAQ: универсальные шаблоны',
+            'type' => 'repeatable',
+            'new_item_label' => 'Прикрепить шаблон FAQ',
+            'init_rows' => 0,
+            'min_rows' => 0,
+            'fake' => true,
+            'store_in' => 'extras',
+            'tab' => $tab,
+            'fields' => [
+                [
+                    'name' => 'template_id',
+                    'label' => 'Шаблон',
+                    'type' => 'select2_from_ajax',
+                    'data_source' => route('backpack.helpers.fetch', ['key' => 'faq_template']),
+                    'attribute' => 'uniqHtml',
+                    'model' => 'Backpack\\Store\\app\\Models\\FaqTemplate',
+                    'minimum_input_length' => 0,
+                    'placeholder' => 'Выберите шаблон FAQ',
+                ],
+            ],
+            'hint' => 'Шаблоны редактируются в разделе «FAQ шаблоны». Порядок задаётся этим списком.',
+        ]);
     }
 
 

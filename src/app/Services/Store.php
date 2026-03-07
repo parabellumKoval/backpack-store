@@ -60,7 +60,9 @@ class Store
 
     public static function isCacheTable(): bool 
     {
-        return \Settings::get('dress.store.catalog_table_cache', false);
+        $configured = config('dress.store.catalog_table_cache', config('backpack.store.catalog_table_cache', false));
+
+        return (bool) \Settings::get('dress.store.catalog_table_cache', $configured);
     }
 
     // Getters
@@ -180,4 +182,3 @@ class Store
         ];
     }
 }
-

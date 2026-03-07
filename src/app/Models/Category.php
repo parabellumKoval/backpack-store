@@ -19,6 +19,7 @@ use Backpack\Store\database\factories\CategoryFactory;
 use ParabellumKoval\BackpackImages\Traits\HasImages;
 use Backpack\Tag\app\Traits\Taggable;
 use Backpack\Helpers\Traits\FormatsUniqAttribute;
+use Backpack\Store\app\Models\Traits\HasFaqData;
 
 class Category extends Model
 {
@@ -30,6 +31,7 @@ class Category extends Model
     use HasImages;
     use Taggable;
     use FormatsUniqAttribute;
+    use HasFaqData;
 
     /*
     |--------------------------------------------------------------------------

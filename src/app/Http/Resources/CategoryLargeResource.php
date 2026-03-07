@@ -22,6 +22,9 @@ class CategoryLargeResource extends BaseResource
         'id' => $this->id,
         'name' => $this->name,
         'slug' => $this->slug,
+        'short_text' => method_exists($this->resource, 'getExtrasTransValue')
+          ? $this->resource->getExtrasTransValue('short_text')
+          : null,
         'content' => $this->content,
         'excerpt' => $this->excerpt,
         // 'extras' => $this->extrasToArray,

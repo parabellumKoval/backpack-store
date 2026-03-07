@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Observers;
 use Backpack\Store\app\Events\CategoryChanged;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Services\Catalog\CatalogSyncTouch;
+use Backpack\Store\Facades\Store;
 use Illuminate\Support\Facades\DB;
 
 class CategoryObserver
@@ -13,7 +14,7 @@ class CategoryObserver
     {
         event(CategoryChanged::for($category, 'saved'));
 
-        if ($category->wasChanged('countries') || $category->wasChanged('store_only_countries')) {
+        if ($this->shouldTouchCatalog($category)) {
             $this->touchCatalogProducts($category);
         }
     }
@@ -25,7 +26,7 @@ class CategoryObserver
 
     protected function touchCatalogProducts(Category $category): void
     {
-        if (!(bool) \Settings::get('dress.store.catalog_table_cache', false)) {
+        if (!Store::isCacheTable()) {
             return;
         }
 
@@ -116,5 +117,16 @@ class CategoryObserver
         return $category->lft !== null
             && $category->rgt !== null
             && $category->lft <= $category->rgt;
+    }
+
+    protected function shouldTouchCatalog(Category $category): bool
+    {
+        if (!Store::isCacheTable()) {
+            return false;
+        }
+
+        // Категории влияют на активацию/видимость/FAQ и структуру каталога;
+        // пересобираем привязанные товары на каждое сохранение категории.
+        return true;
     }
 }

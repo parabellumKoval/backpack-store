@@ -39,10 +39,12 @@ use Backpack\Store\app\Listeners\RefundOrderBonuses;
 use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Admin\Order as OrderAdmin;
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\FaqTemplate;
 use Backpack\Store\app\Models\ProductList;
 use Backpack\Store\app\Models\Admin\CurrencyRate;
 use Backpack\Store\app\Observers\OrderObserver;
 use Backpack\Store\app\Observers\CategoryObserver;
+use Backpack\Store\app\Observers\FaqTemplateObserver;
 use Backpack\Store\app\Observers\ProductListObserver;
 use Backpack\Store\app\Observers\CurrencyRateObserver;
 
@@ -97,6 +99,7 @@ class EventServiceProvider extends ServiceProvider
         Order::observe(OrderObserver::class);
         OrderAdmin::observe(OrderObserver::class);
         Category::observe(CategoryObserver::class);
+        FaqTemplate::observe(FaqTemplateObserver::class);
         ProductList::observe(ProductListObserver::class);
         CurrencyRate::observe(CurrencyRateObserver::class);
     }

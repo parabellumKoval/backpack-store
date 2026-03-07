@@ -53,6 +53,7 @@ use ParabellumKoval\BackpackImages\Traits\HasImages;
 use Backpack\Store\app\Models\Traits\HasModification;
 use Backpack\Tag\app\Traits\Taggable;
 use Backpack\Reviews\app\Traits\Reviewable;
+use Backpack\Store\app\Models\Traits\HasFaqData;
 
 
 use Backpack\Reviews\app\Contracts\ReviewableAvailabilityScope;
@@ -81,6 +82,7 @@ class Product extends Model implements HasCrudCardInterface
     use Taggable;
     use Reviewable;
     use FormatsUniqAttribute;
+    use HasFaqData;
 
     /*
     |--------------------------------------------------------------------------

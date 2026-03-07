@@ -14,6 +14,7 @@ Route::group([
 ], function () { // custom admin routes
     Route::crud('product', 'ProductCrudController');
     Route::crud('category', 'CategoryCrudController');
+    Route::crud('faq-template', 'FaqTemplateCrudController');
     Route::post('category/{id}/toggle', [
         'as' => 'category.toggle',
         'uses' => 'CategoryCrudController@toggleColumnRouter',
