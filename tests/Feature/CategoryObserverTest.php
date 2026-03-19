@@ -52,7 +52,7 @@ class CategoryObserverTest extends TestCase
         $observer = new class extends CategoryObserver {
             public int $touchCalls = 0;
 
-            protected function touchCatalogProducts(Category $category): void
+            protected function queueCatalogTouch(Category $category): void
             {
                 $this->touchCalls++;
             }
@@ -86,7 +86,7 @@ class CategoryObserverTest extends TestCase
         $observer = new class extends CategoryObserver {
             public int $touchCalls = 0;
 
-            protected function touchCatalogProducts(Category $category): void
+            protected function queueCatalogTouch(Category $category): void
             {
                 $this->touchCalls++;
             }

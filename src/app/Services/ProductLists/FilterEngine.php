@@ -233,7 +233,7 @@ class FilterEngine
 
     protected function filterByCategories(array $filter, ListRequestContext $context, ?array $restrict, ?int $limit): ?array
     {
-        $categories = $filter['categories[]'] ?? $filter['ids'] ?? null;
+        $categories = $filter['categories[]'] ?? $filter['categories'] ?? $filter['ids'] ?? null;
         if (!$categories) {
             return null;
         }
@@ -265,7 +265,7 @@ class FilterEngine
 
     protected function filterByBrands(array $filter, ListRequestContext $context, ?array $restrict, ?int $limit): ?array
     {
-        $brands = $filter['brands[]'] ?? $filter['ids'] ?? null;
+        $brands = $filter['brands[]'] ?? $filter['brands'] ?? $filter['ids'] ?? null;
         if (!$brands) {
             return null;
         }
@@ -293,7 +293,7 @@ class FilterEngine
 
     protected function filterByTags(array $filter, ListRequestContext $context, ?array $restrict, ?int $limit): ?array
     {
-        $tags = $filter['tags[]'] ?? $filter['ids'] ?? null;
+        $tags = $filter['tags[]'] ?? $filter['tags'] ?? $filter['ids'] ?? null;
         if (!$tags) {
             return null;
         }
@@ -558,30 +558,36 @@ class FilterEngine
             return $ids;
         }
 
-        $rows = DB::table('ak_product_categories')
-            ->select('id', 'lft', 'rgt')
-            ->whereIn('id', $ids)
-            ->get();
-
-        if ($rows->isEmpty()) {
+        if (!Schema::hasTable('ak_product_categories')) {
             return $ids;
         }
 
-        $extra = [];
-        foreach ($rows as $row) {
-            if ($row->lft === 0 || $row->rgt === 0) {
-                continue;
-            }
+        // Используем обход по parent_id вместо lft/rgt:
+        // nested set может быть повреждён или несогласован по странам/импорту.
+        $collected = $ids;
+        $frontier = $ids;
+
+        while (!empty($frontier)) {
             $children = DB::table('ak_product_categories')
-                ->where('lft', '>=', $row->lft)
-                ->where('rgt', '<=', $row->rgt)
-                // ->where('parent_id', $row->id)
+                ->whereIn('parent_id', $frontier)
                 ->pluck('id')
-                ->toArray();
-            $extra = array_merge($extra, $children);
+                ->map(fn($id) => (int) $id)
+                ->all();
+
+            if (empty($children)) {
+                break;
+            }
+
+            $new = array_values(array_diff($children, $collected));
+            if (empty($new)) {
+                break;
+            }
+
+            $collected = array_merge($collected, $new);
+            $frontier = $new;
         }
 
-        return array_values(array_unique(array_merge($ids, $extra)));
+        return array_values(array_unique($collected));
     }
 
     protected function parseValues(mixed $raw): array

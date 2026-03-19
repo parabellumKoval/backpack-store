@@ -172,7 +172,42 @@ class Campaign extends Model
             $raw = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
         }
 
-        return is_array($raw) ? $raw : [];
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $rules = [];
+        foreach ($raw as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $rule = $row['rule'] ?? $row;
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $normalized = $this->normalizeProductFilterRule($rule);
+            if ($normalized !== null) {
+                $rules[] = $normalized;
+            }
+        }
+
+        return array_values($rules);
+    }
+
+    protected function normalizeProductFilterRule(array $rule): ?array
+    {
+        $type = $rule['type'] ?? $rule['key'] ?? null;
+        if (!is_string($type) || trim($type) === '') {
+            return null;
+        }
+
+        $normalized = $rule;
+        $normalized['type'] = trim($type);
+        $normalized['key'] = trim($type);
+
+        return $normalized;
     }
 
     public function setCountriesAttribute($value): void

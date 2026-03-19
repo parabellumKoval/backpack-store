@@ -572,6 +572,7 @@ class CampaignCrudController extends CrudController
         }
 
         $filters = $this->decodeArrayInput($req->input('product_filters', []));
+        $filters = $this->normalizeFilterRules($filters);
         $manualProducts = $this->normalizeIdList($req->input('manual_products', []));
 
         if ($source === 'manual') {
@@ -615,6 +616,34 @@ class CampaignCrudController extends CrudController
         }
 
         return is_array($value) ? $value : [];
+    }
+
+    protected function normalizeFilterRules(mixed $value): array
+    {
+        $rows = $this->decodeArrayInput($value);
+        $rules = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $rule = $row['rule'] ?? $row;
+            if (!is_array($rule)) {
+                continue;
+            }
+
+            $type = $rule['type'] ?? $rule['key'] ?? null;
+            if (!is_string($type) || trim($type) === '') {
+                continue;
+            }
+
+            $rule['type'] = trim($type);
+            $rule['key'] = trim($type);
+            $rules[] = $rule;
+        }
+
+        return array_values($rules);
     }
 
     protected function normalizeIdList(mixed $value): array

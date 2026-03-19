@@ -174,6 +174,7 @@ class CatalogQueryService extends AbstractQueryService
 
         $campaign = Campaign::query()
             ->activeAt()
+            ->activeForCountry($this->country)
             ->where('slug', $campaignSlug)
             ->first();
 
@@ -351,6 +352,8 @@ class CatalogQueryService extends AbstractQueryService
 
         // Все product_id, прошедшие фильтр (для флага)
         $passedIds = (clone $filtered)->pluck('c.product_id')->all();
+        $passedSet = array_fill_keys(array_map('intval', $passedIds), true);
+        $campaignFilterRequested = $this->isCampaignFilterRequested();
 
         // 2) Пагинация по group_id из ОТФИЛЬТРОВАННОГО среза
         [$pageGroupIds, $totalGroups] = $this->pageGroupIds($filtered);
@@ -377,19 +380,26 @@ class CatalogQueryService extends AbstractQueryService
                 continue;
             }
 
+            // Проставим флаг на модификации + отсортируем модификации (например, по price asc)
+            $mods = $mods->map(function (Catalog $m) use ($passedSet) {
+                $m->setAttribute('passed_filter', isset($passedSet[(int) $m->product_id]));
+                return $m;
+            })->sortBy('price')->values();
+
+            // На campaign-странице показываем только модификации, реально прошедшие campaign-фильтр.
+            if ($campaignFilterRequested) {
+                $mods = $mods->filter(function (Catalog $mod) {
+                    return (bool) $mod->getAttribute('passed_filter');
+                })->values();
+
+                if ($mods->isEmpty()) {
+                    continue;
+                }
+            }
+
             // Базовая запись товара — берём первую модификацию (поля общие для группы)
             /** @var Catalog $base */
             $base = $mods->first();
-
-            // Проставим флаг на модификации + отсортируем модификации (например, по price asc)
-            $mods = $mods->map(function (Catalog $m) use ($passedIds) {
-                if (in_array($m->product_id, $passedIds, true)) {
-                    $m->setAttribute('passed_filter', true);
-                } else {
-                    $m->setAttribute('passed_filter', false);
-                }
-                return $m;
-            })->sortBy('price')->values();
 
             // Пришиваем модификации к базе, чтобы ресурсы могли $this->modifications()
             $base->setRelation('modifications', $mods);
@@ -817,6 +827,13 @@ class CatalogQueryService extends AbstractQueryService
         }
 
         return $item->in_stock ?? 0;
+    }
+
+    protected function isCampaignFilterRequested(): bool
+    {
+        $slug = $this->request->input('campaign');
+
+        return is_string($slug) && trim($slug) !== '';
     }
 
 

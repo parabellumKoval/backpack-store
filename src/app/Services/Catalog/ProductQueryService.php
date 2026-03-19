@@ -146,8 +146,11 @@ class ProductQueryService extends AbstractQueryService
       return $this;
     }
 
+    $country = strtolower((string) (\Store::context()->country ?: \Store::country()));
+
     $campaign = Campaign::query()
       ->activeAt()
+      ->activeForCountry($country)
       ->where('slug', $campaignSlug)
       ->first();
 
@@ -155,8 +158,6 @@ class ProductQueryService extends AbstractQueryService
       $this->query->whereRaw('1=0');
       return $this;
     }
-
-    $country = strtolower((string) (\Store::context()->country ?: \Store::country()));
 
     $this->query->whereIn('ak_products.id', function($sub) use ($campaign, $country) {
       $sub->select('cp.product_id')

@@ -23,6 +23,9 @@ return [
 
     // CATALOG
     'per_page' => 12,
+    'catalog' => [
+      'touch_inline' => env('BP_STORE_CATALOG_TOUCH_INLINE', false),
+    ],
 
     // GUARD
     'auth_guard' => 'profile',

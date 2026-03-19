@@ -19,9 +19,7 @@ class CatalogSyncTouch
         }
 
         DB::afterCommit(function () use ($productId, $delaySeconds, $forceImmediate) {
-            $shouldSyncInline = $forceImmediate
-                || app()->environment('local', 'testing')
-                || config('queue.default') === 'sync';
+            $shouldSyncInline = self::shouldSyncInline($forceImmediate);
 
             if ($shouldSyncInline) {
                 app(CatalogCacheService::class)->syncProduct($productId);
@@ -34,5 +32,13 @@ class CatalogSyncTouch
                 $job->delay(now()->addSeconds($delaySeconds));
             }
         });
+    }
+
+    protected static function shouldSyncInline(bool $forceImmediate = false): bool
+    {
+        return $forceImmediate
+            || app()->environment('testing')
+            || config('dress.store.catalog.touch_inline', false)
+            || config('queue.default') === 'sync';
     }
 }
