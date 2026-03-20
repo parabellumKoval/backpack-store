@@ -123,6 +123,40 @@ class ProductTest extends TestCase
     $product = Product::first();
     $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsToMany::class, $product->categories());
   }
+
+  public function test_get_all_category_ids_skips_branch_when_parent_not_available_for_country(): void
+  {
+    $root = new Category();
+    $root->id = 1001;
+    $root->countries = ['de'];
+
+    $child = new Category();
+    $child->id = 1002;
+    $child->countries = null;
+    $child->setRelation('parent', $root);
+
+    $product = new Product();
+    $product->setRelation('categories', collect([$child]));
+
+    $this->assertSame([], $product->getAllCategoryIds('cz'));
+  }
+
+  public function test_get_all_category_ids_includes_full_branch_when_available_for_country(): void
+  {
+    $root = new Category();
+    $root->id = 1003;
+    $root->countries = ['cz'];
+
+    $child = new Category();
+    $child->id = 1004;
+    $child->countries = null;
+    $child->setRelation('parent', $root);
+
+    $product = new Product();
+    $product->setRelation('categories', collect([$child]));
+
+    $this->assertEqualsCanonicalizing([1003, 1004], $product->getAllCategoryIds('cz'));
+  }
   
   /**
    * test_orders_relationship

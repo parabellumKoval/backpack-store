@@ -296,6 +296,10 @@ class CatalogCacheService
 
         // категории
         $category_ids_array = $p->getAllCategoryIds($countryCode);
+        if (empty($category_ids_array)) {
+            // Product does not belong to any category branch available for this country.
+            return [];
+        }
         $category_ids_json  = $category_ids_array ? json_encode($category_ids_array) : null;
         $storeOnly = $this->isStoreOnlyProduct($category_ids_array, $countryCode);
 

@@ -187,12 +187,21 @@ class Product extends Model implements HasCrudCardInterface
     public function getAllCategoryIds($countryCode = null): array
     {
       $categoryIds = [];
+      $country = $this->resolveCountryCode(is_string($countryCode) ? $countryCode : null);
 
       $categories = $this->categories;
 
       foreach ($categories as $category) {
+        if (!$category instanceof Category) {
+          continue;
+        }
+
+        if ($country && !$this->isCategoryBranchAvailableForCountry($category, $country)) {
+          continue;
+        }
+
         $ancestors = $category
-          ->getParentNode($category, null, $countryCode)
+          ->getParentNode($category, null, $country)
           ->pluck('id')
           ->toArray();
 
@@ -204,6 +213,38 @@ class Product extends Model implements HasCrudCardInterface
       }
 
       return array_values(array_unique($categoryIds));
+    }
+
+    protected function isCategoryBranchAvailableForCountry(Category $category, string $country): bool
+    {
+        $visited = [];
+        $current = $category;
+
+        while ($current instanceof Category) {
+            $currentId = (int) ($current->id ?? 0);
+            if ($currentId > 0) {
+                if (isset($visited[$currentId])) {
+                    return false;
+                }
+
+                $visited[$currentId] = true;
+            }
+
+            if (!$current->isAvailableForCountry($country, false)) {
+                return false;
+            }
+
+            if ($current->relationLoaded('parent')) {
+                $parent = $current->getRelation('parent');
+                $current = $parent instanceof Category ? $parent : null;
+                continue;
+            }
+
+            $parent = $current->parent()->first();
+            $current = $parent instanceof Category ? $parent : null;
+        }
+
+        return true;
     }
 
     /**
