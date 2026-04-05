@@ -667,7 +667,8 @@ class ProductCrudController extends CrudController
       // 
       foreach($this->categories as $category) {
         
-        $category_parent_node = $category->getParentNode();
+        // Admin should not hide inherited attributes based on storefront country context.
+        $category_parent_node = $category->getParentNode(null, null, null, false);
 
         foreach($category_parent_node as $category) {
           // Take all active attributes for this category 

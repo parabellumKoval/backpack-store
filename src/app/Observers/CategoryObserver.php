@@ -17,6 +17,7 @@ class CategoryObserver
     protected const CATALOG_RELEVANT_FIELDS = [
         'countries',
         'store_only_countries',
+        'storefronts',
         'parent_id',
     ];
 

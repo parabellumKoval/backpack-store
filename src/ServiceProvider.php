@@ -101,6 +101,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     );
 
     $this->mergeConfigFrom(__DIR__ . '/config/store.php', 'dress.store');
+    $this->mergeConfigFrom(__DIR__ . '/config/storefront.php', 'dress.storefront');
     $this->mergeConfigFrom(__DIR__ . '/config/search.php', 'dress.search');
     $this->mergeConfigFrom(__DIR__ . '/config/currency.php', 'dress.currency');
     $this->mergeConfigFrom(__DIR__ . '/config/modifications.php', 'dress.modifications');
@@ -210,6 +211,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     $this->publishes([
       __DIR__ . '/config/store.php' => config_path('/dress/store.php'),
+      __DIR__ . '/config/storefront.php' => config_path('/dress/storefront.php'),
       __DIR__ . '/config/search.php' => config_path('/dress/search.php'),
       __DIR__ . '/config/currency.php' => config_path('/dress/currency.php'),
       __DIR__ . '/config/modifications.php' => config_path('/dress/modifications.php'),

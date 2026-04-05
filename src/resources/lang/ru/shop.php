@@ -35,6 +35,7 @@ return [
     'default_cash' => 'Оплата наличными',
     'zasilkovna_cod' => 'Наложенный платёж Zásilkovna',
     'novaposhta_cod' => 'Наложенный платёж Новая Почта',
+    'messenger_cod' => 'Наложенный платёж Messenger.cz',
     'liqpay_online' => 'Оплата LiqPay онлайн',
     'card_online' => 'Оплата картой онлайн',
     'bank_transfer' => 'Банковский перевод',
@@ -45,6 +46,7 @@ return [
     'novaposhta_warehouse' => 'Отделение Новая Почта',
     'packeta_address' => 'Курьер Packeta',
     'packeta_warehouse' => 'Пункт выдачи Packeta',
+    'messenger_address' => 'Курьер Messenger.cz',
     'default_pickup' => 'Самовывоз',
   ],
 ];

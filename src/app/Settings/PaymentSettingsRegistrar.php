@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Settings;
 
+use Backpack\Store\app\Support\CheckoutMethodCatalog;
 use Backpack\Settings\Contracts\SettingsRegistrarInterface;
 use Backpack\Settings\Services\Registry\Registry;
 use Backpack\Settings\Services\Registry\Field;
@@ -20,7 +21,7 @@ class PaymentSettingsRegistrar implements SettingsRegistrarInterface
                 // Вкладка: ОБЩЕЕ
                 // ────────────────────────────────────────────────
                 ->page('Общее', function ($page) {
-                    $payments = \Settings::get('dress.payment.methods', []);
+                    $payments = CheckoutMethodCatalog::paymentMethods();
 
                     $result_name_type_label = array_reduce($payments, function ($carry, $item) {
                         $key = $item['name'] . '_' . $item['type'];

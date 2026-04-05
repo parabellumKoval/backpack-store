@@ -6,6 +6,7 @@ use \Backpack\Store\app\Services\StoreContext;
 
 class Store
 {
+    protected static ?array $normalizedStorefrontsCache = null;
 
     public static function context(): StoreContext
     {
@@ -13,12 +14,15 @@ class Store
     }
 
 
-    public static function withContext(string $country, string $currency, callable $callback)
+    public static function withContext(string $country, string $currency, callable $callback, ?string $storefront = null)
     {
         $cls = StoreContext::class;
         $prev = app()->bound($cls) ? app($cls) : null;
+        $resolvedStorefront = static::normalizeStorefrontCode($storefront)
+            ?? $prev?->storefront
+            ?? static::defaultStorefront();
 
-        app()->instance($cls, new StoreContext($country, $currency));
+        app()->instance($cls, new StoreContext($country, $currency, $resolvedStorefront));
         try {
             return $callback();
         } finally {
@@ -90,6 +94,117 @@ class Store
             ?? self::countryCurrency()
             ?? session('currency')
             ?? \Settings::get('dress.multistore.default_currency');
+    }
+
+    public static function storefront(): string
+    {
+        $requestKey = static::storefrontRequestKey();
+        $headerName = static::storefrontHeaderName();
+
+        $candidate = request()->get($requestKey)
+            ?? request()->header($headerName)
+            ?? session($requestKey)
+            ?? (app()->bound(StoreContext::class) ? app(StoreContext::class)->storefront : null)
+            ?? static::defaultStorefront();
+
+        return static::normalizeStorefrontCode($candidate) ?? static::defaultStorefront();
+    }
+
+    public static function isStorefrontEnabled(): bool
+    {
+        return (bool) config('dress.storefront.enabled', false);
+    }
+
+    public static function storefrontRequestKey(): string
+    {
+        return (string) config('dress.storefront.request_key', 'storefront');
+    }
+
+    public static function storefrontHeaderName(): string
+    {
+        return (string) config('dress.storefront.header_name', 'X-Storefront');
+    }
+
+    public static function defaultStorefront(): string
+    {
+        $configured = static::normalizeStorefrontCode(config('dress.storefront.default', 'main'));
+
+        if ($configured !== null) {
+            return $configured;
+        }
+
+        $storefronts = static::storefronts();
+        return array_key_first($storefronts) ?: 'main';
+    }
+
+    public static function storefronts(): array
+    {
+        if (static::$normalizedStorefrontsCache !== null) {
+            return static::$normalizedStorefrontsCache;
+        }
+
+        $raw = (array) config('dress.storefront.values', []);
+        $normalized = [];
+
+        foreach ($raw as $key => $item) {
+            if (!is_array($item)) {
+                $item = [];
+            }
+
+            $code = static::normalizeStorefrontCode($item['code'] ?? $key);
+            if ($code === null) {
+                continue;
+            }
+
+            if (($item['enabled'] ?? true) === false) {
+                continue;
+            }
+
+            $normalized[$code] = array_merge($item, [
+                'code' => $code,
+                'label' => (string) ($item['label'] ?? ucfirst($code)),
+            ]);
+        }
+
+        $default = static::normalizeStorefrontCode(config('dress.storefront.default', 'main')) ?? 'main';
+        if (!isset($normalized[$default])) {
+            $normalized[$default] = [
+                'enabled' => true,
+                'code' => $default,
+                'label' => ucfirst($default),
+                'is_default' => true,
+            ];
+        }
+
+        return static::$normalizedStorefrontsCache = $normalized;
+    }
+
+    public static function storefrontOptions(): array
+    {
+        $values = static::storefronts();
+        return array_column($values, 'label', 'code');
+    }
+
+    public static function storefrontSettingsOverrides(): array
+    {
+        return (array) config('dress.storefront.settings_overrides', []);
+    }
+
+    public static function applyUnassignedCategoriesToDefaultStorefront(): bool
+    {
+        return (bool) config('dress.storefront.apply_unassigned_to_default', false);
+    }
+
+    public static function normalizeStorefrontCode(?string $code): ?string
+    {
+        if ($code === null || $code === '') {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $code));
+        $normalized = preg_replace('/[^a-z0-9_-]/', '', $normalized);
+
+        return $normalized !== '' ? $normalized : null;
     }
 
     // Получить все доступные страны

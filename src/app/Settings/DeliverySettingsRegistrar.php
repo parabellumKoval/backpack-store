@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Settings;
 
+use Backpack\Store\app\Support\CheckoutMethodCatalog;
 use Backpack\Settings\Contracts\SettingsRegistrarInterface;
 use Backpack\Settings\Services\Registry\Registry;
 use Backpack\Settings\Services\Registry\Field;
@@ -67,7 +68,7 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->tab('Бесплатная доставка')
                     );
 
-                    $deliveries = \Settings::get('dress.delivery.methods', []);
+                    $deliveries = CheckoutMethodCatalog::deliveryMethods();
 
                     $result_name_type_label = array_reduce($deliveries, function ($carry, $item) {
                         $key = $item['name'] . '_' . $item['type'];
@@ -196,6 +197,114 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                             ['max_weight_g' => 15000, 'price' => 130],
                         ])
                         ->tab('Тарифы')
+                        ->regionable(true));
+                })
+
+                ->page('Настройки Messenger.cz', function ($page) {
+                    $page->add(Field::make('shipping.messenger.vat_rate', 'number')
+                        ->label('Ставка НДС, %')
+                        ->default(21)
+                        ->cast('float')
+                        ->tab('Налоги и НДС')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.vat_included', 'checkbox')
+                        ->label('Цены содержат НДС')
+                        ->default(false)
+                        ->cast('bool')
+                        ->tab('Налоги и НДС')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.fuel_surcharge_percent', 'number')
+                        ->label('Топливная надбавка, %')
+                        ->default(0)
+                        ->cast('float')
+                        ->tab('Налоги и НДС')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.currency', 'select_from_array')
+                        ->label('Валюта тарифов')
+                        ->options([
+                            'CZK' => 'CZK',
+                        ])
+                        ->default('CZK')
+                        ->cast('string')
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.shipment_weight_g', 'number')
+                        ->label('Вес одного отправления (г)')
+                        ->default(10000)
+                        ->cast('int')
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.max_dimension_cm', 'number')
+                        ->label('Максимальный размер одной стороны (см)')
+                        ->default(40)
+                        ->cast('int')
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.address_rates', 'repeatable_pure')
+                        ->label('Тарифы на адресную доставку')
+                        ->fields([
+                            ['name' => 'shipments_count', 'type' => 'number', 'label' => 'Количество отправлений'],
+                            ['name' => 'price', 'type' => 'number', 'label' => 'Цена без НДС'],
+                        ])
+                        ->default([
+                            ['shipments_count' => 1, 'price' => 145],
+                            ['shipments_count' => 2, 'price' => 220],
+                            ['shipments_count' => 3, 'price' => 295],
+                            ['shipments_count' => 4, 'price' => 370],
+                            ['shipments_count' => 5, 'price' => 445],
+                            ['shipments_count' => 6, 'price' => 520],
+                            ['shipments_count' => 7, 'price' => 595],
+                            ['shipments_count' => 8, 'price' => 670],
+                            ['shipments_count' => 9, 'price' => 745],
+                            ['shipments_count' => 10, 'price' => 820],
+                            ['shipments_count' => 11, 'price' => 895],
+                            ['shipments_count' => 12, 'price' => 970],
+                            ['shipments_count' => 13, 'price' => 1045],
+                            ['shipments_count' => 14, 'price' => 1120],
+                            ['shipments_count' => 15, 'price' => 1195],
+                            ['shipments_count' => 16, 'price' => 1270],
+                            ['shipments_count' => 17, 'price' => 1345],
+                            ['shipments_count' => 18, 'price' => 1420],
+                            ['shipments_count' => 19, 'price' => 1495],
+                            ['shipments_count' => 20, 'price' => 1570],
+                        ])
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.cod.enabled', 'checkbox')
+                        ->label('Разрешить наложенный платёж')
+                        ->default(true)
+                        ->cast('bool')
+                        ->tab('Наложенный платёж (COD)')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.cod.cash_fee', 'number')
+                        ->label('Доплата COD наличными')
+                        ->suffix('CZK')
+                        ->default(30)
+                        ->cast('float')
+                        ->tab('Наложенный платёж (COD)')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.cod.card_fee_fixed', 'number')
+                        ->label('Доплата COD картой: фиксированная часть')
+                        ->suffix('CZK')
+                        ->default(30)
+                        ->cast('float')
+                        ->tab('Наложенный платёж (COD)')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.cod.card_fee_percent', 'number')
+                        ->label('Доплата COD картой: процент от суммы заказа')
+                        ->default(1.25)
+                        ->cast('float')
+                        ->tab('Наложенный платёж (COD)')
                         ->regionable(true));
                 })
 

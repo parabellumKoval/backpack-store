@@ -36,6 +36,10 @@ class CategoryAvailability
             throw static::notFoundException();
         }
 
+        if (!$category->isAvailableForStorefront(null, $fallbackToStore)) {
+            throw static::notFoundException();
+        }
+
         return $category;
     }
 

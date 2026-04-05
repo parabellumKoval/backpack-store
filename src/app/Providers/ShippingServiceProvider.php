@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Providers;
 use Illuminate\Support\ServiceProvider;
 use Backpack\Store\app\Services\Shipping\ShippingCalculator;
 use Backpack\Store\app\Contracts\ShippingProviderInterface;
+use Backpack\Store\app\Services\Shipping\Providers\MessengerProvider;
 use Backpack\Store\app\Services\Shipping\Providers\PacketaProvider;
 use Backpack\Store\app\Services\Shipping\Providers\NovaPoshtaProvider;
 
@@ -17,6 +18,7 @@ class ShippingServiceProvider extends ServiceProvider
             return [
                 $app->make(PacketaProvider::class),
                 $app->make(NovaPoshtaProvider::class),
+                $app->make(MessengerProvider::class),
             ];
         });
 

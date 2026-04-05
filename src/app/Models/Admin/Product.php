@@ -71,6 +71,29 @@ class Product extends BaseProduct
         return 'Backpack\Store\app\Models\Product';
     } 
 
+    public function getAvailableProperties()
+    {
+        $attrs = collect();
+
+        if (!$this->categories || !$this->categories->count()) {
+            return;
+        }
+
+        foreach ($this->categories as $category) {
+            $categoryParentNode = $category->getParentNode(null, null, null, false);
+
+            foreach ($categoryParentNode as $parentCategory) {
+                $catAttrs = $parentCategory->attributes()->active()->get();
+
+                if ($catAttrs && $catAttrs->count()) {
+                    $attrs = $attrs->merge($catAttrs);
+                }
+            }
+        }
+
+        return $attrs->unique('id');
+    }
+
     /**
      * Build supplier summary for admin tables (prices, stock, codes)
      */

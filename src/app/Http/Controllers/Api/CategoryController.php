@@ -26,6 +26,14 @@ class CategoryController extends \App\Http\Controllers\Controller
               ->select('ak_product_categories.*')
               ->with('tags')
               ->forCountry($country, true)
+              ->when(\Backpack\Store\app\Services\Store::isStorefrontEnabled(), function ($query) use ($country) {
+                $visibleIds = Category::visibleIdsForContext($country, null, true);
+                if (empty($visibleIds)) {
+                  $query->whereRaw('1=0');
+                  return;
+                }
+                $query->whereIn('ak_product_categories.id', $visibleIds);
+              })
               
               ->distinct('ak_product_categories.id')
               

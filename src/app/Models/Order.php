@@ -48,7 +48,7 @@ class Order extends Model
     // protected $primaryKey = 'id';
     // public $timestamps = false;
     protected $guarded = ['id'];
-    protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status','country_code', 'currency_code', 'fx_rate',
+    protected $fillable = ['price', 'productsRelated', 'extras', 'delivery_status', 'pay_status', 'status','country_code', 'storefront_code', 'currency_code', 'fx_rate',
         'subtotal','discount_total','promocode_discount_total','bonus_discount_total','personal_discount_total','campaign_discount_total','shipping_total','tax_total','grand_total',];
     // protected $hidden = [];
     // protected $dates = [];
@@ -77,6 +77,9 @@ class Order extends Model
             if (!$order->country_code) {
                 $order->country_code = \Store::country();
             }
+            if (!$order->storefront_code) {
+                $order->storefront_code = \Store::storefront();
+            }
             if (!$order->currency_code) {
                 $order->currency_code = \Store::countryCurrency($order->country_code);
             }
@@ -84,6 +87,10 @@ class Order extends Model
                 $order->fx_rate = app(\Backpack\Store\app\Contracts\ExchangeRateProvider::class)
                     ->getExchangeRate(\Settings::get('dress.store.base_currency'), $order->currency_code);
             }
+
+            $info = $order->info ?? [];
+            $info['storefront'] = $info['storefront'] ?? $order->storefront_code ?? \Store::storefront();
+            $order->info = $info;
         });
     }
     
@@ -124,6 +131,7 @@ class Order extends Model
             'parts'   => array_filter([$code, $user, $time, $sum]),
             'join'    => ' / ',
             'country' => $this->country_code ?? '',
+            'storefront' => $this->storefront_code ?? data_get($this->info, 'storefront'),
             'html_template' => 'crud::columns.order_display_label'
         ];
     }

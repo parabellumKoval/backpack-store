@@ -22,6 +22,7 @@ class CatalogQueryService extends AbstractQueryService
     protected Request $request;
     protected string $country;
     protected $query;
+    protected array $visibleCategoryIds = [];
 
     public function __construct(Request $request)
     {
@@ -37,9 +38,26 @@ class CatalogQueryService extends AbstractQueryService
     /** Базовый запрос к ak_catalog */
     public function startQuery(): self
     {
+        $this->visibleCategoryIds = Category::visibleIdsForContext($this->country, null, true);
+
         $this->query = DB::table('ak_catalog as c')
             ->where('c.country_code', $this->country)
             ->where('c.is_available', 1);
+
+        if (empty($this->visibleCategoryIds)) {
+            $this->query->whereRaw('1=0');
+            return $this;
+        }
+
+        $this->query->whereExists(function ($sub) {
+            $sub->selectRaw('1')
+                ->from('ak_category_product as cp')
+                ->whereIn('cp.category_id', $this->visibleCategoryIds)
+                ->where(function ($where) {
+                    $where->whereColumn('cp.product_id', 'c.product_id')
+                        ->orWhereColumn('cp.product_id', 'c.group_id');
+                });
+        });
 
         return $this;
     }

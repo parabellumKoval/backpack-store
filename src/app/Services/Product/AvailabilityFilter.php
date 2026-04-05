@@ -15,6 +15,11 @@ class AvailabilityFilter
     {
         $t       = $q->getModel()->getTable();
         $country = $country ?: \Store::context()->country;
+        $visibleCategoryIds = Category::visibleIdsForContext($country, null, true);
+
+        if (empty($visibleCategoryIds)) {
+            return $q->whereRaw('1=0');
+        }
 
         /** @var \Backpack\Store\Contracts\SupplierFilter $sup */
         $sup = app(SupplierFilter::class);
@@ -26,22 +31,14 @@ class AvailabilityFilter
         $spOk = $sup->spOk($country);
 
         // активные категории, доступные для страны (или все активные, если страна не задана)
-        $availableCategories = Category::query()
-            ->select('ak_product_categories.id')
-            ->active()
-            ->when($country, function ($q) use ($country) {
-                $q->forCountry($country, false);
-            })
-            ->toBase();
-
         // База для веток: FROM ak_products p WHERE p.is_active=1
         /** @var Qb $base */
         $base = DB::table("$t as p")
             ->where('p.is_active', 1)
-            ->whereExists(function (Qb $cat) use ($availableCategories) {
+            ->whereExists(function (Qb $cat) use ($visibleCategoryIds) {
                 $cat->selectRaw('1')
                     ->from('ak_category_product as cp')
-                    ->joinSub($availableCategories, 'ac', 'ac.id', '=', 'cp.category_id')
+                    ->whereIn('cp.category_id', $visibleCategoryIds)
                     ->where(function ($where) {
                         $where->whereColumn('cp.product_id', 'p.id')
                             ->orWhere(function ($parent) {

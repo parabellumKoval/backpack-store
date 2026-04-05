@@ -2,9 +2,11 @@
 
 namespace Backpack\Store\app\Services\Shipping;
 
+use App\Support\StorefrontSettings;
 use Backpack\Store\app\Contracts\ShippingProviderInterface;
 use Backpack\Store\app\DTO\ShippingQuoteRequest;
 use Backpack\Store\app\DTO\ShippingQuoteResult;
+use Backpack\Store\app\Support\CheckoutMethodCatalog;
 
 class ShippingCalculator
 {
@@ -61,13 +63,13 @@ class ShippingCalculator
             return $quote;
         }
 
-        $enabled = \Settings::get('shipping.free_enabled', false, ['country' => $country]);
+        $enabled = app(StorefrontSettings::class)->get('shipping.free_enabled', false, ['country' => $country]);
 
         if (! $enabled) {
             return $quote;
         }
 
-        $minPrice = \Settings::get('shipping.free_min_price', null, ['country' => $country]);
+        $minPrice = app(StorefrontSettings::class)->get('shipping.free_min_price', null, ['country' => $country]);
         if ($minPrice === null) {
             return $quote;
         }
@@ -122,7 +124,7 @@ class ShippingCalculator
      */
     protected function resolveMethodByKey(string $methodKey): ?array
     {
-        $methods = \Settings::get('dress.delivery.methods', []);
+        $methods = CheckoutMethodCatalog::deliveryMethods();
         foreach ($methods as $item) {
             $key = ($item['name'] ?? '') . '_' . ($item['type'] ?? '');
             if ($key === $methodKey) {

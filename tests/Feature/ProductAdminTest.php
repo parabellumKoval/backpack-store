@@ -8,6 +8,7 @@ use Backpack\Store\Tests\TestCase;
 
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Models\Attribute;
 
 class ProductAdminTest extends TestCase
 {
@@ -86,5 +87,30 @@ class ProductAdminTest extends TestCase
 
     // Check if category has been attached to product
     // $this->assertEquals($product_category->id, $category->id);
+  }
+
+  public function test_product_edit_shows_inherited_attribute_even_when_parent_category_is_country_limited(): void
+  {
+    $parentCategory = Category::factory()->create([
+      'countries' => ['cz'],
+    ]);
+    $childCategory = Category::factory()->create([
+      'parent_id' => $parentCategory->id,
+      'countries' => null,
+    ]);
+    $attribute = Attribute::factory()->create([
+      'name' => 'Inherited Admin Attribute',
+      'is_active' => true,
+    ]);
+
+    $parentCategory->attributes()->attach($attribute->id);
+
+    $product = Product::factory()->create();
+    $product->categories()->attach($childCategory->id);
+
+    $response = $this->get('/admin/product/'.$product->id.'/edit');
+
+    $response->assertStatus(200);
+    $response->assertSee('Inherited Admin Attribute');
   }
 }

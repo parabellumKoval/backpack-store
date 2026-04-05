@@ -53,6 +53,7 @@ class Category extends Model
         'images' => 'array',
         'countries' => 'array',
         'store_only_countries' => 'array',
+        'storefronts' => 'array',
         'is_active' => 'boolean',
     ];
 
@@ -187,6 +188,38 @@ class Category extends Model
         return $normalized === '' ? null : $normalized;
     }
 
+    protected static function resolveStorefront(?string $storefront = null, bool $fallbackToStore = false): ?string
+    {
+        if (!\Backpack\Store\app\Services\Store::isStorefrontEnabled()) {
+            return null;
+        }
+
+        if ($storefront !== null) {
+            return static::normalizeStorefrontCode($storefront);
+        }
+
+        $requestKey = \Backpack\Store\app\Services\Store::storefrontRequestKey();
+        $headerName = \Backpack\Store\app\Services\Store::storefrontHeaderName();
+
+        if (app()->bound('request')) {
+            $requestStorefront = request()->get($requestKey) ?? request()->header($headerName);
+            if ($requestStorefront !== null && $requestStorefront !== '') {
+                return static::normalizeStorefrontCode($requestStorefront);
+            }
+        }
+
+        if ($fallbackToStore && class_exists(\Backpack\Store\app\Services\Store::class)) {
+            return \Backpack\Store\app\Services\Store::storefront();
+        }
+
+        return static::normalizeStorefrontCode(\Backpack\Store\app\Services\Store::defaultStorefront());
+    }
+
+    protected static function normalizeStorefrontCode(?string $code): ?string
+    {
+        return \Backpack\Store\app\Services\Store::normalizeStorefrontCode($code);
+    }
+
     protected function prepareCountryCodes($value): array
     {
         if (is_string($value)) {
@@ -200,6 +233,26 @@ class Category extends Model
             })
             ->map(function ($code) {
                 return static::normalizeCountryCode($code);
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    protected function prepareStorefrontCodes($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = $decoded === null && json_last_error() !== JSON_ERROR_NONE ? [$value] : $decoded;
+        }
+
+        return collect($value ?? [])
+            ->filter(function ($code) {
+                return $code !== null && $code !== '';
+            })
+            ->map(function ($code) {
+                return static::normalizeStorefrontCode($code);
             })
             ->filter()
             ->unique()
@@ -276,6 +329,7 @@ class Category extends Model
     public function childrenForCountry(?string $country = null, bool $fallbackToStore = false, array $visited = [])
     {
         $country = static::resolveCountry($country, $fallbackToStore);
+        $storefront = static::resolveStorefront(null, $fallbackToStore);
         $currentKey = $this->getKey();
         if ($currentKey !== null) {
             $visited[$currentKey] = true;
@@ -289,10 +343,13 @@ class Category extends Model
         $children = $childrenQuery->get()->reject(function (self $child) use ($visited) {
             $childKey = $child->getKey();
             return $childKey !== null && isset($visited[$childKey]);
+        })->filter(function (self $child) use ($country, $storefront) {
+            return $child->isAvailableForStorefront($storefront, false)
+                && (!$country || $child->isAvailableForCountry($country, false));
         });
 
         return $children->map(function (self $child) use ($country, $visited) {
-            $child->setRelation('children', $child->childrenForCountry($country, false, $visited));
+            $child->setRelation('children', $child->childrenForCountry($country, true, $visited));
             return $child;
         });
     }
@@ -368,6 +425,186 @@ class Category extends Model
         $codes = $this->prepareCountryCodes($value);
         $this->attributes['store_only_countries'] = empty($codes) ? null : json_encode($codes);
     }
+
+    public function getStorefrontsListAttribute(): ?array
+    {
+        if (empty($this->storefronts)) {
+            return null;
+        }
+
+        if (!class_exists(\Backpack\Store\app\Services\Store::class)) {
+            return $this->storefronts;
+        }
+
+        $options = \Backpack\Store\app\Services\Store::storefrontOptions();
+
+        return array_values(array_map(function ($code) use ($options) {
+            $code = static::normalizeStorefrontCode($code);
+            return $options[$code] ?? $code;
+        }, $this->storefronts));
+    }
+
+    public function setStorefrontsAttribute($value): void
+    {
+        $codes = $this->prepareStorefrontCodes($value);
+        $this->attributes['storefronts'] = empty($codes) ? null : json_encode($codes);
+    }
+
+    public function getEffectiveStorefrontsAttribute(): ?array
+    {
+        return $this->resolveEffectiveStorefronts();
+    }
+
+    protected function resolveEffectiveStorefronts(): ?array
+    {
+        if (!\Backpack\Store\app\Services\Store::isStorefrontEnabled()) {
+            return null;
+        }
+
+        $current = $this;
+
+        while ($current instanceof self) {
+            $list = $current->storefronts ?? [];
+
+            if (is_string($list)) {
+                $decoded = json_decode($list, true);
+                $list = json_last_error() === JSON_ERROR_NONE ? $decoded : [$list];
+            }
+
+            $list = $this->prepareStorefrontCodes($list);
+            if (!empty($list)) {
+                return $list;
+            }
+
+            $current = $current->relationLoaded('parent')
+                ? ($current->getRelation('parent') instanceof self ? $current->getRelation('parent') : null)
+                : $current->parent()->first();
+        }
+
+        if (\Backpack\Store\app\Services\Store::applyUnassignedCategoriesToDefaultStorefront()) {
+            return [\Backpack\Store\app\Services\Store::defaultStorefront()];
+        }
+
+        return null;
+    }
+
+    public function isAvailableForStorefront(?string $storefront = null, bool $fallbackToStore = false): bool
+    {
+        $storefront = static::resolveStorefront($storefront, $fallbackToStore);
+
+        if (!$storefront) {
+            return true;
+        }
+
+        $allowed = $this->resolveEffectiveStorefronts();
+
+        if ($allowed === null) {
+            return true;
+        }
+
+        return in_array($storefront, $allowed, true);
+    }
+
+    public static function visibleIdsForContext(?string $country = null, ?string $storefront = null, bool $fallbackToStore = true): array
+    {
+        $country = static::resolveCountry($country, $fallbackToStore);
+        $storefront = static::resolveStorefront($storefront, $fallbackToStore);
+
+        $query = static::query()
+            ->select(['id', 'parent_id', 'countries', 'storefronts', 'is_active'])
+            ->active();
+
+        $rows = $query->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $rowsById = [];
+        $childrenByParent = [];
+        $visibleIds = [];
+        $defaultStorefront = \Backpack\Store\app\Services\Store::defaultStorefront();
+        $defaultOnly = \Backpack\Store\app\Services\Store::applyUnassignedCategoriesToDefaultStorefront();
+        $visited = [];
+
+        foreach ($rows as $row) {
+            $rowId = (int) $row->id;
+            $parentId = $row->parent_id !== null ? (int) $row->parent_id : null;
+            $rowsById[$rowId] = $row;
+            $childrenByParent[$parentId ?? 0][] = $rowId;
+        }
+
+        $roots = collect($rowsById)
+            ->keys()
+            ->filter(function ($rowId) use ($rowsById) {
+                $parentId = $rowsById[$rowId]->parent_id;
+
+                return $parentId === null || !isset($rowsById[(int) $parentId]);
+            })
+            ->values()
+            ->all();
+
+        $walk = function (int $rowId, bool $parentCountryVisible, ?array $parentStorefronts) use (
+            &$walk,
+            &$visited,
+            &$visibleIds,
+            $rowsById,
+            $childrenByParent,
+            $country,
+            $storefront,
+            $defaultOnly,
+            $defaultStorefront
+        ): void {
+            if (isset($visited[$rowId]) || !isset($rowsById[$rowId])) {
+                return;
+            }
+
+            $visited[$rowId] = true;
+            /** @var self $row */
+            $row = $rowsById[$rowId];
+
+            $countryVisible = $parentCountryVisible;
+            if ($countryVisible && $country) {
+                $countryVisible = $row->isAvailableForCountry($country, false);
+            }
+
+            $explicitStorefronts = $row->prepareStorefrontCodes($row->storefronts ?? []);
+            if (!empty($explicitStorefronts)) {
+                $allowedStorefronts = $explicitStorefronts;
+            } elseif ($row->parent_id !== null) {
+                $allowedStorefronts = $parentStorefronts;
+            } elseif ($defaultOnly) {
+                $allowedStorefronts = [$defaultStorefront];
+            } else {
+                $allowedStorefronts = null;
+            }
+
+            $storefrontVisible = true;
+            if ($storefront && is_array($allowedStorefronts)) {
+                $storefrontVisible = in_array($storefront, $allowedStorefronts, true);
+            }
+
+            if ($countryVisible && $storefrontVisible) {
+                $visibleIds[] = $rowId;
+            }
+
+            foreach ($childrenByParent[$rowId] ?? [] as $childId) {
+                $walk($childId, $countryVisible, $allowedStorefronts);
+            }
+        };
+
+        foreach ($roots as $rootId) {
+            $walk((int) $rootId, true, null);
+        }
+
+        foreach (array_keys($rowsById) as $rowId) {
+            if (!isset($visited[$rowId])) {
+                $walk((int) $rowId, true, null);
+            }
+        }
+
+        return array_values(array_unique($visibleIds));
+    }
     
     /**
      * getCategoryNodeIdList
@@ -414,17 +651,17 @@ class Category extends Model
      *
      * @return void
      */
-    public function getParentNode($category = null, $carry = null, ?string $country = null) {
+    public function getParentNode($category = null, $carry = null, ?string $country = null, bool $fallbackToStore = true) {
       $carry = $carry? $carry: collect();
 			$category = $category? $category: $this;
-      $country = static::resolveCountry($country, true);
+      $country = static::resolveCountry($country, $fallbackToStore);
 
       if(!$country || $category->isAvailableForCountry($country, false)) {
         $carry->push($category);
       }
 
       if($category->parent) {
-        return $this->getParentNode($category->parent, $carry, $country);
+        return $this->getParentNode($category->parent, $carry, $country, false);
       }else {
         return $carry;
       }
@@ -584,6 +821,19 @@ class Category extends Model
         return implode(', ', $list);
     }
 
+    public function getAdminStorefrontsLabel(): string
+    {
+        $list = $this->storefrontsList;
+
+        if (!$list || empty($list)) {
+            return \Backpack\Store\app\Services\Store::applyUnassignedCategoriesToDefaultStorefront()
+                ? 'Default'
+                : 'Все';
+        }
+
+        return implode(', ', $list);
+    }
+
     /**
      * getSeoToArrayAttribute
      *
@@ -716,6 +966,10 @@ class Category extends Model
                 ],
                 'countries' => [
                     'label' => 'Страны',
+                    'strategy' => 'append',
+                ],
+                'storefronts' => [
+                    'label' => 'Storefronts',
                     'strategy' => 'append',
                 ],
                 'images' => [

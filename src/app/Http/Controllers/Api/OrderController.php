@@ -2,6 +2,7 @@
 
 namespace Backpack\Store\app\Http\Controllers\Api;
 
+use App\Support\StorefrontSettings;
 use Illuminate\Http\Request;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
@@ -308,6 +309,14 @@ class OrderController extends \App\Http\Controllers\Controller
     return [$order, $products];
   }
 
+  protected function resolveStorefrontCode(array $data = []): string
+  {
+    $requestValue = $data['storefront_code'] ?? $data['storefront'] ?? null;
+    $resolved = \Backpack\Store\app\Services\Store::normalizeStorefrontCode($requestValue);
+
+    return $resolved ?? \Store::storefront();
+  }
+
   protected function calculateShippingQuote(Order $order, array $data): ?\Backpack\Store\app\DTO\ShippingQuoteResult
   {
     $methodKey = data_get($data, 'delivery.method');
@@ -321,10 +330,13 @@ class OrderController extends \App\Http\Controllers\Controller
 
     /** @var ShippingCalculator $calculator */
     $calculator = app(ShippingCalculator::class);
+    $isMessengerCod = $methodKey === 'messenger_address' && data_get($data, 'payment.method') === 'messenger_cod';
     $quoteRequest = new ShippingQuoteRequest([
       'methodKey' => $methodKey,
       'destinationCountry' => $destination,
       'weightG' => $this->resolveShipmentWeight($order, $data),
+      'codEnabled' => $isMessengerCod,
+      'codAmount' => $isMessengerCod ? round((float) $order->getProductsPrice(), 2) : 0,
       'meta' => $this->buildShippingMeta($order, $data),
     ]);
 
@@ -350,10 +362,10 @@ class OrderController extends \App\Http\Controllers\Controller
     $country = $this->resolveShippingCountry($data, $order);
 
     if ($country) {
-      return (bool) \Settings::get('shipping.add_to_order_enabled', false, ['country' => $country]);
+      return (bool) app(StorefrontSettings::class)->get('shipping.add_to_order_enabled', false, ['country' => $country]);
     }
 
-    return (bool) \Settings::get('shipping.add_to_order_enabled', false);
+    return (bool) app(StorefrontSettings::class)->get('shipping.add_to_order_enabled', false);
   }
 
   protected function resolveShippingCountry(array $data, ?Order $order = null): ?string
@@ -821,6 +833,13 @@ class OrderController extends \App\Http\Controllers\Controller
     
     // Generate order code
     $order->delivery_status = \Settings::get('dress.order.delivery_status.default', 'waiting');
+
+    $storefront = $this->resolveStorefrontCode();
+    $order->storefront_code = $storefront;
+
+    $info = $order->info ?? [];
+    $info['storefront'] = $info['storefront'] ?? $storefront;
+    $order->info = $info;
 
     return $order;
   }

@@ -8,6 +8,9 @@ class StoreContextResolver
 {
     public function resolve(): StoreContext
     {
+        $requestKey = Store::storefrontRequestKey();
+        $headerName = Store::storefrontHeaderName();
+
         $country  = request()->get('country')
             ?? session('country')
             ?? config('dress.multistore.default_country');
@@ -17,6 +20,15 @@ class StoreContextResolver
             ?? session('currency')
             ?? config('dress.multistore.default_currency');
 
-        return new StoreContext($country, $currency);
+        $storefront = request()->get($requestKey)
+            ?? request()->header($headerName)
+            ?? session($requestKey)
+            ?? Store::defaultStorefront();
+
+        return new StoreContext(
+            $country,
+            $currency,
+            Store::normalizeStorefrontCode($storefront) ?? Store::defaultStorefront()
+        );
     }
 }

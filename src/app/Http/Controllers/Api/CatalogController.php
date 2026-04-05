@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 use Backpack\Store\app\Http\Resources\ProductCollection;
 
@@ -186,7 +187,12 @@ class CatalogController
     {
         $query = $request->query();
         $map   = array_flip($this->nonFiltersExclude);
-        return array_diff_key($query, $map);
+        $params = array_diff_key($query, $map);
+        $context = \Store::context();
+        $params['_country'] = $context->country ?? null;
+        $params['_storefront'] = $context->storefront ?? null;
+        $params['_locale'] = app()->getLocale();
+        return $params;
     }
 
      
@@ -202,8 +208,26 @@ class CatalogController
     public function show(Request $request, $slug) {
 
         $region = $request->input('country');
+        $visibleCategoryIds = \Backpack\Store\app\Models\Category::visibleIdsForContext($region, null, true);
 
-        $product = Catalog::where('slug', $slug)->where('country_code', $region)->available()->firstOrFail();
+        if (empty($visibleCategoryIds)) {
+            abort(404);
+        }
+
+        $product = Catalog::query()
+            ->where('slug', $slug)
+            ->where('country_code', $region)
+            ->available()
+            ->whereExists(function ($sub) use ($visibleCategoryIds) {
+                $sub->selectRaw('1')
+                    ->from('ak_category_product as cp')
+                    ->whereIn('cp.category_id', $visibleCategoryIds)
+                    ->where(function ($where) {
+                        $where->whereColumn('cp.product_id', 'ak_catalog.product_id')
+                            ->orWhereColumn('cp.product_id', 'ak_catalog.group_id');
+                    });
+            })
+            ->firstOrFail();
         $availableRegions = Catalog::query()
             ->where('group_id', $product->group_id)
             ->where('is_available', 1)

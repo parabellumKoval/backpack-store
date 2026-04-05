@@ -20,7 +20,7 @@ class CategoryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        foreach (['countries', 'store_only_countries'] as $field) {
+        foreach (['countries', 'store_only_countries', 'storefronts'] as $field) {
             if (!$this->has($field)) {
                 continue;
             }
@@ -43,6 +43,8 @@ class CategoryRequest extends FormRequest
             'countries.*' => 'string|min:2|max:3',
             'store_only_countries' => 'nullable|array',
             'store_only_countries.*' => 'string|min:2|max:3',
+            'storefronts' => 'nullable|array',
+            'storefronts.*' => 'string|min:1|max:64',
         ];
     }
 

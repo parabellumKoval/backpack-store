@@ -14,6 +14,10 @@ return [
             'label' => 'backpack-store::shop.payment_methods.novaposhta_cod',
             'icon' => 'la la-shipping-fast',
         ],
+        'messenger_cod' => [
+            'label' => 'backpack-store::shop.payment_methods.messenger_cod',
+            'icon' => 'la la-truck-loading',
+        ],
         'liqpay_online' => [
             'label' => 'backpack-store::shop.payment_methods.liqpay_online',
             'icon' => 'la la-qrcode',
@@ -46,6 +50,10 @@ return [
             'label' => 'backpack-store::shop.delivery_methods.packeta_warehouse',
             'logo' => 'packages/backpack/store/img/providers/packeta.svg',
             'logo_alt' => 'Packeta',
+        ],
+        'messenger_address' => [
+            'label' => 'backpack-store::shop.delivery_methods.messenger_address',
+            'icon' => 'la la-truck-loading',
         ],
         'default_pickup' => [
             'label' => 'backpack-store::shop.delivery_methods.default_pickup',

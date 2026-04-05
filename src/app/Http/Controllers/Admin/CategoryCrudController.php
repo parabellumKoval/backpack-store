@@ -215,6 +215,16 @@ class CategoryCrudController extends CrudController
             'limit' => 255,
         ]);
 
+        if (\Backpack\Store\app\Services\Store::isStorefrontEnabled()) {
+            $this->crud->addColumn([
+                'name' => 'admin_storefronts_label',
+                'label' => 'Storefronts',
+                'type' => 'model_function',
+                'function_name' => 'getAdminStorefrontsLabel',
+                'limit' => 255,
+            ]);
+        }
+
         $this->setupTagColumns();
 
         $this->listOperation();
@@ -274,6 +284,7 @@ class CategoryCrudController extends CrudController
                 'hint' => 'В выбранных странах товары этой категории и подкатегорий доступны только в физических магазинах',
                 'tab' => trans('backpack-store::category.tabs.main')
             ],
+            ...$this->storefrontFields(),
             [
                 'name' => 'content',
                 'label' => 'Описание',
@@ -434,6 +445,24 @@ class CategoryCrudController extends CrudController
     protected function countryOptions(): array
     {
         return \Store::countryOptions();
+    }
+
+    protected function storefrontFields(): array
+    {
+        if (!\Backpack\Store\app\Services\Store::isStorefrontEnabled()) {
+            return [];
+        }
+
+        return [[
+            'name' => 'storefronts',
+            'label' => 'Storefronts',
+            'type' => 'select2_from_array',
+            'allows_multiple' => true,
+            'options' => \Backpack\Store\app\Services\Store::storefrontOptions(),
+            'allows_null' => true,
+            'hint' => 'Пусто — используется storefront по умолчанию для неразмеченных веток.',
+            'tab' => trans('backpack-store::category.tabs.main'),
+        ]];
     }
     
     /**

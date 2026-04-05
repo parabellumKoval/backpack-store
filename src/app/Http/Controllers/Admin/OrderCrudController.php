@@ -271,6 +271,18 @@ class OrderCrudController extends CrudController
         }
       }
 
+      if (\Store::isStorefrontEnabled()) {
+        CRUD::addFilter([
+          'name'  => 'storefront_code',
+          'type'  => 'dropdown',
+          'label' => 'Storefront',
+        ], function () {
+          return \Store::storefrontOptions();
+        }, function ($value) {
+          CRUD::addClause('where', 'storefront_code', $value);
+        });
+      }
+
 
 
       $this->crud->addColumn([
@@ -288,6 +300,15 @@ class OrderCrudController extends CrudController
           'name' => 'country_code',
           'label' => 'Страна',
           'type' => 'country_flag_label',
+        ]);
+      }
+
+      if (\Store::isStorefrontEnabled()) {
+        $this->crud->addColumn([
+          'name' => 'storefront_code',
+          'label' => 'Storefront',
+          'type' => 'select_from_array',
+          'options' => \Store::storefrontOptions(),
         ]);
       }
 
@@ -456,6 +477,19 @@ class OrderCrudController extends CrudController
         'type' => 'select2_from_array',
         'options' => \Store::countryOptions(),
         'wrapper' => [ 
+          'class' => 'form-group col-md-4'
+        ]
+      ]);
+    }
+
+    if (\Store::isStorefrontEnabled()) {
+      $this->crud->addField([
+        'name' => 'storefront_code',
+        'label' => 'Storefront',
+        'type' => 'select2_from_array',
+        'options' => \Store::storefrontOptions(),
+        'default' => \Store::defaultStorefront(),
+        'wrapper' => [
           'class' => 'form-group col-md-4'
         ]
       ]);
@@ -795,6 +829,15 @@ class OrderCrudController extends CrudController
         'type' => 'select_from_array',
         'options' => $this->status['delivery']
       ]);
+
+      if (\Store::isStorefrontEnabled()) {
+        $this->crud->addColumn([
+          'name' => 'storefront_code',
+          'label' => 'Storefront',
+          'type' => 'select_from_array',
+          'options' => \Store::storefrontOptions()
+        ]);
+      }
       
       $this->crud->addColumn([
         'name' => 'info',

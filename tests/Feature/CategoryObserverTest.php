@@ -92,7 +92,7 @@ class CategoryObserverTest extends TestCase
             }
         };
 
-        foreach (['countries', 'store_only_countries', 'parent_id'] as $field) {
+        foreach (['countries', 'store_only_countries', 'storefronts', 'parent_id'] as $field) {
             $category = Mockery::mock(Category::class);
             $category->shouldReceive('getAttribute')->with('id')->andReturn(2);
             $category->shouldReceive('getAttribute')->with('slug')->andReturn('osnovnoe');
@@ -101,6 +101,6 @@ class CategoryObserverTest extends TestCase
             $observer->saved($category);
         }
 
-        $this->assertSame(3, $observer->touchCalls);
+        $this->assertSame(4, $observer->touchCalls);
     }
 }
