@@ -211,7 +211,8 @@ class FilterEngine
     {
         $query = DB::table('ak_catalog as c')
             ->select('c.product_id')
-            ->where('c.country_code', $context->country);
+            ->where('c.country_code', $context->country)
+            ->where('c.storefront_code', $context->storefront);
 
         $query->where('c.is_available', 1);
 
@@ -306,7 +307,8 @@ class FilterEngine
         $query = DB::table('ak_product_tag as t')
             ->join('ak_catalog as c', function ($join) use ($context) {
                 $join->on('c.product_id', '=', 't.product_id')
-                    ->where('c.country_code', '=', $context->country);
+                    ->where('c.country_code', '=', $context->country)
+                    ->where('c.storefront_code', '=', $context->storefront);
                 if ($this->catalogHasVisible()) {
                     $join->where('c.is_visible', '=', 1);
                 } else {
@@ -341,7 +343,8 @@ class FilterEngine
         $query = DB::table('ak_catalog_attr as ca')
             ->join('ak_catalog as c', function ($join) use ($context) {
                 $join->on('ca.group_id', '=', 'c.group_id')
-                     ->where('c.country_code', '=', $context->country);
+                     ->where('c.country_code', '=', $context->country)
+                     ->where('c.storefront_code', '=', $context->storefront);
                 if ($this->catalogHasVisible()) {
                     $join->where('c.is_visible', '=', 1);
                 } else {
@@ -349,6 +352,7 @@ class FilterEngine
                 }
             })
             ->where('ca.country_code', $context->country)
+            ->where('ca.storefront_code', $context->storefront)
             ->select('c.product_id');
 
         if ($restrict) {

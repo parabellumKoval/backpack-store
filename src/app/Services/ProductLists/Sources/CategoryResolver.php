@@ -116,7 +116,7 @@ class CategoryResolver implements SourceResolver
             $query->whereNotIn(DB::raw('COALESCE(p.parent_id, p.id)'), $excludedBaseIds);
         }
 
-        $this->availabilityGate->applyQueryFilter($query, $context->country);
+        $this->availabilityGate->applyQueryFilter($query, $context->country, $context->storefront);
 
         if ($limit !== null && $limit > 0) {
             $query->limit($limit);

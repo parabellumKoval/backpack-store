@@ -16,6 +16,7 @@ class CatalogFilterService extends AbstractFilterService
     protected $query;
     protected Request $request;
     protected string $country;
+    protected string $storefront;
     protected $product_service;
 
     protected string $itemsTableName = 'c';
@@ -23,6 +24,7 @@ class CatalogFilterService extends AbstractFilterService
     public function __construct(Request $request, CatalogQueryService $productService)
     {
         $this->country = \Store::context()->country;
+        $this->storefront = \Store::storefront();
 
         $this->product_service = $productService;
         $this->request = $request;
@@ -91,6 +93,7 @@ class CatalogFilterService extends AbstractFilterService
     protected function calculateAllAttributes($product_query): array
     {
         $country = $this->country;
+        $storefront = $this->storefront;
 
         // Срез текущих вариантов и групп из каталога (alias: c)
         $pSub = DB::query()->fromSub(
@@ -108,6 +111,7 @@ class CatalogFilterService extends AbstractFilterService
         $discVar = DB::table('ak_catalog_attr as a')
             ->joinSub($pSub, 'p', 'p.product_id', '=', 'a.product_id')
             ->where('a.country_code', $country)
+            ->where('a.storefront_code', $storefront)
             ->whereNotNull('a.attribute_value_id')
             ->select([
                 'a.attribute_id',
@@ -118,6 +122,7 @@ class CatalogFilterService extends AbstractFilterService
         $discGrp = DB::table('ak_catalog_attr as a')
             ->joinSub($gSub, 'g', 'g.group_id', '=', 'a.group_id')
             ->where('a.country_code', $country)
+            ->where('a.storefront_code', $storefront)
             ->whereNull('a.product_id') // групповые
             ->whereNotNull('a.attribute_value_id')
             ->select([
@@ -148,6 +153,7 @@ class CatalogFilterService extends AbstractFilterService
         $numVar = DB::table('ak_catalog_attr as a')
             ->joinSub($pSub, 'p', 'p.product_id', '=', 'a.product_id')
             ->where('a.country_code', $country)
+            ->where('a.storefront_code', $storefront)
             ->whereNull('a.attribute_value_id')
             ->whereNotNull('a.value')
             ->select([
@@ -158,6 +164,7 @@ class CatalogFilterService extends AbstractFilterService
         $numGrp = DB::table('ak_catalog_attr as a')
             ->joinSub($gSub, 'g', 'g.group_id', '=', 'a.group_id')
             ->where('a.country_code', $country)
+            ->where('a.storefront_code', $storefront)
             ->whereNull('a.product_id')
             ->whereNull('a.attribute_value_id')
             ->whereNotNull('a.value')
@@ -190,6 +197,7 @@ class CatalogFilterService extends AbstractFilterService
     protected function calculateSingleAttribute($product_query, $active_attr): array
     {
         $country = $this->country;
+        $storefront = $this->storefront;
         $attrId  = (int)($active_attr['attr_id'] ?? 0);
 
         $pSub = DB::query()->fromSub(
@@ -206,6 +214,7 @@ class CatalogFilterService extends AbstractFilterService
             $numVar = DB::table('ak_catalog_attr as a')
                 ->joinSub($pSub, 'p', 'p.product_id', '=', 'a.product_id')
                 ->where('a.country_code', $country)
+                ->where('a.storefront_code', $storefront)
                 ->where('a.attribute_id', $attrId)
                 ->whereNull('a.attribute_value_id')
                 ->whereNotNull('a.value')
@@ -214,6 +223,7 @@ class CatalogFilterService extends AbstractFilterService
             $numGrp = DB::table('ak_catalog_attr as a')
                 ->joinSub($gSub, 'g', 'g.group_id', '=', 'a.group_id')
                 ->where('a.country_code', $country)
+                ->where('a.storefront_code', $storefront)
                 ->whereNull('a.product_id')
                 ->where('a.attribute_id', $attrId)
                 ->whereNull('a.attribute_value_id')
@@ -237,6 +247,7 @@ class CatalogFilterService extends AbstractFilterService
         $discVar = DB::table('ak_catalog_attr as a')
             ->joinSub($pSub, 'p', 'p.product_id', '=', 'a.product_id')
             ->where('a.country_code', $country)
+            ->where('a.storefront_code', $storefront)
             ->where('a.attribute_id', $attrId)
             ->whereNotNull('a.attribute_value_id')
             ->select(['a.attribute_value_id','a.group_id']);
@@ -244,6 +255,7 @@ class CatalogFilterService extends AbstractFilterService
         $discGrp = DB::table('ak_catalog_attr as a')
             ->joinSub($gSub, 'g', 'g.group_id', '=', 'a.group_id')
             ->where('a.country_code', $country)
+            ->where('a.storefront_code', $storefront)
             ->whereNull('a.product_id')
             ->where('a.attribute_id', $attrId)
             ->whereNotNull('a.attribute_value_id')
@@ -286,12 +298,14 @@ class CatalogFilterService extends AbstractFilterService
         $discVar = DB::table('ak_catalog_attr as ca')
             ->joinSub($pSub, 'p', 'p.product_id', '=', 'ca.product_id')
             ->where('ca.country_code', $this->country)
+            ->where('ca.storefront_code', $this->storefront)
             ->whereNotNull('ca.attribute_value_id')
             ->select('ca.attribute_id', 'ca.attribute_value_id', 'ca.group_id');
 
         $discGrp = DB::table('ak_catalog_attr as ca')
             ->joinSub($gSub, 'g', 'g.group_id', '=', 'ca.group_id')
             ->where('ca.country_code', $this->country)
+            ->where('ca.storefront_code', $this->storefront)
             ->whereNull('ca.product_id') // групповые
             ->whereNotNull('ca.attribute_value_id')
             ->select('ca.attribute_id', 'ca.attribute_value_id', 'ca.group_id');
@@ -352,6 +366,7 @@ class CatalogFilterService extends AbstractFilterService
         $numVar = DB::table('ak_catalog_attr as ca')
             ->joinSub($pSub, 'p', 'p.product_id', '=', 'ca.product_id')
             ->where('ca.country_code', $this->country)
+            ->where('ca.storefront_code', $this->storefront)
             ->whereNull('ca.attribute_value_id')
             ->whereNotNull('ca.value')
             ->select('ca.attribute_id');
@@ -359,6 +374,7 @@ class CatalogFilterService extends AbstractFilterService
         $numGrp = DB::table('ak_catalog_attr as ca')
             ->joinSub($gSub, 'g', 'g.group_id', '=', 'ca.group_id')
             ->where('ca.country_code', $this->country)
+            ->where('ca.storefront_code', $this->storefront)
             ->whereNull('ca.product_id')    // групповые
             ->whereNull('ca.attribute_value_id')
             ->whereNotNull('ca.value')

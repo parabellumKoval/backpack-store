@@ -49,6 +49,7 @@ class BrandResolver implements SourceResolver
             $rows = $this->fetchBrandProducts(
                 $brandId,
                 $context->country,
+                $context->storefront,
                 $perAnchorLimit,
                 $anchorBaseIds
             );
@@ -79,11 +80,12 @@ class BrandResolver implements SourceResolver
         return $brandId ? (int) $brandId : null;
     }
 
-    protected function fetchBrandProducts(int $brandId, string $country, ?int $limit, array $excludedBaseIds)
+    protected function fetchBrandProducts(int $brandId, string $country, string $storefront, ?int $limit, array $excludedBaseIds)
     {
         $query = DB::table('ak_catalog as c')
             ->join('ak_products as p', 'p.id', '=', 'c.product_id')
             ->where('c.country_code', $country)
+            ->where('c.storefront_code', $storefront)
             ->where('c.brand_id', $brandId)
             ->orderByDesc('c.product_id');
 

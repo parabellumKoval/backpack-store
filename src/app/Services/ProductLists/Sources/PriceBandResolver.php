@@ -36,7 +36,7 @@ class PriceBandResolver implements SourceResolver
         $anchorBaseIds = $this->mapIdsToBase($anchors->ids, $anchorBaseMap);
         $anchorBaseLookup = $this->baseLookup($anchorBaseIds);
 
-        $anchorPrices = $this->anchorPrices($anchors->ids, $context->country);
+        $anchorPrices = $this->anchorPrices($anchors->ids, $context->country, $context->storefront);
         if (empty($anchorPrices)) {
             return new SourceResult($definition, []);
         }
@@ -57,6 +57,7 @@ class PriceBandResolver implements SourceResolver
 
         $candidates = $this->fetchCandidates(
             $context->country,
+            $context->storefront,
             $anchorBaseIds,
             $reference,
             $minPrice,
@@ -74,10 +75,11 @@ class PriceBandResolver implements SourceResolver
         return new SourceResult($definition, $candidates);
     }
 
-    protected function anchorPrices(array $anchorIds, string $country): array
+    protected function anchorPrices(array $anchorIds, string $country, string $storefront): array
     {
         return DB::table('ak_catalog')
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->whereIn('product_id', $anchorIds)
             ->pluck('price')
             ->filter(fn($value) => $value !== null)
@@ -106,6 +108,7 @@ class PriceBandResolver implements SourceResolver
 
     protected function fetchCandidates(
         string $country,
+        string $storefront,
         array $anchorBaseIds,
         float $reference,
         float $minPrice,
@@ -116,6 +119,7 @@ class PriceBandResolver implements SourceResolver
         $query = DB::table('ak_catalog as c')
             ->join('ak_products as p', 'p.id', '=', 'c.product_id')
             ->where('c.country_code', $country)
+            ->where('c.storefront_code', $storefront)
             ->where('c.price', '>=', $minPrice);
 
         if (!empty($anchorBaseIds)) {

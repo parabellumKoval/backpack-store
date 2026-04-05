@@ -9,6 +9,7 @@ class ListRequestContext
     public function __construct(
         public readonly string $page,
         public readonly string $country,
+        public readonly string $storefront,
         public readonly string $lang,
         public readonly ?AnchorSelection $anchors = null,
         public readonly ?int $capacityOverride = null,
@@ -22,6 +23,7 @@ class ListRequestContext
         return new self(
             $this->page,
             $this->country,
+            $this->storefront,
             $this->lang,
             $this->anchors,
             $capacityOverride ?? $this->capacityOverride,

@@ -16,10 +16,11 @@ class SearchService
             'dress.search.only_in_stock',
             config('dress.search.only_in_stock', true)
         );
+        $storefront = \Store::storefront();
 
         $driver = \Settings::get('dress.search.driver', 'meilisearch');
         if (!\Settings::get('dress.search.enabled', false) || $driver !== 'meilisearch') {
-            return $this->dbFallback($q, $countryCode, $perPage, $onlyInStock);
+            return $this->dbFallback($q, $countryCode, $perPage, $onlyInStock, $storefront);
         }
 
         $started = microtime(true);
@@ -29,7 +30,7 @@ class SearchService
         $norm = app(QueryNormalizer::class)->variants($q, $locale);
 
         $builder = Catalog::search($norm[0]);
-        $this->applyDefaultOptions($builder, $locale, $onlyInStock);
+        $this->applyDefaultOptions($builder, $locale, $onlyInStock, $countryCode, $storefront);
         
         // ранжирование/сортировка — по настройкам
         if ($sort = \Settings::get('dress.search.ranking.sort', [])) {
@@ -47,7 +48,7 @@ class SearchService
         if ($page->total() === 0 && count($norm) > 1) {
             foreach (array_slice($norm, 1) as $alt) {
                 $altBuilder = Catalog::search($alt);
-                $this->applyDefaultOptions($altBuilder, $locale, $onlyInStock);
+                $this->applyDefaultOptions($altBuilder, $locale, $onlyInStock, $countryCode, $storefront);
                 
                 $page = $altBuilder->paginate($perPage);
                 if ($page->total() > 0) {
@@ -84,10 +85,13 @@ class SearchService
     }
 
 
-    protected function dbFallback(string $q, string $country, int $perPage, bool $onlyInStock): array
+    protected function dbFallback(string $q, string $country, int $perPage, bool $onlyInStock, string $storefront): array
     {
         $locale = $this->countryToLocale($country);
-        $query = Catalog::query()->where('country_code', $country)->where('is_available', 1);
+        $query = Catalog::query()
+            ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
+            ->where('is_available', 1);
 
         if ($onlyInStock) {
             $query->where('in_stock', '>', 0);
@@ -109,7 +113,7 @@ class SearchService
         return ['meta' => $this->meta($page), 'data' => $page->items()];
     }
 
-    protected function applyDefaultOptions(Builder $builder, string $locale, bool $onlyInStock): void
+    protected function applyDefaultOptions(Builder $builder, string $locale, bool $onlyInStock, string $country, string $storefront): void
     {
         $options = $builder->options ?? [];
 
@@ -125,6 +129,9 @@ class SearchService
         if ($onlyInStock) {
             $options['filter'] = $this->mergeFilters($options['filter'] ?? null, 'in_stock > 0');
         }
+
+        $options['filter'] = $this->mergeFilters($options['filter'] ?? null, 'country_code = "'.$country.'"');
+        $options['filter'] = $this->mergeFilters($options['filter'] ?? null, 'storefront_code = "'.$storefront.'"');
 
         if (!empty($options)) {
             $builder->options($options);

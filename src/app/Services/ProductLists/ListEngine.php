@@ -54,14 +54,22 @@ class ListEngine
 
         $items = $this->deduplicate($items);
 
-        $allowed = $this->availabilityGate->allowedIds(array_map(fn($i) => $i->productId, $items), $context->country);
+        $allowed = $this->availabilityGate->allowedIds(
+            array_map(fn($i) => $i->productId, $items),
+            $context->country,
+            $context->storefront
+        );
         $allowedSet = array_fill_keys($allowed, true);
         $items = array_values(array_filter($items, fn($item) => isset($allowedSet[$item->productId])));
 
         $listFilters = is_array($list->filters) ? $list->filters : [];
         $items = $this->applyListFilters($items, $listFilters, $context);
 
-        $catalogRows = $this->hydrator->fetchCatalogRows(array_map(fn($i) => $i->productId, $items), $context->country);
+        $catalogRows = $this->hydrator->fetchCatalogRows(
+            array_map(fn($i) => $i->productId, $items),
+            $context->country,
+            $context->storefront
+        );
 
         $sortOrder = $list->sort_order;
         if (!is_array($sortOrder)) {
@@ -83,7 +91,12 @@ class ListEngine
             $items = array_slice($items, $offset, $context->perPage);
         }
 
-        $hydrated = $this->hydrator->hydrate(array_map(fn($i) => $i->productId, $items), $context->country, $context->lang);
+        $hydrated = $this->hydrator->hydrate(
+            array_map(fn($i) => $i->productId, $items),
+            $context->country,
+            $context->storefront,
+            $context->lang
+        );
 
         return [
             'items' => $hydrated,

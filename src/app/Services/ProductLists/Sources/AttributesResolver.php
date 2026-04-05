@@ -98,9 +98,11 @@ class AttributesResolver implements SourceResolver
             ->join('ak_catalog_attr as ca', function ($join) use ($attributeId, $context) {
                 $join->on('ca.group_id', '=', 'c.group_id')
                      ->where('ca.country_code', '=', $context->country)
+                     ->where('ca.storefront_code', '=', $context->storefront)
                      ->where('ca.attribute_id', '=', $attributeId);
             })
             ->where('c.country_code', $context->country)
+            ->where('c.storefront_code', $context->storefront)
             ->whereIn(DB::raw('COALESCE(p.parent_id, p.id)'), $anchorBaseIds)
             ->select('ca.attribute_value_id', 'ca.value')
             ->get();

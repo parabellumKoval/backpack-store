@@ -19,6 +19,7 @@ class CreateAkCatalogTable extends Migration
             $t->unsignedBigInteger('product_id');                 // всегда child (модификация)
             $t->unsignedBigInteger('group_id');                   // parent_id ?: product_id
             $t->string('country_code', 2);                        // ISO Alpha-2
+            $t->string('storefront_code', 64)->default('main');   // storefront cache partition
             $t->string('currency_code', 3);                       // ISO 4217 (валюта цены)
 
             $t->enum('item_type', ['s', 'm'])->default('s');                // s - simple, m - modification
@@ -54,11 +55,11 @@ class CreateAkCatalogTable extends Migration
             
             // Ключи/индексы
             // $t->primary(['product_id', 'country_code']);
-            $t->unique(['product_id', 'country_code'], 'ak_catalog_unique_product_country');
-            $t->index(['country_code', 'is_available', 'price'], 'akc_country_cat_price');
-            $t->index(['country_code', 'brand_id', 'is_available'], 'akc_country_brand');
-            $t->index(['country_code', 'group_id', 'is_available', 'price'], 'akc_country_group_price');
-            $t->index(['country_code', 'is_available', 'in_stock'], 'akc_country_stock');
+            $t->unique(['product_id', 'country_code', 'storefront_code'], 'ak_catalog_unique_product_country_storefront');
+            $t->index(['country_code', 'storefront_code', 'is_available', 'price'], 'akc_country_storefront_price');
+            $t->index(['country_code', 'storefront_code', 'brand_id', 'is_available'], 'akc_country_storefront_brand');
+            $t->index(['country_code', 'storefront_code', 'group_id', 'is_available', 'price'], 'akc_country_storefront_group_price');
+            $t->index(['country_code', 'storefront_code', 'is_available', 'in_stock'], 'akc_country_storefront_stock');
         });
     }
 

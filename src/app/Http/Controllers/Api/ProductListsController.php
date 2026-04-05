@@ -20,6 +20,7 @@ class ProductListsController extends Controller
     public function index(Request $request, string $page, ListEngine $engine)
     {
         $country = (string) ($request->query('country') ?: \Store::country());
+        $storefront = (string) \Store::storefront();
         $lang = (string) ($request->query('lang') ?: app()->getLocale());
         $capacityOverride = $this->queryInt($request, 'capacity_override');
         $pageNumber = $this->queryInt($request, 'page');
@@ -30,6 +31,7 @@ class ProductListsController extends Controller
         $context = new ListRequestContext(
             $page,
             $country,
+            $storefront,
             $lang,
             $anchors,
             $capacityOverride,
@@ -57,6 +59,7 @@ class ProductListsController extends Controller
     public function show(Request $request, string $page, string $slug, ListEngine $engine)
     {
         $country = (string) ($request->query('country') ?: \Store::country());
+        $storefront = (string) \Store::storefront();
         $lang = (string) ($request->query('lang') ?: app()->getLocale());
         $capacityOverride = $this->queryInt($request, 'capacity_override');
         $pageNumber = $this->queryInt($request, 'page');
@@ -73,6 +76,7 @@ class ProductListsController extends Controller
         $context = new ListRequestContext(
             $page,
             $country,
+            $storefront,
             $lang,
             $anchors,
             $capacityOverride,

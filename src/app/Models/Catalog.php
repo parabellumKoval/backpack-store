@@ -117,6 +117,13 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
       return $q->where('is_available', 1);
     }
 
+    public function scopeForStorefront(Builder $query, ?string $storefront = null): Builder
+    {
+        $resolved = \Store::normalizeStorefrontCode($storefront ?? \Store::storefront()) ?? \Store::defaultStorefront();
+
+        return $query->where($query->getModel()->getTable().'.storefront_code', $resolved);
+    }
+
     public function scopeReviewableAvailability(Builder $query, array $context = []): Builder
     {
         $table = $query->getModel()->getTable();
@@ -128,6 +135,9 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         if ($country) {
             $query->where("{$table}.country_code", mb_strtolower($country));
         }
+
+        $storefront = $context['storefront'] ?? null;
+        $query->where("{$table}.storefront_code", \Store::normalizeStorefrontCode($storefront ?? \Store::storefront()) ?? \Store::defaultStorefront());
 
         return $query;
     }
@@ -164,6 +174,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
     {
         return $this->hasMany(self::class, 'group_id', 'group_id')
             ->where('country_code', $this->country_code)
+            ->where('storefront_code', $this->storefront_code)
             ->where('is_available', 1);
     }
 

@@ -24,7 +24,7 @@ class ManualListItemsResolver implements SourceResolver
             return new SourceResult($definition, []);
         }
 
-        $items = $this->filterByCatalogAvailability($items, $context->country);
+        $items = $this->filterByCatalogAvailability($items, $context->country, $context->storefront);
 
         $limit = (int) ($definition->param('limit') ?? $definition->param('capacity') ?? 0);
         if ($limit > 0) {
@@ -65,7 +65,7 @@ class ManualListItemsResolver implements SourceResolver
         );
     }
 
-    protected function filterByCatalogAvailability(array $items, string $country): array
+    protected function filterByCatalogAvailability(array $items, string $country, string $storefront): array
     {
         $productIds = array_values(array_unique(array_map(fn(ResolvedItem $item) => $item->productId, $items)));
         if (empty($productIds)) {
@@ -74,6 +74,7 @@ class ManualListItemsResolver implements SourceResolver
 
         $availableIds = Catalog::query()
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->where('is_available', 1)
             ->whereIn('product_id', $productIds)
             ->pluck('product_id')

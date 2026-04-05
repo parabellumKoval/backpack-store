@@ -14,7 +14,7 @@ class ProductHydrator
       self::resources_init();
     }
 
-    public function fetchCatalogRows(array $ids, string $country): array
+    public function fetchCatalogRows(array $ids, string $country, string $storefront): array
     {
         $ids = array_values(array_unique(array_map('intval', $ids)));
         if (empty($ids)) {
@@ -23,17 +23,18 @@ class ProductHydrator
 
         return Catalog::query()
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->whereIn('product_id', $ids)
             ->get()
             ->keyBy('product_id')
             ->all();
     }
 
-    public function hydrate(array $ids, string $country, string $lang) {
+    public function hydrate(array $ids, string $country, string $storefront, string $lang) {
         if (empty($ids)) {
             return [];
         }
-        $rowsById = $this->fetchCatalogRows($ids, $country);
+        $rowsById = $this->fetchCatalogRows($ids, $country, $storefront);
 
         // Preserve sorting resolved by ListEngine.
         $orderedRows = [];

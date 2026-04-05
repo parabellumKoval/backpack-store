@@ -29,6 +29,8 @@ class UpsellService
             return collect();
         }
 
+        $storefront = \Store::storefront();
+
         $placements = (array) Settings::get('dress.upsell.placements', [
             'mini_cart' => 8, 'cart' => 12, 'checkout' => 12,
         ]);
@@ -47,7 +49,7 @@ class UpsellService
             $candidates = $this->fetchFrom($source, $anchors, $country, $kind, $capacity);
 
             // доступность в стране (батчем)
-            $available = $this->availableInCountry($candidates, $country);
+            $available = $this->availableInCountry($candidates, $country, $storefront);
 
             // логика up (дороже)
             $filtered = [];
@@ -57,7 +59,7 @@ class UpsellService
                 if (in_array($pid, $anchors, true)) continue;
 
                 if ($kind === 'up' && Settings::get('dress.upsell.only_more_expensive', false)) {
-                    if (!$this->isMoreExpensive($pid, $anchors, $country)) continue;
+                    if (!$this->isMoreExpensive($pid, $anchors, $country, $storefront)) continue;
                 }
 
                 $filtered[] = $pid;
@@ -70,7 +72,7 @@ class UpsellService
             }
         }
 
-        return $this->hydrate($results, $country);
+        return $this->hydrate($results, $country, $storefront);
     }
 
     /** Возвращает отсортированный список кандидатов для источника. */
@@ -168,11 +170,12 @@ class UpsellService
     }
 
     /** Карта доступных в стране product_id => true (ak_catalog). */
-    protected function availableInCountry(array $ids, string $country): array
+    protected function availableInCountry(array $ids, string $country, string $storefront): array
     {
         if (!$ids) return [];
         $list = DB::table('ak_catalog')
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->where('is_visible', 1)
             ->whereIn('product_id', $ids)
             ->pluck('product_id')
@@ -181,13 +184,14 @@ class UpsellService
     }
 
     /** Проверка «дороже якоря» для up-sell: price(candidate) >= max(anchorPrice) * factor */
-    protected function isMoreExpensive(int $candidateId, array $anchors, string $country): bool
+    protected function isMoreExpensive(int $candidateId, array $anchors, string $country, string $storefront): bool
     {
         $factor = (float) Settings::get('dress.upsell.more_expensive_factor', 1.0);
         if ($factor <= 1.0) return true; // включено, но фактор не повышает — пропускаем
 
         $anchorMax = DB::table('ak_catalog')
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->whereIn('product_id', $anchors)
             ->max('price');
 
@@ -195,6 +199,7 @@ class UpsellService
 
         $candidate = DB::table('ak_catalog')
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->where('product_id', $candidateId)
             ->value('price');
 
@@ -204,12 +209,13 @@ class UpsellService
     }
 
     /** Возвращаем карточки из ak_catalog в том же порядке, что и ids. */
-    protected function hydrate(array $ids, string $country): Collection
+    protected function hydrate(array $ids, string $country, string $storefront): Collection
     {
         if (!$ids) return collect();
 
         $rows = DB::table('ak_catalog')
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->whereIn('product_id', $ids)
             ->select('product_id','title','slug','price','old_price','image_main','in_stock')
             ->get()

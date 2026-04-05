@@ -21,6 +21,7 @@ class CatalogQueryService extends AbstractQueryService
 {
     protected Request $request;
     protected string $country;
+    protected string $storefront;
     protected $query;
     protected array $visibleCategoryIds = [];
 
@@ -28,10 +29,13 @@ class CatalogQueryService extends AbstractQueryService
     {
         $this->request = $request;
         $this->country = \Store::context()->country;
+        $this->storefront = \Store::storefront();
     }
 
     public function setRequest(Request $request): static {
         $this->request = $request;
+        $this->country = \Store::context()->country;
+        $this->storefront = \Store::storefront();
         return $this;
     }
 
@@ -42,6 +46,7 @@ class CatalogQueryService extends AbstractQueryService
 
         $this->query = DB::table('ak_catalog as c')
             ->where('c.country_code', $this->country)
+            ->where('c.storefront_code', $this->storefront)
             ->where('c.is_available', 1);
 
         if (empty($this->visibleCategoryIds)) {
@@ -170,11 +175,13 @@ class CatalogQueryService extends AbstractQueryService
         }
         if (in_array('top_sales', $sel, true)) {
             $country = $this->country;
-            $this->query->whereIn('c.group_id', function ($sub) use ($salesMin, $country) {
+            $storefront = $this->storefront;
+            $this->query->whereIn('c.group_id', function ($sub) use ($salesMin, $country, $storefront) {
                 $sub->select('cat.group_id')
                     ->from('ak_catalog as cat')
                     ->join('ak_order_product as op', 'op.product_id', '=', 'cat.product_id')
                     ->where('cat.country_code', $country)
+                    ->where('cat.storefront_code', $storefront)
                     ->groupBy('cat.group_id')
                     ->havingRaw('SUM(op.amount) >= ?', [$salesMin]);
             });
@@ -251,13 +258,15 @@ class CatalogQueryService extends AbstractQueryService
         if (empty($byAttr)) return $this;
 
         $country = $this->country;
+        $storefront = $this->storefront;
 
-        $this->query->whereExists(function ($outer) use ($country, $byAttr, $except_attribute_id) {
+        $this->query->whereExists(function ($outer) use ($country, $storefront, $byAttr, $except_attribute_id) {
             // Ищем модификацию c2 в той же группе, что и строка catalog 'c'
             $outer->selectRaw('1')
                 ->from('ak_catalog as c2')
                 ->whereColumn('c2.group_id', 'c.group_id')
                 ->where('c2.country_code', $country)
+                ->where('c2.storefront_code', $storefront)
                 ->where('c2.is_available', 1);
 
             // Для КАЖДОГО правила должно существовать подходящее значение в ak_catalog_attr
@@ -266,10 +275,11 @@ class CatalogQueryService extends AbstractQueryService
                     continue;
                 }
                         
-                $outer->whereExists(function ($sub) use ($country, $attrId, $rule) {
+                $outer->whereExists(function ($sub) use ($country, $storefront, $attrId, $rule) {
                     $sub->selectRaw('1')
                         ->from('ak_catalog_attr as a')
                         ->where('a.country_code', $country)
+                        ->where('a.storefront_code', $storefront)
                         ->whereColumn('a.group_id', 'c2.group_id')
                         ->where('a.attribute_id', $attrId)
                         ->where(function ($w) {
@@ -534,6 +544,7 @@ class CatalogQueryService extends AbstractQueryService
     {
         $rows = DB::table('ak_catalog as c')
             ->where('c.country_code', $this->country)
+            ->where('c.storefront_code', $this->storefront)
             ->where('c.is_available', 1)
             ->whereIn('c.group_id', $groupIds)
             ->get(['c.*']);

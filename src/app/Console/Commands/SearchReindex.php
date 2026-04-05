@@ -46,17 +46,24 @@ class SearchReindex extends Command
             
             // Получаем валюту для данной страны
             $currency = \Store::countryCurrency($code) ?? \Store::currency();
-            
-            // Устанавливаем контекст для правильного создания индекса
-            \Store::withContext($code, $currency, function () use ($code) {
-                Catalog::query()
-                    ->where('country_code', $code)
-                    ->where('is_available', 1)
-                    ->orderBy('id')
-                    ->chunkById(1000, function ($chunk) {
-                        $chunk->searchable();
-                    });
-            });
+
+            $storefronts = array_keys(\Store::storefronts());
+            if (empty($storefronts)) {
+                $storefronts = [\Store::defaultStorefront()];
+            }
+
+            foreach ($storefronts as $storefront) {
+                \Store::withContext($code, $currency, function () use ($code, $storefront) {
+                    Catalog::query()
+                        ->where('country_code', $code)
+                        ->where('storefront_code', $storefront)
+                        ->where('is_available', 1)
+                        ->orderBy('id')
+                        ->chunkById(1000, function ($chunk) {
+                            $chunk->searchable();
+                        });
+                }, $storefront);
+            }
         }
 
         $this->info('Готово.');

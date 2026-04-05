@@ -19,11 +19,13 @@ class RebuildCatalogCacheJob implements ShouldQueue, ShouldBeUniqueUntilProcessi
     public int $timeout = 0; // не ограничиваем время фоновой пересборки
 
     protected ?array $countries;
+    protected ?array $storefronts;
     protected int $chunk;
 
-    public function __construct(?array $countries = null, int $chunk = 1000)
+    public function __construct(?array $countries = null, int $chunk = 1000, ?array $storefronts = null)
     {
         $this->countries = $countries ?: null;
+        $this->storefronts = $storefronts ?: null;
         $this->chunk = $chunk;
 
         $this->afterCommit();
@@ -38,14 +40,15 @@ class RebuildCatalogCacheJob implements ShouldQueue, ShouldBeUniqueUntilProcessi
             }
             : null;
 
-        $builder->rebuildAll($this->countries, $this->chunk, $heartbeat);
+        $builder->rebuildAll($this->countries, $this->chunk, $heartbeat, $this->storefronts);
     }
 
     public function uniqueId(): string
     {
         $countryKey = $this->countries ? implode(',', $this->countries) : 'all';
+        $storefrontKey = $this->storefronts ? implode(',', $this->storefronts) : 'all';
 
-        return sprintf('catalog-rebuild:%s:%d', $countryKey, $this->chunk);
+        return sprintf('catalog-rebuild:%s:%s:%d', $countryKey, $storefrontKey, $this->chunk);
     }
 
     public function uniqueFor(): int

@@ -208,6 +208,7 @@ class CatalogController
     public function show(Request $request, $slug) {
 
         $region = $request->input('country');
+        $storefront = \Store::storefront();
         $visibleCategoryIds = \Backpack\Store\app\Models\Category::visibleIdsForContext($region, null, true);
 
         if (empty($visibleCategoryIds)) {
@@ -217,6 +218,7 @@ class CatalogController
         $product = Catalog::query()
             ->where('slug', $slug)
             ->where('country_code', $region)
+            ->where('storefront_code', $storefront)
             ->available()
             ->whereExists(function ($sub) use ($visibleCategoryIds) {
                 $sub->selectRaw('1')
@@ -230,6 +232,7 @@ class CatalogController
             ->firstOrFail();
         $availableRegions = Catalog::query()
             ->where('group_id', $product->group_id)
+            ->where('storefront_code', $storefront)
             ->where('is_available', 1)
             ->pluck('country_code')
             ->map(function ($code) {

@@ -21,8 +21,10 @@ trait SearchCatalogTrait {
 
         // $loc  = app()->getLocale();
         $this->country_code = \Store::context()->country;
+        $storefront = \Store::normalizeStorefrontCode($this->storefront_code ?? \Store::context()->storefront ?? \Store::storefront()) ?? \Store::defaultStorefront();
+        $this->storefront_code = $storefront;
 
-        return $base . '_' . $this->country_code;
+        return $base . '_' . $this->country_code . '_' . $storefront;
     }
 
     public function toSearchableArray(): array
@@ -48,10 +50,10 @@ trait SearchCatalogTrait {
     }
 
     public static function searchIndexBase(): string { return 'products'; }
-    public static function searchableAttributes(): array { return ['id', 'product_id', 'group_id', 'country_code', 'price', 'old_price', 'in_stock', 'brandName']; }
+    public static function searchableAttributes(): array { return ['id', 'product_id', 'group_id', 'country_code', 'storefront_code', 'price', 'old_price', 'in_stock', 'brandName']; }
     public static function searchableTranslatableAttributes(): array { return ['name', 'short_name',  'categories' => 'resolveCategoryNamesArray']; }
     // public static function searchableTranslatableAttributes(): array { return ['name','brand','category','attrs_text']; }
-    public static function filterableAttributes(): array { return ['in_stock','country_code','category_ids','brand_id']; }
+    public static function filterableAttributes(): array { return ['in_stock','country_code','storefront_code','category_ids','brand_id']; }
     public static function sortableAttributes(): array { return ['price','popularity','created_at']; }
     public static function distinctAttribute(): ?string { return null; }
     public static function searchRankingRules(): array {

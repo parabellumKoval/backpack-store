@@ -11,6 +11,7 @@ return new class extends Migration {
             $t->bigIncrements('id');
 
             $t->string('country_code', 8)->index();
+            $t->string('storefront_code', 64)->default('main')->index();
 
             // группа (id базового товара) и вариант (product_id модификации)
             $t->unsignedBigInteger('group_id')->index();
@@ -22,9 +23,9 @@ return new class extends Migration {
             $t->double('value')->nullable();                          // для number
 
             // индексы под EXISTS и фасеты
-            $t->index(['country_code','attribute_id','attribute_value_id','group_id'], 'ak_ca_idx_discrete');
-            $t->index(['country_code','attribute_id','value','group_id'], 'ak_ca_idx_number');
-            $t->index(['country_code','group_id'], 'ak_ca_idx_group');
+            $t->index(['country_code','storefront_code','attribute_id','attribute_value_id','group_id'], 'ak_ca_idx_discrete');
+            $t->index(['country_code','storefront_code','attribute_id','value','group_id'], 'ak_ca_idx_number');
+            $t->index(['country_code','storefront_code','group_id'], 'ak_ca_idx_group');
         });
     }
 

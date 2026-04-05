@@ -8,7 +8,7 @@ use Illuminate\Database\Query\Builder;
 class AvailabilityGate
 {
 
-    public function allowedIds(array $productIds, string $country, array $options = []): array
+    public function allowedIds(array $productIds, string $country, string $storefront, array $options = []): array
     {
         if (empty($productIds)) {
             return [];
@@ -16,6 +16,7 @@ class AvailabilityGate
 
         $query = DB::table('ak_catalog')
             ->where('country_code', $country)
+            ->where('storefront_code', $storefront)
             ->whereIn('product_id', $productIds);
 
         $query->where('is_available', 1);
@@ -31,10 +32,11 @@ class AvailabilityGate
         return $query->pluck('product_id')->toArray();
     }
 
-    public function applyQueryFilter(Builder $query, string $country, array $options = []): Builder
+    public function applyQueryFilter(Builder $query, string $country, string $storefront, array $options = []): Builder
     {
         $query
             ->where('c.country_code', $country)
+            ->where('c.storefront_code', $storefront)
             ->where('c.is_available', 1);
 
         if (!empty($options['only_in_stock'])) {
