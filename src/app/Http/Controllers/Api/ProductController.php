@@ -34,11 +34,11 @@ class ProductController extends \App\Http\Controllers\Controller
   protected $filterService;
   protected $productService;
 
-  protected $filters_data_exclude = ['with_filter_count', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache'];
-  protected $filters_count_exclude = ['with_filter', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache'];
+  protected $filters_data_exclude = ['with_filter_count', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache', 'resource'];
+  protected $filters_count_exclude = ['with_filter', 'with_products', 'with_sorting', 'page', 'per_page', 'order_by', 'order_dir', 'cache', 'resource'];
   protected $products_exclude = ['with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
 
-  protected $non_filters_exclude = ['page', 'per_page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache'];
+  protected $non_filters_exclude = ['page', 'per_page', 'order_by', 'order_dir', 'category_slug', 'brand_slug', 'with_filter', 'with_filter_count', 'with_products', 'with_sorting', 'cache', 'resource'];
 
   function __construct() {
 
@@ -232,7 +232,8 @@ class ProductController extends \App\Http\Controllers\Controller
    */
   public function show(Request $request, $slug) {
     $product = $this->product_class::where('slug', $slug)->available()->firstOrFail();
-    $product_resource = new self::$resources['product']['large']($product);
+    $resourceClass = self::resolveResourceClass('product', $request->input('resource'), 'large');
+    $product_resource = new $resourceClass($product);
     return response()->json($product_resource);
   }
   

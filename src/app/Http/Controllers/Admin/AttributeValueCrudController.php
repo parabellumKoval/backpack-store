@@ -50,6 +50,11 @@ class AttributeValueCrudController extends CrudController
         'name' => 'value',
         'label' => 'Значение',
       ]);
+
+      $this->crud->addColumn([
+       'name' => 'slug',
+       'label' => 'Slug',
+     ]);
       
       $this->crud->addColumn([
        'name' => 'attribute',
@@ -90,7 +95,16 @@ class AttributeValueCrudController extends CrudController
         $this->crud->addField([
           'name' => 'value',
           'label' => 'Значение',
-          'type' => 'text'
+          'type' => 'text',
+          'wrapper' => ['class' => 'form-group col-md-6']
+        ]);
+
+        $this->crud->addField([
+          'name' => 'slug',
+          'label' => 'Slug',
+          'type' => 'text',
+          'hint' => 'Если оставить пустым, slug будет сгенерирован автоматически',
+          'wrapper' => ['class' => 'form-group col-md-6']
         ]);
     }
     

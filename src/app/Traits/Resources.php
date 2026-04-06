@@ -10,6 +10,8 @@ trait Resources {
       'small' => '',
       'medium' => '',
       'large' => '',
+      'kratom_small' => '',
+      'kratom_large' => '',
       'cart' => '',
       'mod' => '',
     ],
@@ -46,6 +48,8 @@ trait Resources {
     self::$resources['product']['small'] = \Settings::get('dress.product.resource.small', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
     self::$resources['product']['medium'] = \Settings::get('dress.product.resource.medium', 'Backpack\Store\app\Http\Resources\ProductMediumResource');
     self::$resources['product']['large'] = \Settings::get('dress.product.resource.large', 'Backpack\Store\app\Http\Resources\ProductLargeResource');
+    self::$resources['product']['kratom_small'] = \Settings::get('dress.product.resource.kratom_small', 'Backpack\Store\app\Http\Resources\ProductKratomSmallResource');
+    self::$resources['product']['kratom_large'] = \Settings::get('dress.product.resource.kratom_large', 'Backpack\Store\app\Http\Resources\ProductKratomLargeResource');
     self::$resources['product']['cart'] = \Settings::get('dress.product.resource.cart', 'Backpack\Store\app\Http\Resources\ProductCartResource');
     self::$resources['product']['mod'] = \Settings::get('dress.product.resource.mod', 'Backpack\Store\app\Http\Resources\ProductModificationResource');
 
@@ -67,5 +71,23 @@ trait Resources {
 
     self::$resources['promocode']['small'] = \Settings::get('dress.promocode.resource.small', 'Backpack\Store\app\Http\Resources\PromocodeSmallResource');
     self::$resources['promocode']['large'] = \Settings::get('dress.promocode.resource.large', 'Backpack\Store\app\Http\Resources\PromocodeLargeResource');
+  }
+
+  protected static function resolveResourceClass(string $group, ?string $requestedKey = null, ?string $fallbackKey = null): string
+  {
+    self::resources_init();
+
+    $groupResources = self::$resources[$group] ?? [];
+    $normalizedKey = is_string($requestedKey) ? trim($requestedKey) : '';
+
+    if ($normalizedKey !== '' && !empty($groupResources[$normalizedKey])) {
+      return $groupResources[$normalizedKey];
+    }
+
+    $fallback = $fallbackKey && !empty($groupResources[$fallbackKey])
+      ? $fallbackKey
+      : array_key_first(array_filter($groupResources));
+
+    return $fallback ? $groupResources[$fallback] : '';
   }
 }

@@ -1096,21 +1096,35 @@ class Product extends Model implements HasCrudCardInterface
 
       $country = $this->normalizeCountryCode($countryCode ?? (\Store::context()->country ?? null));
       $current = $this->resolveRegionalizedTranslationsForProduct($this, $attribute, $country);
-
-      if ($this->translationsFilled($current)) {
-        return $current;
-      }
+      $fallback = [];
 
       if ($this->parent_id) {
         $parent = $this->relationLoaded('parent') ? $this->parent : $this->parent()->first();
         $fallback = $this->resolveRegionalizedTranslationsForProduct($parent, $attribute, $country);
-
-        if ($this->translationsFilled($fallback)) {
-          return $fallback;
-        }
       }
 
-      return $current ?: null;
+      $merged = $this->mergeTranslationArrays($current, $fallback);
+
+      return $merged ?: null;
+    }
+
+    public function getEffectiveTranslations(string $attribute): ?array
+    {
+      if (!method_exists($this, 'isTranslatableAttribute') || !$this->isTranslatableAttribute($attribute)) {
+        return null;
+      }
+
+      $current = $this->normalizeTranslationArray($this->getTranslations($attribute));
+      $fallback = [];
+
+      if ($this->parent_id) {
+        $parent = $this->relationLoaded('parent') ? $this->parent : $this->parent()->first();
+        $fallback = $parent ? $this->normalizeTranslationArray($parent->getTranslations($attribute)) : [];
+      }
+
+      $merged = $this->mergeTranslationArrays($current, $fallback);
+
+      return $merged ?: null;
     }
 
     public function getRegionalContentTranslationLocalesState(string $countryCode, string $attribute): array

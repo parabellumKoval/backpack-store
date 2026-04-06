@@ -15,7 +15,8 @@ class ProductCollection extends JsonResource
   {
     self::resources_init();
 
-    $this->resource_class = $options['resource_class'] ?? \Settings::get('dress.product.resource.small', 'Backpack\Store\app\Http\Resources\ProductSmallResource');
+    $requestedResource = request()?->input('resource');
+    $this->resource_class = $options['resource_class'] ?? self::resolveResourceClass('product', $requestedResource, 'small');
 
     $this->total = $resource->total();
     $this->last_page = $resource->lastPage();

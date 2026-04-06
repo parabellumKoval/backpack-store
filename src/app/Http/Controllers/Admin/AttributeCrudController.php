@@ -361,7 +361,13 @@ class AttributeCrudController extends CrudController
               'name'    => 'value',
               'type'    => 'text',
               'label'   => 'Значение',
-              'wrapper' => ['class' => 'form-group col-md-12'],
+              'wrapper' => ['class' => 'form-group col-md-6'],
+            ],
+            [
+              'name'    => 'slug',
+              'type'    => 'text',
+              'label'   => 'Slug',
+              'wrapper' => ['class' => 'form-group col-md-6'],
             ],
             [
               'name'    => 'transform',
@@ -511,6 +517,7 @@ class AttributeCrudController extends CrudController
         return [
           'id' => $item->id,
           'value' => $value,
+          'slug' => $item->slug,
           'transform' => $item->transform,
           'transform_value' => $item->transformValueString
         ];

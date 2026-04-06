@@ -247,7 +247,8 @@ class CatalogController
         }
 
         $product->setAttribute('available_regions', $availableRegions);
-        $product_resource = new self::$resources['product']['large']($product);
+        $resourceClass = self::resolveResourceClass('product', $request->input('resource'), 'large');
+        $product_resource = new $resourceClass($product);
         return response()->json($product_resource);
     }
 }

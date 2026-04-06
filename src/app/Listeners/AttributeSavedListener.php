@@ -38,6 +38,7 @@ class AttributeSavedListener
 
       for($i = 0; $i < count($values); $i++){
         $item = $values[$i];
+        $slug = $item['slug'] ?? null;
 
         if(!empty($item['id'])) {
           // update exists
@@ -50,18 +51,31 @@ class AttributeSavedListener
           $av->setTranslation('value', $lang, $item['value']);
           $av->transform = !empty($item['transform'])? $item['transform']: null;
 
+          $extras = is_array($av->extras) ? $av->extras : [];
+
           if(!empty($item['transform_value'])) {
-            $extras = $av->extras;
             $extras['transform_value'] = $item['transform_value'];
-            $av->extras = $extras;
+          } else {
+            unset($extras['transform_value']);
           }
 
+          $av->extras = !empty($extras) ? $extras : null;
+          $av->syncSlug($slug);
           $av->save();
         }else {
           // create new
           $av = new AttributeValue();
           $av->attribute_id = $event->attribute->id;
           $av->setTranslation('value', $lang, $item['value']);
+          $av->transform = !empty($item['transform'])? $item['transform']: null;
+
+          $extras = [];
+          if(!empty($item['transform_value'])) {
+            $extras['transform_value'] = $item['transform_value'];
+          }
+
+          $av->extras = !empty($extras) ? $extras : null;
+          $av->syncSlug($slug);
           $av->save();
 
           $processed_attribute_value_ids[] = $av->id;

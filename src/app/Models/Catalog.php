@@ -62,6 +62,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         'excerpt'      => 'array',
         'images'       => 'array',
         'extras'       => 'array',
+        'attrs'        => 'array',
         'category_ids' => 'array',
         'rating'       => 'float',
         'reviews'      => 'integer',
@@ -70,7 +71,7 @@ class Catalog extends SearchConfigurableAbstract implements ReviewableAvailabili
         'created_at'   => 'datetime',
     ];
 
-    protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray', 'content', 'merchant_content', 'seo', 'attrs'];
+    protected $translatable = ['name', 'short_name', 'excerpt', 'categoryNamesArray', 'content', 'merchant_content', 'seo'];
 
     const DEFAULT_BY = 'created_at';
     const DEFAULT_DIR = 'desc';

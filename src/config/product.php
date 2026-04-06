@@ -21,9 +21,11 @@ return [
     // Small product resource used for catalog pages (index route)
     'small' => 'Backpack\Store\app\Http\Resources\ProductSmallResource',
     'medium' => 'Backpack\Store\app\Http\Resources\ProductMediumResource',
+    'kratom_small' => 'Backpack\Store\app\Http\Resources\ProductKratomSmallResource',
     
     // Large product resource used for product page (show route)
     'large' => 'Backpack\Store\app\Http\Resources\ProductLargeResource',
+    'kratom_large' => 'Backpack\Store\app\Http\Resources\ProductKratomLargeResource',
 
     // Cart product resource used for order
     'cart' => 'Backpack\Store\app\Http\Resources\ProductCartResource',

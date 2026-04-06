@@ -309,7 +309,6 @@ class CatalogCacheService
     /** Единое построение строки ak_catalog. */
     protected function buildCatalogRow($p, string $countryCode): array
     {
-        \Log::info('p - ' . $p->id);
         $storefrontCode = $this->currentStorefrontCode();
 
         // категории
@@ -330,11 +329,13 @@ class CatalogCacheService
         }
         $extrasJson = $p->effective(true)->extras;
 
-        \Log::info('p - ' . $p->id);
-
+        $nameTranslations = $this->encodeTranslations($p->getEffectiveTranslations('name'));
+        $shortNameTranslations = $this->encodeTranslations($p->getEffectiveTranslations('short_name'));
         $contentTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('content', $countryCode));
         $excerptTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('excerpt', $countryCode));
         $merchantContentTranslations = $this->encodeTranslations($p->getEffectiveRegionalizedTranslations('merchant_content', $countryCode));
+        $seoTranslations = $this->encodeTranslations($p->getEffectiveTranslations('seo'));
+        $attrsJson = json_encode($p->effective()->properties, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $manualSort = $p->manual_sort;
         if ($manualSort === null && !empty($p->parent_id)) {
             $parent = $p->relationLoaded('parent') ? $p->parent : $p->parent()->first();
@@ -364,10 +365,8 @@ class CatalogCacheService
             'sale'          => $p->getModificationSale(), // <-- унификация: всегда есть в строке
             'brand_id'      => $p->brand_id ?? null,
             'category_ids'  => $category_ids_json,
-            'short_name'    => $p->getRawOriginal('short_name'),
-
-            
-            'name'          => $p->inherited(true)->name,
+            'short_name'    => $shortNameTranslations,
+            'name'          => $nameTranslations,
             'excerpt'       => $excerptTranslations,
             'slug'          => $p->slug,
             'images'        => $images_json,
@@ -382,8 +381,8 @@ class CatalogCacheService
             // Additional
             'content'       => $contentTranslations,
             'merchant_content' => $merchantContentTranslations,
-            'seo'           => $p->effective(true)->seo,
-            'attrs'         => $p->effective(true)->properties,
+            'seo'           => $seoTranslations,
+            'attrs'         => $attrsJson,
             'created_at'    => $p->created_at,
         ];
     }

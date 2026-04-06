@@ -10,6 +10,36 @@ use Illuminate\Support\Collection;
 
 class ProductLargeResource extends BaseResource
 {
+    protected function resolveProductAttrs(): array
+    {
+      $attrs = is_object($this->resource) && method_exists($this->resource, 'getAttribute')
+        ? $this->resource->getAttribute('attrs')
+        : null;
+
+      if (is_array($attrs)) {
+        return $attrs;
+      }
+
+      $properties = $this->properties ?? null;
+
+      return is_array($properties) ? $properties : [];
+    }
+
+    protected function resolveProductCustomAttrs(): array
+    {
+      $customAttrs = is_object($this->resource) && method_exists($this->resource, 'getAttribute')
+        ? $this->resource->getAttribute('custom_attrs')
+        : null;
+
+      if (is_array($customAttrs)) {
+        return $customAttrs;
+      }
+
+      $customProperties = $this->customProperties ?? null;
+
+      return is_array($customProperties) ? $customProperties : [];
+    }
+
     /**
      * Transform the resource into an array.
      *
@@ -55,8 +85,8 @@ class ProductLargeResource extends BaseResource
         // 'categories' => $this->categories && $this->categories->count()? 
         //   self::$resources['category']['tiny']::collection($this->categories): 
         //     null,
-        'attrs' => $this->properties,
-        'custom_attrs' => $this->customProperties,
+        'attrs' => $this->resolveProductAttrs(),
+        'custom_attrs' => $this->resolveProductCustomAttrs(),
         'modifications' => $mods,
         'faq' => app(ProductFaqResolver::class)->resolveForProduct($this->resource),
         'seo' => $this->resolveSeo(),

@@ -6,6 +6,21 @@ use Backpack\Store\app\Services\Campaign\CampaignPayloadService;
 
 class ProductSmallResource extends BaseResource
 {
+    protected function resolveProductAttrs(): array
+    {
+      $attrs = is_object($this->resource) && method_exists($this->resource, 'getAttribute')
+        ? $this->resource->getAttribute('attrs')
+        : null;
+
+      if (is_array($attrs)) {
+        return $attrs;
+      }
+
+      $properties = $this->properties ?? null;
+
+      return is_array($properties) ? $properties : [];
+    }
+
     /**
      * Transform the resource into an array.
      *
