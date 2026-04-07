@@ -52,7 +52,7 @@ return [
       'rules' => 'array:method,status',
       'store_in' => 'info',
       'method' => [
-        'rules' => 'required|in:liqpay,cash'
+        'rules' => 'required|in:liqpay_online,niftipay_online,card_online,default_cash,zasilkovna_cod,novaposhta_cod,bank_transfer,liqpay,cash'
       ]
     ],
     

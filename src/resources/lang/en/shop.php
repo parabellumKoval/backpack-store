@@ -36,6 +36,7 @@ return [
     'novaposhta_cod' => 'Cash on delivery (Nova Poshta)',
     'messenger_cod' => 'Cash on delivery (Messenger.cz)',
     'liqpay_online' => 'LiqPay online payment',
+    'niftipay_online' => 'Niftipay online payment',
     'card_online' => 'Card payment online',
     'bank_transfer' => 'Bank transfer',
   ],

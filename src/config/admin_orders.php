@@ -22,6 +22,10 @@ return [
             'label' => 'backpack-store::shop.payment_methods.liqpay_online',
             'icon' => 'la la-qrcode',
         ],
+        'niftipay_online' => [
+            'label' => 'backpack-store::shop.payment_methods.niftipay_online',
+            'icon' => 'la la-credit-card',
+        ],
         'card_online' => [
             'label' => 'backpack-store::shop.payment_methods.card_online',
             'icon' => 'la la-credit-card',

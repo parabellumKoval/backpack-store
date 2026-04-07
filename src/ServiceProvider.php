@@ -17,6 +17,7 @@ use Backpack\Store\app\Contracts\BonusService;
 use Backpack\Store\app\Contracts\Admin\SupplierFormStrategy;
 use Backpack\Store\app\Services\Product\ProductOrdersAttachService;
 use Backpack\Store\app\Services\Product\ProductOrdersReportService;
+use Backpack\Store\app\Services\Payments\PaymentProviderRegistry;
 
 
 class ServiceProvider extends \Illuminate\Support\ServiceProvider
@@ -124,6 +125,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->mergeConfigFrom(__DIR__ . '/config/admin_orders.php', 'dress.admin_orders');
 
     $this->resolveBonusService();
+    $this->registerPaymentProviders();
 
     $this->app->singleton(ProductOrdersAttachService::class);
     $this->app->singleton(ProductOrdersReportService::class);
@@ -145,6 +147,23 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     }
 
     $this->app->bind(BonusService::class, $serviceClass);
+  }
+
+  private function registerPaymentProviders(): void
+  {
+    $this->app->singleton(PaymentProviderRegistry::class, function ($app) {
+      $registry = new PaymentProviderRegistry($app);
+
+      foreach ((array) config('dress.payment.provider_classes', []) as $key => $provider) {
+        $registry->register($key, $provider);
+      }
+
+      foreach ((array) config('dress.payment.custom_provider_classes', []) as $key => $provider) {
+        $registry->register($key, $provider);
+      }
+
+      return $registry;
+    });
   }
 
   private function resolveMode() {
@@ -205,6 +224,7 @@ class ServiceProvider extends \Illuminate\Support\ServiceProvider
     $this->loadRoutesFrom(__DIR__.'/routes/api/lists.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/invoice.php');
     $this->loadRoutesFrom(__DIR__.'/routes/api/shipping.php');
+    $this->loadRoutesFrom(__DIR__.'/routes/api/payment.php');
   }
 
   private function addPublishes() {

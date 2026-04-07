@@ -20,6 +20,7 @@ use Backpack\Store\app\Services\Shipping\ShippingCalculator;
 // EVENTS
 use Backpack\Store\app\Events\ProductAttachedToOrder;
 use Backpack\Store\app\Events\PromocodeApplied;
+use Backpack\Store\app\Support\CheckoutMethodCatalog;
 
 // EXCEPTIONS
 use Backpack\Store\app\Exceptions\OrderException;
@@ -45,8 +46,29 @@ class OrderController extends \App\Http\Controllers\Controller
 
     // Rd 
     $this->rd_fields = \Settings::get('dress.order.fields');
+    $this->rd_fields = $this->withDynamicPaymentMethodRules($this->rd_fields);
 
     $this->bonusService = app(BonusService::class);
+  }
+
+  protected function withDynamicPaymentMethodRules(array $fields): array
+  {
+    $methods = array_values(array_unique(array_filter(array_map(function ($item) {
+      $name = trim((string) ($item['name'] ?? ''));
+      $type = trim((string) ($item['type'] ?? ''));
+
+      if ($name === '' || $type === '') {
+        return null;
+      }
+
+      return "{$name}_{$type}";
+    }, CheckoutMethodCatalog::paymentMethods()))));
+
+    if (!empty($methods)) {
+      $fields['payment']['method']['rules'] = 'required|in:' . implode(',', $methods);
+    }
+
+    return $fields;
   }
   
   /**
@@ -235,7 +257,7 @@ class OrderController extends \App\Http\Controllers\Controller
       $data['provider'] = 'data';
     }
 
-    $order = $this->prepareOrder($order);
+    $order = $this->prepareOrder($order, $data);
     $order = $this->setRequestFields($order, $data);
     $order = $this->setUserData($order, $data, $user);
 
@@ -821,7 +843,7 @@ class OrderController extends \App\Http\Controllers\Controller
    * @param Backpack\Store\app\Models\Order $order
    * @return Backpack\Store\app\Models\Order $order
    */
-  protected function prepareOrder($order) {
+  protected function prepareOrder($order, array $data = []) {
     // Generate order code
     $order->code = random_int(100000, 999999);
 
@@ -834,7 +856,7 @@ class OrderController extends \App\Http\Controllers\Controller
     // Generate order code
     $order->delivery_status = \Settings::get('dress.order.delivery_status.default', 'waiting');
 
-    $storefront = $this->resolveStorefrontCode();
+    $storefront = $this->resolveStorefrontCode($data);
     $order->storefront_code = $storefront;
 
     $info = $order->info ?? [];

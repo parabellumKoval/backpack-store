@@ -37,6 +37,7 @@ return [
     'novaposhta_cod' => 'Наложенный платёж Новая Почта',
     'messenger_cod' => 'Наложенный платёж Messenger.cz',
     'liqpay_online' => 'Оплата LiqPay онлайн',
+    'niftipay_online' => 'Оплата Niftipay онлайн',
     'card_online' => 'Оплата картой онлайн',
     'bank_transfer' => 'Банковский перевод',
   ],

@@ -15,6 +15,7 @@ class CheckoutMethodCatalog
     public static function paymentMethods(): array
     {
         return static::mergeByMethodKey(
+            config('dress.payment.package_methods', []),
             config('dress.payment.methods', []),
             \Settings::get('dress.payment.methods', [])
         );
