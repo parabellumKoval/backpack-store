@@ -3,40 +3,28 @@
   $products = $rawInfo['products'] ?? [];
   $info = \Illuminate\Support\Arr::except($rawInfo, ['products']);
 
-  $user = isset($info['user']) ? array_filter($info['user']) : null;
+  $user = isset($info['user']) && is_array($info['user'])
+    ? array_values(array_filter(array_map('store_stringify_value', $info['user'])))
+    : null;
 
   $payment = null;
+  $paymentLines = [];
   if(isset($info['payment'])) {
     $paymentData = $info['payment'];
-    if(is_array($paymentData)) {
-      if(!empty($paymentData['method'])) {
-        $methodLabel = store_payment_method_label($paymentData['method']);
-        if($methodLabel) {
-          $paymentData['method'] = $methodLabel;
-        }
-      }
-      $payment_items = array_filter($paymentData);
-      $payment = implode(', ', $payment_items);
-    } else {
-      $payment = store_payment_method_label($paymentData) ?? $paymentData;
-    }
+    $paymentLines = function_exists('store_payment_lines') ? store_payment_lines($paymentData) : [];
+    $payment = function_exists('store_payment_summary')
+      ? store_payment_summary($paymentData)
+      : (!empty($paymentLines) ? implode(', ', $paymentLines) : (store_payment_method_label($paymentData) ?? $paymentData));
   }
 
   $delivery = null;
+  $deliveryLines = [];
   if(isset($info['delivery'])) {
     $deliveryData = $info['delivery'];
-    if(is_array($deliveryData)) {
-      if(!empty($deliveryData['method'])) {
-        $methodLabel = store_delivery_method_label($deliveryData['method']);
-        if($methodLabel) {
-          $deliveryData['method'] = $methodLabel;
-        }
-      }
-      $delivery_items = array_filter($deliveryData);
-      $delivery = implode(', ', $delivery_items);
-    } else {
-      $delivery = store_delivery_method_label($deliveryData) ?? $deliveryData;
-    }
+    $deliveryLines = function_exists('store_delivery_lines') ? store_delivery_lines($deliveryData) : [];
+    $delivery = function_exists('store_delivery_summary')
+      ? store_delivery_summary($deliveryData)
+      : (!empty($deliveryLines) ? implode(', ', $deliveryLines) : null);
   }
 
   $currency = $entry->currency_code ?? \Settings::get('dress.store.currency.code', 'USD');
@@ -96,16 +84,24 @@
   {{-- Способ оплаты --}}
   @if($payment && !empty($payment))
     <div style="margin-bottom: 12px; padding: 8px 12px; background: #fff; border-radius: 4px; border: 1px solid #e0e0e0;">
-      <span style="color: #6c757d;">💳 Оплата:</span> 
-      <strong style="color: #212529;">{{ $payment }}</strong>
+      <div style="color: #6c757d; margin-bottom: 4px;">💳 Оплата:</div>
+      <div style="color: #212529; font-weight: 600;">
+        @foreach($paymentLines as $line)
+          <div>{{ $line }}</div>
+        @endforeach
+      </div>
     </div>
   @endif
 
   {{-- Способ доставки --}}
   @if($delivery && !empty($delivery))
     <div style="margin-bottom: 12px; padding: 8px 12px; background: #fff; border-radius: 4px; border: 1px solid #e0e0e0;">
-      <span style="color: #6c757d;">📦 Доставка:</span> 
-      <strong style="color: #212529;">{{ $delivery }}</strong>
+      <div style="color: #6c757d; margin-bottom: 4px;">📦 Доставка:</div>
+      <div style="color: #212529; font-weight: 600;">
+        @foreach($deliveryLines as $line)
+          <div>{{ $line }}</div>
+        @endforeach
+      </div>
     </div>
   @endif
   

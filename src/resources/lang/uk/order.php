@@ -14,6 +14,12 @@ return [
             'cash' => 'Оплата готівкою',
             'liqpay' => 'Онлайн оплата'
         ],
+        'payment' => [
+            'account' => 'Рахунок',
+            'card' => 'Картка',
+            'invoice_number' => 'Інвойс',
+            'comment' => 'Коментар',
+        ],
         'customer' => [
             'title' => 'Покупець',
             'firstname' => 'Ім\'я',

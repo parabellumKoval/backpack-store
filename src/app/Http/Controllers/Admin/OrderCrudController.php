@@ -287,7 +287,21 @@ class OrderCrudController extends CrudController
 
       $this->crud->addColumn([
         'name' => 'code',
-        'label' => '#️⃣'
+        'label' => '#️⃣',
+        'type' => 'closure',
+        'escaped' => false,
+        'orderable' => true,
+        'orderLogic' => function ($query, $column, $columnDirection) {
+          return $query->orderBy('code', $columnDirection);
+        },
+        'searchLogic' => function ($query, $column, $searchTerm) {
+          $query->orWhere('code', 'LIKE', '%' . trim($searchTerm) . '%');
+        },
+        'function' => function ($entry) {
+          return view('crud::columns.order_code_with_storefront', [
+            'entry' => $entry,
+          ])->render();
+        },
       ]);
 
       $this->crud->addColumn([
@@ -303,15 +317,6 @@ class OrderCrudController extends CrudController
         ]);
       }
 
-      if (\Store::isStorefrontEnabled()) {
-        $this->crud->addColumn([
-          'name' => 'storefront_code',
-          'label' => 'Storefront',
-          'type' => 'select_from_array',
-          'options' => \Store::storefrontOptions(),
-        ]);
-      }
-
       $this->crud->addColumn([
         'name' => 'orderStatusHtml',
         'label' => 'Статус',
@@ -321,14 +326,14 @@ class OrderCrudController extends CrudController
       
       $this->crud->addColumn([
         'name' => 'payInfoHtml',
-        'label' => 'Доставка',
+        'label' => 'Оплата',
         'escaped' => false,
         'limit' => 5500,
       ]);
       
       $this->crud->addColumn([
         'name' => 'deliveryInfoHtml',
-        'label' => 'Оплата',
+        'label' => 'Доставка',
         'escaped' => false,
         'limit' => 5500,
       ]);

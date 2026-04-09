@@ -12,11 +12,13 @@ $brands = \Backpack\Store\app\Models\Brand::all();
             <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_inactive">{{ trans('backpack-store::bulk_actions.deactivate') }}</a></li>
             <div class="dropdown-divider"></div>
             <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_category">{{ trans('backpack-store::bulk_actions.set_category') }}</a></li>
+            <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_attribute">{{ trans('backpack-store::bulk_actions.set_attribute') }}</a></li>
             <li class="dropdown-item"><a href="#" class="bulk-action" data-action="set_brand">{{ trans('backpack-store::bulk_actions.set_brand') }}</a></li>
         </ul>
     </div>
 
     @include('store-crud::buttons.category_bulk_modal')
+    @include('store-crud::buttons.attribute_bulk_modal')
     @include('store-crud::buttons.brand_bulk_modal')
     @push('after_scripts')
         <script>
@@ -36,6 +38,8 @@ $brands = \Backpack\Store\app\Models\Brand::all();
 
                     if (action === 'set_category') {
                         window.showCategoryModal();
+                    } else if (action === 'set_attribute') {
+                        window.showAttributeModal();
                     } else if (action === 'set_brand') {
                         window.showBrandModal();
                     } else {

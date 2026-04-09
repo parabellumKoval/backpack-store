@@ -16,6 +16,12 @@ return [
             'cash' => 'Оплата наличными',
             'liqpay' => 'Онлайн оплата'
         ],
+        'payment' => [
+            'account' => 'Счёт',
+            'card' => 'Карта',
+            'invoice_number' => 'Инвойс',
+            'comment' => 'Комментарий',
+        ],
         'customer' => [
             'title' => 'Покупатель',
             'firstname' => 'Имя',

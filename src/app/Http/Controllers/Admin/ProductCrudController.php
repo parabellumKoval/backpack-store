@@ -16,7 +16,9 @@ use Illuminate\Support\Str;
 use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Brand;
 use Backpack\Store\app\Models\Supplier;
+use Backpack\Store\app\Models\Attribute;
 use Backpack\Store\app\Models\AttributeValue;
+use Backpack\Store\app\Models\AttributeProduct;
 use Backpack\Store\app\Models\SupplierProduct;
 use Backpack\Store\Facades\ProductOrders;
 use Backpack\Store\app\Services\Product\ProductOrdersReportService;
@@ -177,25 +179,50 @@ class ProductCrudController extends CrudController
             return;
         }
 
-        $entryId = (int) $entry->id;
-        CatalogSyncTouch::touch($entryId, 0, true);
+        // The current product is already queued by ProductSavedListener.
+        // Here we only refresh related products whose catalog rows depend on it.
+        $this->queueCatalogTouchForProducts([$entry], false);
+    }
 
-        $parentId = (int) ($entry->parent_id ?? 0);
-        if ($parentId > 0) {
-            CatalogSyncTouch::touch($parentId, 0, true);
-            return;
+    protected function queueCatalogTouchForProducts(iterable $products, bool $includeSelf = true): void
+    {
+        $touchIds = [];
+
+        foreach ($products as $product) {
+            if (!$product) {
+                continue;
+            }
+
+            $productId = (int) ($product->id ?? 0);
+            if ($includeSelf && $productId > 0) {
+                $touchIds[$productId] = true;
+            }
+
+            $parentId = (int) ($product->parent_id ?? 0);
+            if ($parentId > 0) {
+                $touchIds[$parentId] = true;
+                continue;
+            }
+
+            if (!method_exists($product, 'children')) {
+                continue;
+            }
+
+            $childIds = $product->children()
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->all();
+
+            foreach ($childIds as $childId) {
+                $touchIds[$childId] = true;
+            }
         }
 
-        $childIds = $entry->children()
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
-            ->unique()
-            ->values()
-            ->all();
-
-        foreach ($childIds as $childId) {
-            CatalogSyncTouch::touch($childId, 0, true);
+        foreach (array_keys($touchIds) as $touchId) {
+            CatalogSyncTouch::touch((int) $touchId);
         }
     }
 
@@ -857,9 +884,13 @@ class ProductCrudController extends CrudController
 
             case 'set_brand':
                 $brandId = request()->input('brand_id');
+
+                $products = $this->crud->model->whereIn('id', $ids)->get();
                 
                 // Обновляем бренд для всех выбранных продуктов
                 $this->crud->model->whereIn('id', $ids)->update(['brand_id' => $brandId]);
+
+                $this->queueCatalogTouchForProducts($products);
 
                 $message = is_null($brandId) 
                     ? trans('backpack-store::bulk_actions.brand_removed', ['count' => count($ids)])
@@ -899,9 +930,140 @@ class ProductCrudController extends CrudController
                     }
                 }
 
+                $this->queueCatalogTouchForProducts($products);
+
                 $message = empty($categoryIds) 
                     ? trans('backpack-store::bulk_actions.categories_removed', ['count' => count($ids)])
                     : trans('backpack-store::bulk_actions.categories_assigned', ['count' => count($ids)]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                ]);
+
+            case 'set_attribute':
+                $attributeId = (int) request()->input('attribute_id');
+                $attribute = Attribute::query()->find($attributeId);
+
+                if (!$attribute) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => trans('backpack-store::bulk_actions.attribute_required'),
+                    ]);
+                }
+
+                $products = $this->crud->model->whereIn('id', $ids)->get();
+
+                switch ((string) $attribute->type) {
+                    case 'checkbox':
+                        $valueIds = array_values(array_unique(array_filter(array_map('intval', (array) request()->input('attribute_value_ids', [])))));
+                        $valueIds = AttributeValue::query()
+                            ->where('attribute_id', $attributeId)
+                            ->whereIn('id', $valueIds)
+                            ->pluck('id')
+                            ->map(fn ($id) => (int) $id)
+                            ->all();
+
+                        if ($valueIds === []) {
+                            AttributeProduct::query()
+                                ->whereIn('product_id', $ids)
+                                ->where('attribute_id', $attributeId)
+                                ->delete();
+
+                            $message = trans('backpack-store::bulk_actions.attribute_removed', ['count' => count($ids)]);
+                            break;
+                        }
+
+                        $existingByProduct = AttributeProduct::query()
+                            ->whereIn('product_id', $ids)
+                            ->where('attribute_id', $attributeId)
+                            ->whereNotNull('attribute_value_id')
+                            ->get(['product_id', 'attribute_value_id'])
+                            ->groupBy('product_id');
+
+                        foreach ($ids as $productId) {
+                            $existingValueIds = ($existingByProduct->get($productId) ?? collect())
+                                ->pluck('attribute_value_id')
+                                ->map(fn ($id) => (int) $id)
+                                ->all();
+
+                            $newValueIds = array_diff($valueIds, $existingValueIds);
+                            foreach ($newValueIds as $valueId) {
+                                AttributeProduct::query()->create([
+                                    'product_id' => (int) $productId,
+                                    'attribute_id' => $attributeId,
+                                    'attribute_value_id' => (int) $valueId,
+                                ]);
+                            }
+                        }
+
+                        $message = trans('backpack-store::bulk_actions.attribute_assigned', ['count' => count($ids)]);
+                        break;
+
+                    case 'radio':
+                        $valueId = (int) request()->input('attribute_value_id');
+                        $valueId = AttributeValue::query()
+                            ->where('attribute_id', $attributeId)
+                            ->where('id', $valueId)
+                            ->value('id');
+
+                        AttributeProduct::query()
+                            ->whereIn('product_id', $ids)
+                            ->where('attribute_id', $attributeId)
+                            ->delete();
+
+                        if ($valueId) {
+                            foreach ($ids as $productId) {
+                                AttributeProduct::query()->create([
+                                    'product_id' => (int) $productId,
+                                    'attribute_id' => $attributeId,
+                                    'attribute_value_id' => (int) $valueId,
+                                ]);
+                            }
+                            $message = trans('backpack-store::bulk_actions.attribute_assigned', ['count' => count($ids)]);
+                        } else {
+                            $message = trans('backpack-store::bulk_actions.attribute_removed', ['count' => count($ids)]);
+                        }
+                        break;
+
+                    case 'number':
+                    case 'string':
+                    default:
+                        $rawValue = request()->input('value');
+                        $normalizedValue = is_string($rawValue) ? trim($rawValue) : $rawValue;
+
+                        AttributeProduct::query()
+                            ->whereIn('product_id', $ids)
+                            ->where('attribute_id', $attributeId)
+                            ->delete();
+
+                        if ($normalizedValue === null || $normalizedValue === '') {
+                            $message = trans('backpack-store::bulk_actions.attribute_removed', ['count' => count($ids)]);
+                            break;
+                        }
+
+                        $locale = backpack_translatable_request_locale(config('app.locale'));
+
+                        foreach ($ids as $productId) {
+                            $payload = [
+                                'product_id' => (int) $productId,
+                                'attribute_id' => $attributeId,
+                            ];
+
+                            if ($attribute->type === 'number') {
+                                $payload['value'] = $normalizedValue;
+                            } else {
+                                $payload['value_trans'] = [$locale => (string) $normalizedValue];
+                            }
+
+                            AttributeProduct::query()->create($payload);
+                        }
+
+                        $message = trans('backpack-store::bulk_actions.attribute_assigned', ['count' => count($ids)]);
+                        break;
+                }
+
+                $this->queueCatalogTouchForProducts($products);
 
                 return response()->json([
                     'success' => true,

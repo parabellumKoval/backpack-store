@@ -14,6 +14,12 @@ return [
             'cash' => 'Cash Payment',
             'liqpay' => 'Online Payment'
         ],
+        'payment' => [
+            'account' => 'Account',
+            'card' => 'Card',
+            'invoice_number' => 'Invoice',
+            'comment' => 'Comment',
+        ],
         'customer' => [
             'title' => 'Customer',
             'firstname' => 'First Name',

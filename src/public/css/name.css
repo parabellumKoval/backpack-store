@@ -28,3 +28,27 @@
   padding: 0 10px;
   border-radius: 12px;
 }
+
+.order-code-with-storefront {
+  display: inline-block;
+}
+
+.order-code-with-storefront__badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.order-code-with-storefront__code {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}

@@ -147,7 +147,11 @@ class Store
         $normalized = [];
 
         foreach ($raw as $key => $item) {
-            if (!is_array($item)) {
+            if (is_string($item)) {
+                $item = [
+                    'label' => $item,
+                ];
+            } elseif (!is_array($item)) {
                 $item = [];
             }
 
@@ -163,6 +167,7 @@ class Store
             $normalized[$code] = array_merge($item, [
                 'code' => $code,
                 'label' => (string) ($item['label'] ?? ucfirst($code)),
+                'badge' => static::normalizeStorefrontBadge($item['badge'] ?? null),
             ]);
         }
 
@@ -172,11 +177,41 @@ class Store
                 'enabled' => true,
                 'code' => $default,
                 'label' => ucfirst($default),
+                'badge' => static::normalizeStorefrontBadge(null),
                 'is_default' => true,
             ];
         }
 
         return static::$normalizedStorefrontsCache = $normalized;
+    }
+
+    public static function storefrontMeta(?string $code): array
+    {
+        $storefronts = static::storefronts();
+        $normalizedCode = static::normalizeStorefrontCode($code);
+
+        if ($normalizedCode !== null && isset($storefronts[$normalizedCode])) {
+            return $storefronts[$normalizedCode];
+        }
+
+        if ($normalizedCode !== null) {
+            return [
+                'code' => $normalizedCode,
+                'label' => ucfirst($normalizedCode),
+                'badge' => static::normalizeStorefrontBadge(null),
+            ];
+        }
+
+        $defaultCode = static::defaultStorefront();
+        if (isset($storefronts[$defaultCode])) {
+            return $storefronts[$defaultCode];
+        }
+
+        return [
+            'code' => $defaultCode,
+            'label' => ucfirst($defaultCode),
+            'badge' => static::normalizeStorefrontBadge(null),
+        ];
     }
 
     public static function storefrontOptions(): array
@@ -205,6 +240,73 @@ class Store
         $normalized = preg_replace('/[^a-z0-9_-]/', '', $normalized);
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    protected static function normalizeStorefrontBadge($badge): array
+    {
+        if (is_string($badge)) {
+            $badge = ['background' => $badge];
+        }
+
+        if (!is_array($badge)) {
+            $badge = [];
+        }
+
+        $background = static::normalizeHexColor($badge['background'] ?? $badge['bg'] ?? null) ?? '#E5E7EB';
+        $color = static::normalizeHexColor($badge['color'] ?? $badge['text'] ?? null)
+            ?? static::contrastTextColor($background);
+
+        return [
+            'background' => $background,
+            'color' => $color,
+        ];
+    }
+
+    protected static function normalizeHexColor(?string $color): ?string
+    {
+        if (!is_string($color)) {
+            return null;
+        }
+
+        $normalized = trim($color);
+        if ($normalized === '') {
+            return null;
+        }
+
+        if ($normalized[0] !== '#') {
+            $normalized = '#'.$normalized;
+        }
+
+        if (!preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $normalized)) {
+            return null;
+        }
+
+        if (strlen($normalized) === 4) {
+            return sprintf(
+                '#%1$s%1$s%2$s%2$s%3$s%3$s',
+                $normalized[1],
+                $normalized[2],
+                $normalized[3]
+            );
+        }
+
+        return strtoupper($normalized);
+    }
+
+    protected static function contrastTextColor(string $background): string
+    {
+        $hex = ltrim($background, '#');
+
+        if (strlen($hex) !== 6) {
+            return '#111827';
+        }
+
+        $red = hexdec(substr($hex, 0, 2));
+        $green = hexdec(substr($hex, 2, 2));
+        $blue = hexdec(substr($hex, 4, 2));
+        $luminance = (($red * 299) + ($green * 587) + ($blue * 114)) / 1000;
+
+        return $luminance >= 160 ? '#111827' : '#FFFFFF';
     }
 
     // Получить все доступные страны

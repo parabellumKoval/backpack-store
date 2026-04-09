@@ -18,6 +18,10 @@ return [
             'enabled' => true,
             'code' => 'main',
             'label' => 'Main',
+            'badge' => [
+                'background' => '#E5E7EB',
+                'color' => '#111827',
+            ],
             'is_default' => true,
         ],
     ],
