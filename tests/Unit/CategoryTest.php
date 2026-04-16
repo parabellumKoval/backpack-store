@@ -28,4 +28,28 @@ class CategoryTest extends TestCase
         $this->assertTrue($firstChild->relationLoaded('children'));
         $this->assertCount(0, $firstChild->getRelation('children'));
     }
+
+    /** @test */
+    public function children_for_country_excludes_inactive_children()
+    {
+        $parent = Category::factory()->create([
+            'parent_id' => null,
+            'is_active' => true,
+        ]);
+
+        $activeChild = Category::factory()->create([
+            'parent_id' => $parent->id,
+            'is_active' => true,
+        ]);
+
+        Category::factory()->create([
+            'parent_id' => $parent->id,
+            'is_active' => false,
+        ]);
+
+        $children = $parent->childrenForCountry();
+
+        $this->assertCount(1, $children);
+        $this->assertSame([$activeChild->id], $children->pluck('id')->all());
+    }
 }

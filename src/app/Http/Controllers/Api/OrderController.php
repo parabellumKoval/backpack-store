@@ -3,6 +3,8 @@
 namespace Backpack\Store\app\Http\Controllers\Api;
 
 use App\Support\StorefrontSettings;
+use Backpack\Profile\app\Models\Profile as ProfileModel;
+use Backpack\Profile\app\Support\StorefrontFeatureGate;
 use Illuminate\Http\Request;
 use \Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Validator;
@@ -327,6 +329,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $order->save();
 
     $this->attachProductsToOrder($order, $products, $data);
+    $this->syncAuthenticatedProfileData($user, $data, $order);
 
     return [$order, $products];
   }
@@ -503,7 +506,13 @@ class OrderController extends \App\Http\Controllers\Controller
   protected function applyPersonalDiscount(Order $order, $user = null): float
   {
     $info = $order->info ?? [];
-    $allowed = \Settings::get('profile.users.allow_personal_discount');
+    $allowed = app(StorefrontFeatureGate::class)->featureEnabled(
+      'profile.users.allow_personal_discount',
+      true,
+      $order->storefront_code,
+      [],
+      null
+    );
 
     if(!$allowed || !$user) {
       $info['personalDiscount'] = [
@@ -639,7 +648,7 @@ class OrderController extends \App\Http\Controllers\Controller
     $bonusPoints = isset($data['bonus']) ? (float)$data['bonus'] : 0.0;
     $info = $order->info ?? [];
 
-    if(!$this->bonusFeatureEnabled() || $bonusPoints <= 0 || !$user) {
+    if(!$this->bonusFeatureEnabled($order->storefront_code) || $bonusPoints <= 0 || !$user) {
       return [
         'bonus_discount' => 0.0,
         'total_discount' => round($campaignDiscount + $promocodeDiscount + $personalDiscount, 2),
@@ -812,7 +821,7 @@ class OrderController extends \App\Http\Controllers\Controller
       return;
     }
 
-    if(!$this->bonusFeatureEnabled()) {
+    if(!$this->bonusFeatureEnabled($this->resolveStorefrontCode($data))) {
       throw new DetailedException('Использование бонусов недоступно для этого заказа.', 422);
     }
 
@@ -825,15 +834,63 @@ class OrderController extends \App\Http\Controllers\Controller
     }
   }
 
-  protected function bonusFeatureEnabled(): bool
+  protected function bonusFeatureEnabled(?string $storefront = null): bool
   {
-    $enabledFlag = \Settings::get('profile.pay_for_order.enabled');
+    return app(StorefrontFeatureGate::class)->featureEnabled('profile.pay_for_order', false, $storefront);
+  }
 
-    // if ($enabledFlag === null) {
-    //   $enabledFlag = \Settings::get('dress.order.enable_bonus', false);
-    // }
+  protected function syncAuthenticatedProfileData($user, array $data, Order $order): void
+  {
+    if(!$user || !method_exists($user, 'loadMissing')) {
+      return;
+    }
 
-    return (bool)$enabledFlag;
+    try {
+      $user->loadMissing('profile');
+      $profile = $user->profile;
+
+      if(!$profile instanceof ProfileModel) {
+        return;
+      }
+
+      $profileChanged = false;
+      $userData = (array) data_get($data, 'user', []);
+
+      foreach (['first_name', 'last_name', 'phone'] as $field) {
+        $value = isset($userData[$field]) && is_string($userData[$field])
+          ? trim($userData[$field])
+          : null;
+
+        if($value === null || $value === '') {
+          continue;
+        }
+
+        if($profile->{$field} !== $value) {
+          $profile->{$field} = $value;
+          $profileChanged = true;
+        }
+      }
+
+      $savedAddress = $profile->syncDeliveryAddress(
+        (array) data_get($data, 'delivery', []),
+        [
+          'email' => data_get($userData, 'email') ?: $user->email,
+          'phone' => data_get($userData, 'phone') ?: $profile->phone,
+        ],
+        $order->storefront_code,
+        $order->country_code
+      );
+
+      if($savedAddress !== null) {
+        $profileChanged = true;
+      }
+
+      if($profileChanged) {
+        $profile->save();
+      }
+    } catch (\Throwable $e) {
+      report($e);
+    }
   }
 
 

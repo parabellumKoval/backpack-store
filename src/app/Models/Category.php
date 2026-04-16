@@ -335,7 +335,10 @@ class Category extends Model
             $visited[$currentKey] = true;
         }
 
-        $childrenQuery = $this->children()->orderBy('lft')->with('tags');
+        $childrenQuery = $this->children()
+            ->active()
+            ->orderBy('lft')
+            ->with('tags');
         if ($country) {
             $childrenQuery->forCountry($country, false);
         }
