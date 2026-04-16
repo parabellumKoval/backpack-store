@@ -5,6 +5,7 @@ namespace Backpack\Store\app\Observers;
 use Backpack\Store\app\Events\CategoryChanged;
 use Backpack\Store\app\Job\TouchCategoryCatalogProductsJob;
 use Backpack\Store\app\Models\Category;
+use Backpack\Store\app\Services\Category\CategoryResponseCacheInvalidator;
 use Backpack\Store\app\Services\Catalog\CategoryCatalogTouchService;
 use Backpack\Store\Facades\Store;
 
@@ -15,6 +16,7 @@ class CategoryObserver
      * should trigger touching linked products.
      */
     protected const CATALOG_RELEVANT_FIELDS = [
+        'is_active',
         'countries',
         'store_only_countries',
         'storefronts',
@@ -24,6 +26,7 @@ class CategoryObserver
     public function saved(Category $category): void
     {
         event(CategoryChanged::for($category, 'saved'));
+        $this->invalidateCategoryResponseCache($category);
 
         if ($this->shouldTouchCatalog($category)) {
             $this->queueCatalogTouch($category);
@@ -33,6 +36,12 @@ class CategoryObserver
     public function deleted(Category $category): void
     {
         event(CategoryChanged::for($category, 'deleted'));
+        $this->invalidateCategoryResponseCache($category);
+    }
+
+    protected function invalidateCategoryResponseCache(Category $category): void
+    {
+        app(CategoryResponseCacheInvalidator::class)->invalidate($category);
     }
 
     protected function queueCatalogTouch(Category $category): void

@@ -51,6 +51,12 @@ class CategoryObserverTest extends TestCase
 
         $observer = new class extends CategoryObserver {
             public int $touchCalls = 0;
+            public int $invalidateCalls = 0;
+
+            protected function invalidateCategoryResponseCache(Category $category): void
+            {
+                $this->invalidateCalls++;
+            }
 
             protected function queueCatalogTouch(Category $category): void
             {
@@ -64,6 +70,7 @@ class CategoryObserverTest extends TestCase
         $this->assertSame('saved', $events[0]->action);
         $this->assertSame(2, $events[0]->categoryId);
         $this->assertSame('osnovnoe', $events[0]->slug);
+        $this->assertSame(1, $observer->invalidateCalls);
         $this->assertSame(0, $observer->touchCalls);
     }
 
@@ -85,6 +92,12 @@ class CategoryObserverTest extends TestCase
 
         $observer = new class extends CategoryObserver {
             public int $touchCalls = 0;
+            public int $invalidateCalls = 0;
+
+            protected function invalidateCategoryResponseCache(Category $category): void
+            {
+                $this->invalidateCalls++;
+            }
 
             protected function queueCatalogTouch(Category $category): void
             {
@@ -92,7 +105,7 @@ class CategoryObserverTest extends TestCase
             }
         };
 
-        foreach (['countries', 'store_only_countries', 'storefronts', 'parent_id'] as $field) {
+        foreach (['is_active', 'countries', 'store_only_countries', 'storefronts', 'parent_id'] as $field) {
             $category = Mockery::mock(Category::class);
             $category->shouldReceive('getAttribute')->with('id')->andReturn(2);
             $category->shouldReceive('getAttribute')->with('slug')->andReturn('osnovnoe');
@@ -101,6 +114,7 @@ class CategoryObserverTest extends TestCase
             $observer->saved($category);
         }
 
-        $this->assertSame(4, $observer->touchCalls);
+        $this->assertSame(5, $observer->invalidateCalls);
+        $this->assertSame(5, $observer->touchCalls);
     }
 }
