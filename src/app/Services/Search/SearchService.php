@@ -9,7 +9,6 @@ use Laravel\Scout\Builder;
 
 class SearchService
 {
-
     public function searchProducts(string $q, string $countryCode, int $perPage = 20, ?bool $onlyInStock = null): array
     {
         $onlyInStock = $onlyInStock ?? (bool) \Settings::get(
@@ -24,64 +23,72 @@ class SearchService
         }
 
         $started = microtime(true);
-        $results = null;
-
         $locale = $this->countryToLocale($countryCode);
         $norm = app(QueryNormalizer::class)->variants($q, $locale);
 
-        $builder = Catalog::search($norm[0]);
-        $this->applyDefaultOptions($builder, $locale, $onlyInStock, $countryCode, $storefront);
-        
-        // ранжирование/сортировка — по настройкам
-        if ($sort = \Settings::get('dress.search.ranking.sort', [])) {
-            // пример: ["price:asc","popularity:desc"]
-            foreach ($sort as $rule) {
-                [$field, $dir] = array_pad(explode(':', $rule, 2), 2, 'asc');
-                $builder->orderBy($field, $dir);
-            }
-        }
+        try {
+            $builder = Catalog::search($norm[0]);
+            $this->applyDefaultOptions($builder, $locale, $onlyInStock, $countryCode, $storefront);
 
-        // если первый вариант не дал результатов — пробуем варианты
-        /** @var LengthAwarePaginator $page */
-        $page = $builder->paginate($perPage);
-
-        if ($page->total() === 0 && count($norm) > 1) {
-            foreach (array_slice($norm, 1) as $alt) {
-                $altBuilder = Catalog::search($alt);
-                $this->applyDefaultOptions($altBuilder, $locale, $onlyInStock, $countryCode, $storefront);
-                
-                $page = $altBuilder->paginate($perPage);
-                if ($page->total() > 0) {
-                    LogSearchQueryJob::dispatchNowOrQueue(
-                        q: $q,
-                        normalized: $norm,
-                        countryCode: $countryCode,
-                        locale: $locale,
-                        userId: optional(auth()->user())->id,
-                        ip: request()->ip(),
-                        resultsCount: $page->total() ?? 0,
-                        tookMs: (int) round((microtime(true) - $started) * 1000),
-                        driver: 'meilisearch'
-                    );
-
-                    return ['meta' => $this->meta($page), 'data' => $page, 'suggestion' => $alt];
+            // ранжирование/сортировка — по настройкам
+            if ($sort = \Settings::get('dress.search.ranking.sort', [])) {
+                foreach ($sort as $rule) {
+                    [$field, $dir] = array_pad(explode(':', $rule, 2), 2, 'asc');
+                    $builder->orderBy($field, $dir);
                 }
             }
+
+            /** @var LengthAwarePaginator $page */
+            $page = $builder->paginate($perPage);
+
+            if ($page->total() === 0 && count($norm) > 1) {
+                foreach (array_slice($norm, 1) as $alt) {
+                    $altBuilder = Catalog::search($alt);
+                    $this->applyDefaultOptions($altBuilder, $locale, $onlyInStock, $countryCode, $storefront);
+
+                    $page = $altBuilder->paginate($perPage);
+                    if ($page->total() > 0) {
+                        LogSearchQueryJob::dispatchNowOrQueue(
+                            q: $q,
+                            normalized: $norm,
+                            countryCode: $countryCode,
+                            locale: $locale,
+                            userId: optional(auth()->user())->id,
+                            ip: request()->ip(),
+                            resultsCount: $page->total() ?? 0,
+                            tookMs: (int) round((microtime(true) - $started) * 1000),
+                            driver: 'meilisearch'
+                        );
+
+                        return ['meta' => $this->meta($page, 'meilisearch'), 'data' => $page, 'suggestion' => $alt];
+                    }
+                }
+            }
+
+            LogSearchQueryJob::dispatchNowOrQueue(
+                q: $q,
+                normalized: $norm,
+                countryCode: $countryCode,
+                locale: $locale,
+                userId: optional(auth()->user())->id,
+                ip: request()->ip(),
+                resultsCount: $page->total() ?? 0,
+                tookMs: (int) round((microtime(true) - $started) * 1000),
+                driver: 'meilisearch'
+            );
+
+            return ['meta' => $this->meta($page, 'meilisearch'), 'data' => $page];
+        } catch (\Throwable $e) {
+            \Log::warning('Meilisearch search failed, falling back to database search.', [
+                'query' => $q,
+                'country_code' => $countryCode,
+                'storefront_code' => $storefront,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return $this->dbFallback($q, $countryCode, $perPage, $onlyInStock, $storefront);
         }
-
-        LogSearchQueryJob::dispatchNowOrQueue(
-            q: $q,
-            normalized: $norm,
-            countryCode: $countryCode,
-            locale: $locale,
-            userId: optional(auth()->user())->id,
-            ip: request()->ip(),
-            resultsCount: $page->total() ?? 0,
-            tookMs: (int) round((microtime(true) - $started) * 1000),
-            driver: 'meilisearch'
-        );
-
-        return ['meta' => $this->meta($page), 'data' => $page];
     }
 
 
@@ -110,7 +117,7 @@ class SearchService
         });
 
         $page = $query->paginate($perPage);
-        return ['meta' => $this->meta($page), 'data' => $page->items()];
+        return ['meta' => $this->meta($page, 'db'), 'data' => $page->items()];
     }
 
     protected function applyDefaultOptions(Builder $builder, string $locale, bool $onlyInStock, string $country, string $storefront): void
@@ -161,10 +168,10 @@ class SearchService
         return $map[$country] ?? app()->getLocale();
     }
 
-    protected function meta(LengthAwarePaginator $p): array
+    protected function meta(LengthAwarePaginator $p, string $driver): array
     {
         return [
-            'driver'   => 'meilisearch',
+            'driver'   => $driver,
             'page'     => $p->currentPage(),
             'per_page' => $p->perPage(),
             'total'    => $p->total(),

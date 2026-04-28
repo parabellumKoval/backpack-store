@@ -32,18 +32,17 @@ class MeiliSettingsBuilder
     protected static function ensureFilterableAttributes(array $settings): array
     {
         $filterable = $settings['filterableAttributes'] ?? [];
+        $modelFilterable = [];
 
-        if (empty($filterable)) {
-            $productModel = config('dress.search.models.products');
-            if (is_string($productModel)
-                && class_exists($productModel)
-                && method_exists($productModel, 'filterableAttributes')) {
-                $filterable = $productModel::filterableAttributes();
-            }
+        $productModel = config('dress.search.models.products');
+        if (is_string($productModel)
+            && class_exists($productModel)
+            && method_exists($productModel, 'filterableAttributes')) {
+            $modelFilterable = $productModel::filterableAttributes();
         }
 
-        // гарантируем наличие in_stock так как он используется в фильтрах поиска
-        $filterable = array_unique(array_merge($filterable, ['in_stock']));
+        $required = ['in_stock', 'country_code', 'storefront_code'];
+        $filterable = array_unique(array_merge($filterable, $modelFilterable, $required));
 
         $settings['filterableAttributes'] = array_values($filterable);
 

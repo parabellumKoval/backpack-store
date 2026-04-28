@@ -3,6 +3,8 @@ namespace Backpack\Store\app\Console\Commands;
 
 use Illuminate\Console\Command;
 use Backpack\Store\app\Models\Catalog;
+use Backpack\Store\app\Job\ApplyMeiliSettingsJob;
+use Backpack\Store\app\Services\Search\MeiliSettingsBuilder;
 
 class SearchReindex extends Command
 {
@@ -19,6 +21,9 @@ class SearchReindex extends Command
             $this->warn('Поиск отключён или драйвер не meilisearch.');
             return 0;
         }
+
+        $this->info('Применение настроек индекса…');
+        (new ApplyMeiliSettingsJob(MeiliSettingsBuilder::build()))->handle();
 
         // опционально чистим индекс
         if ($this->option('flush')) {
@@ -53,14 +58,14 @@ class SearchReindex extends Command
             }
 
             foreach ($storefronts as $storefront) {
-                \Store::withContext($code, $currency, function () use ($code, $storefront) {
+                \Store::withContext($code, $currency, function () use ($code, $storefront, $chunk) {
                     Catalog::query()
                         ->where('country_code', $code)
                         ->where('storefront_code', $storefront)
                         ->where('is_available', 1)
                         ->orderBy('id')
-                        ->chunkById(1000, function ($chunk) {
-                            $chunk->searchable();
+                        ->chunkById($chunk, function ($items) {
+                            $items->searchable();
                         });
                 }, $storefront);
             }

@@ -29,14 +29,7 @@ class ApplyMeiliSettingsJob implements ShouldQueue
             \Settings::get('dress.search.meilisearch.key')
         );
 
-        $base = 'products';
-        $indexes = [$base];
-
-        if (\Settings::get('dress.search.suffix_per_country', false) && class_exists(\Store::class)) {
-            foreach (\Store::countries() as $code => $_) {
-                $indexes[] = "{$base}_{$code}";
-            }
-        }
+        $indexes = self::resolveIndexUids();
 
         \Log::info('Setting ' . print_r($this->settings, true));
 
@@ -50,5 +43,32 @@ class ApplyMeiliSettingsJob implements ShouldQueue
         foreach ($tasks as [$uid, $taskUid]) {
             $client->index($uid)->waitForTask($taskUid, 15000, 100);
         }
+    }
+
+    protected static function resolveIndexUids(): array
+    {
+        $base = 'products';
+        $indexes = [$base];
+
+        if (!class_exists(\Store::class)) {
+            return $indexes;
+        }
+
+        $countries = array_keys((array) \Store::countries());
+        $storefronts = array_keys((array) \Store::storefronts());
+
+        if (empty($storefronts)) {
+            $storefronts = [\Store::defaultStorefront()];
+        }
+
+        foreach ($countries as $countryCode) {
+            $indexes[] = "{$base}_{$countryCode}";
+
+            foreach ($storefronts as $storefront) {
+                $indexes[] = "{$base}_{$countryCode}_{$storefront}";
+            }
+        }
+
+        return array_values(array_unique($indexes));
     }
 }
