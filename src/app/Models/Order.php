@@ -59,7 +59,7 @@ class Order extends Model
       'user' => 'array'
     ];
 
-    public $products_to_synk = null;
+    public $products_to_synk = [];
 
     protected $dispatchesEvents = [
       'created' => OrderCreated::class
@@ -614,7 +614,17 @@ class Order extends Model
      * @return void
      */
     public function setProductsRelatedAttribute($v) {
-      $this->products_to_synk = $v;
+      if (is_array($v)) {
+        $this->products_to_synk = $v;
+        return;
+      }
+
+      if ($v instanceof \Traversable) {
+        $this->products_to_synk = iterator_to_array($v, false);
+        return;
+      }
+
+      $this->products_to_synk = [];
     }
     
     /**

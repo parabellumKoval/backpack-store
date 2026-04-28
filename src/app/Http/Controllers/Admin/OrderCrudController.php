@@ -63,33 +63,40 @@ class OrderCrudController extends CrudController
     $this->setEntry();
 
     $this->ORDER_MODEL::created(function($entry) {
+      $productsToSync = $this->normalizeProductsToSync($entry->products_to_synk);
+      $attachedAny = false;
 
       // Sync with Products relation
-      foreach($entry->products_to_synk as $key => $product) {
-        if(!isset($product->id) || empty($product->id))
+      foreach($productsToSync as $key => $product) {
+        $productId = data_get($product, 'id');
+        if(empty($productId))
           continue;
 
-        $amount = $product->amount ?? 1;
-        $entry->products()->attach($product->id, [
+        $amount = data_get($product, 'amount', 1);
+        $entry->products()->attach($productId, [
           'amount' => $amount,
-          'value' => $product->price,
+          'value' => data_get($product, 'price'),
           'currency_code' => $entry->currency_code ?? \Store::countryCurrency($entry->country_code),
           'country_code' => $entry->country_code ?? \Store::country(),
           'supplier_id' => null,
         ]);
+        $attachedAny = true;
       }
 
-      ProductAttachedToOrder::dispatch($entry);
+      if ($attachedAny) {
+        ProductAttachedToOrder::dispatch($entry);
+      }
     
     });
 
 
     $this->ORDER_MODEL::creating(function($entry) {
+      $productsToSync = $this->normalizeProductsToSync($entry->products_to_synk);
 
       // IF price empty, fill it from products data
       if($entry->price === null) {
-        $filtered_products = array_filter($entry->products_to_synk, function($item) {
-          return !empty($item->id);
+        $filtered_products = array_filter($productsToSync, function($item) {
+          return !empty(data_get($item, 'id'));
         });
 
         $plucked_products = Arr::pluck($filtered_products, 'amount', 'id');
@@ -859,6 +866,19 @@ class OrderCrudController extends CrudController
         'searchable_attributes' => ['name', 'code', 'slug'],
         'paginate' => 50
       ]);
+  }
+
+  protected function normalizeProductsToSync($products): array
+  {
+      if (is_array($products)) {
+          return $products;
+      }
+
+      if ($products instanceof \Traversable) {
+          return iterator_to_array($products, false);
+      }
+
+      return [];
   }
 
 
