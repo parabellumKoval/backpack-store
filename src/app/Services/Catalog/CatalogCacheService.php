@@ -271,14 +271,39 @@ class CatalogCacheService
                         ->where('storefront_code', $storefrontCode)
                         ->first();
 
-                    if ($indexAction === 'upsert' && $model && (int)$model->is_available === 1) {
-                        $model->searchable();
-                    } elseif ($model) {
-                        $model->unsearchable();
-                    }
+                    $this->syncSearchIndex($model, $indexAction, $productId, $countryCode, $storefrontCode);
                 });
             });
         }, $storefrontCode);
+    }
+
+    protected function syncSearchIndex(
+        ?Catalog $model,
+        string $indexAction,
+        int $productId,
+        string $countryCode,
+        string $storefrontCode
+    ): void
+    {
+        if (!$model) {
+            return;
+        }
+
+        try {
+            if ($indexAction === 'upsert' && (int)$model->is_available === 1) {
+                $model->searchable();
+            } else {
+                $model->unsearchable();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Catalog search index sync failed after cache rebuild', [
+                'product_id' => $productId,
+                'country' => $countryCode,
+                'storefront' => $storefrontCode,
+                'action' => $indexAction,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
