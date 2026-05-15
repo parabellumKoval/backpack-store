@@ -23,6 +23,10 @@ class AttributeSavedListener
      */
     public function handle(AttributeSaved $event)
     {
+      if (!$event->attribute->exists || empty($event->attribute->id)) {
+        return;
+      }
+
       $lang = backpack_translatable_request_locale(config('app.locale'));
 
       // Attach attributes that is presented

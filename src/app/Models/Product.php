@@ -189,9 +189,19 @@ class Product extends Model implements HasCrudCardInterface
       $categoryIds = [];
       $country = $this->resolveCountryCode(is_string($countryCode) ? $countryCode : null);
 
-      $categories = $this->categories;
+      $categories = collect($this->categories);
 
-      foreach ($categories as $category) {
+      if (!empty($this->parent_id)) {
+        $parent = $this->relationLoaded('parent')
+          ? $this->getRelation('parent')
+          : $this->parent()->with('categories')->first();
+
+        if ($parent instanceof self) {
+          $categories = $categories->merge($parent->categories);
+        }
+      }
+
+      foreach ($categories->unique('id') as $category) {
         if (!$category instanceof Category) {
           continue;
         }
@@ -1303,38 +1313,59 @@ class Product extends Model implements HasCrudCardInterface
      * @return void
      */
     public function getPropertiesAttribute () {
-      $attrs = [];
+      $attrs = $this->buildPropertiesMapFromAttributeProducts($this->ap);
 
-      for($i = 0; $i < $this->ap->count(); $i++) {
-        $attribute = $this->ap[$i]->attribute;
+      if ($this->parent_id) {
+        $parent = $this->relationLoaded('parent') ? $this->parent : $this->parent()->first();
+        $parentProperties = $parent?->properties ?? [];
 
-        if(!isset($attrs[$attribute->id])) {
-          // Skip if this attributes denny to properties
-          if(!$attribute->in_properties) {
+        foreach ($parentProperties as $parentProperty) {
+          $attributeId = (int) ($parentProperty['id'] ?? 0);
+
+          if ($attributeId <= 0 || isset($attrs[$attributeId])) {
             continue;
-          };
+          }
 
-          $attrs[$attribute->id] = [
-            'id' => $attribute->id,
-            'name' => $attribute->name,
-            'slug' => $attribute->slug,
-            // 'defaultValue' => $attribute->default_value,
-            'si' => $attribute->si,
-            'type' => $attribute->type,
-            'value' => null
-          ];
-        }
-
-        if($this->ap[$i]->attribute_value_id){
-          $attrs[$attribute->id]['value'][] = $this->ap[$i]->attribute_value;
-        }elseif($this->ap[$i]->value) {
-          $attrs[$attribute->id]['value'] = $this->ap[$i]->value;
-        }elseif($this->ap[$i]->value_trans) {
-          $attrs[$attribute->id]['value'] = $this->ap[$i]->value_trans;
+          $attrs[$attributeId] = $parentProperty;
         }
       }
 
       return array_values($attrs);
+    }
+
+    protected function buildPropertiesMapFromAttributeProducts($attributeProducts): array
+    {
+      $attrs = [];
+      $attributeProducts = collect($attributeProducts);
+
+      foreach ($attributeProducts as $attributeProduct) {
+        $attribute = $attributeProduct->attribute;
+
+        if (!$attribute || !$attribute->in_properties) {
+          continue;
+        }
+
+        if (!isset($attrs[$attribute->id])) {
+          $attrs[$attribute->id] = [
+            'id' => $attribute->id,
+            'name' => $attribute->name,
+            'slug' => $attribute->slug,
+            'si' => $attribute->si,
+            'type' => $attribute->type,
+            'value' => null,
+          ];
+        }
+
+        if ($attributeProduct->attribute_value_id) {
+          $attrs[$attribute->id]['value'][] = $attributeProduct->attribute_value;
+        } elseif ($attributeProduct->value) {
+          $attrs[$attribute->id]['value'] = $attributeProduct->value;
+        } elseif ($attributeProduct->value_trans) {
+          $attrs[$attribute->id]['value'] = $attributeProduct->value_trans;
+        }
+      }
+
+      return $attrs;
     }
         
     /**

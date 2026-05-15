@@ -15,7 +15,16 @@ class ShippingQuoteResult
         $this->provider  = $provider;
         $this->methodKey = $methodKey;
         $this->currency  = $currency;
-        $this->amount    = round($amount, 2);
+        $this->amount    = $this->normalizeAmount($amount);
         $this->breakdown = $breakdown;
+    }
+
+    protected function normalizeAmount(float $amount): float
+    {
+        if ($amount <= 0) {
+            return 0.0;
+        }
+
+        return (float) floor($amount + 1e-9);
     }
 }

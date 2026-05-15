@@ -21,16 +21,52 @@ class SlugMapCache
 
     public function categoryIdBySlug(?string $slug): ?int
     {
+        $slug = $this->normalizeSlug($slug);
         if (!$slug) return null;
+
         $map = $this->getCatMap();
-        return isset($map[$slug]) ? (int) $map[$slug] : null;
+
+        if (isset($map[$slug])) {
+            return (int) $map[$slug];
+        }
+
+        $resolved = Category::query()
+            ->where('slug', $slug)
+            ->value('id');
+
+        if (!$resolved) {
+            return null;
+        }
+
+        $map[$slug] = (int) $resolved;
+        Cache::put($this->catKey, $map, $this->ttl);
+
+        return (int) $resolved;
     }
 
     public function brandIdBySlug(?string $slug): ?int
     {
+        $slug = $this->normalizeSlug($slug);
         if (!$slug) return null;
+
         $map = $this->getBrandMap();
-        return isset($map[$slug]) ? (int) $map[$slug] : null;
+
+        if (isset($map[$slug])) {
+            return (int) $map[$slug];
+        }
+
+        $resolved = Brand::query()
+            ->where('slug', $slug)
+            ->value('id');
+
+        if (!$resolved) {
+            return null;
+        }
+
+        $map[$slug] = (int) $resolved;
+        Cache::put($this->brandKey, $map, $this->ttl);
+
+        return (int) $resolved;
     }
 
     /** Принудительно перестроить обе карты */
@@ -66,5 +102,12 @@ class SlugMapCache
         return Cache::remember($this->brandKey, $this->ttl, function () {
             return Brand::query()->pluck('id', 'slug')->all();
         });
+    }
+
+    protected function normalizeSlug(?string $slug): ?string
+    {
+        $normalized = is_string($slug) ? trim($slug) : '';
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

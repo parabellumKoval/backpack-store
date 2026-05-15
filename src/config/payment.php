@@ -92,6 +92,7 @@ return [
         ],
 
         'niftipay' => [
+            'enabled' => env('NIFTIPAY_ENABLED', true),
             'base_url' => env('NIFTIPAY_BASE_URL', 'https://www.niftipay.com'),
             'api_key' => env('NIFTIPAY_API_KEY'),
             'fiat_integration_id' => env('NIFTIPAY_FIAT_INTEGRATION_ID'),

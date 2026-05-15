@@ -75,14 +75,20 @@ class CatalogQueryService extends AbstractQueryService
 
         // либо category_id, либо category_slug
         $categoryId = $this->request->input('category_id');
+        $categorySlug = $this->request->input('category_slug');
+        $hasCategoryFilter = filled($categoryId) || filled($categorySlug);
 
-        if (!$categoryId && ($slug = $this->request->input('category_slug'))) {
-            $categoryId = $map->categoryIdBySlug($slug);
+        if (!$categoryId && $categorySlug) {
+            $categoryId = $map->categoryIdBySlug($categorySlug);
         }
 
         if ($categoryId) {
             // category_ids — JSON-массив всех категорий товара (вкл. родительские/дочерние уже записаны при кэше)
             $this->query->whereJsonContains('c.category_ids', (int) $categoryId);
+        } elseif ($hasCategoryFilter) {
+            // Если фильтр был явно запрошен, но категория не разрешилась,
+            // это должен быть пустой результат, а не весь каталог.
+            $this->query->whereRaw('1=0');
         }
 
         return $this;
@@ -397,6 +403,7 @@ class CatalogQueryService extends AbstractQueryService
 
         // 3) Вытянуть все модификации выбранных групп (страна + доступность), БЕЗ доп. фильтров
         $modsByGroup = $this->fetchAllModsForGroups($pageGroupIds);
+        $groupNames = $this->fetchGroupNames($pageGroupIds);
 
         // 4) Собрать по одной «карточке» на группу: берём любую модификацию как базу,
         //    пришиваем все модификации и проставляем passed_filter на каждой модификации
@@ -428,6 +435,7 @@ class CatalogQueryService extends AbstractQueryService
             // Базовая запись товара — берём первую модификацию (поля общие для группы)
             /** @var Catalog $base */
             $base = $mods->first();
+            $base->setAttribute('name', $groupNames[(int) $gid] ?? $base->getAttribute('name'));
 
             // Пришиваем модификации к базе, чтобы ресурсы могли $this->modifications()
             $base->setRelation('modifications', $mods);
@@ -465,6 +473,49 @@ class CatalogQueryService extends AbstractQueryService
         ]);
 
         return [$paginator, $items];
+    }
+
+    protected function fetchGroupNames(array $groupIds): array
+    {
+        if (empty($groupIds)) {
+            return [];
+        }
+
+        $locale = backpack_translatable_request_locale(null) ?? app()->getLocale();
+        $fallbackLocale = config('app.fallback_locale');
+
+        return DB::table('ak_products')
+            ->whereIn('id', array_map('intval', $groupIds))
+            ->pluck('name', 'id')
+            ->map(function ($name) use ($locale, $fallbackLocale) {
+                if (!is_string($name) || trim($name) === '') {
+                    return null;
+                }
+
+                $decoded = json_decode($name, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+                    return $name;
+                }
+
+                foreach (array_filter([$locale, $fallbackLocale]) as $localeCode) {
+                    $value = $decoded[$localeCode] ?? null;
+
+                    if (is_string($value) && trim($value) !== '') {
+                        return $value;
+                    }
+                }
+
+                foreach ($decoded as $value) {
+                    if (is_string($value) && trim($value) !== '') {
+                        return $value;
+                    }
+                }
+
+                return null;
+            })
+            ->filter()
+            ->all();
     }
 
     /**

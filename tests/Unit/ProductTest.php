@@ -8,6 +8,8 @@ use Backpack\Store\app\Models\Category;
 use Backpack\Store\app\Models\Product;
 use Backpack\Store\app\Models\Order;
 use Backpack\Store\app\Models\Promocode;
+use Backpack\Store\app\Models\Attribute;
+use Backpack\Store\app\Models\AttributeProduct;
 
 // DATE
 use Carbon\Carbon;
@@ -156,6 +158,70 @@ class ProductTest extends TestCase
     $product->setRelation('categories', collect([$child]));
 
     $this->assertEqualsCanonicalizing([1003, 1004], $product->getAllCategoryIds('cz'));
+  }
+
+  public function test_properties_inherit_missing_base_attributes_without_overwriting_child_attributes(): void
+  {
+    $baseStrength = new Attribute([
+      'name' => 'Strength',
+      'slug' => 'strength',
+      'type' => 'number',
+      'in_properties' => true,
+    ]);
+    $baseStrength->id = 501;
+
+    $baseOrigin = new Attribute([
+      'name' => 'Origin',
+      'slug' => 'origin',
+      'type' => 'string',
+      'in_properties' => true,
+    ]);
+    $baseOrigin->id = 502;
+
+    $childOrigin = new Attribute([
+      'name' => 'Origin',
+      'slug' => 'origin',
+      'type' => 'string',
+      'in_properties' => true,
+    ]);
+    $childOrigin->id = 502;
+
+    $baseStrengthPivot = new AttributeProduct([
+      'attribute_id' => 501,
+      'value' => '25',
+    ]);
+    $baseStrengthPivot->setRelation('attribute', $baseStrength);
+
+    $baseOriginPivot = new AttributeProduct([
+      'attribute_id' => 502,
+      'value_trans' => ['ru' => 'Thailand'],
+    ]);
+    $baseOriginPivot->setRelation('attribute', $baseOrigin);
+
+    $childOriginPivot = new AttributeProduct([
+      'attribute_id' => 502,
+      'value_trans' => ['ru' => 'Indonesia'],
+    ]);
+    $childOriginPivot->setRelation('attribute', $childOrigin);
+
+    $parent = new Product([
+      'id' => 100,
+      'parent_id' => null,
+    ]);
+    $parent->setRelation('ap', collect([$baseStrengthPivot, $baseOriginPivot]));
+
+    $child = new Product([
+      'id' => 101,
+      'parent_id' => 100,
+    ]);
+    $child->setRelation('ap', collect([$childOriginPivot]));
+    $child->setRelation('parent', $parent);
+
+    $properties = collect($child->properties)->keyBy('id');
+
+    $this->assertCount(2, $properties);
+    $this->assertSame('25', $properties[501]['value']);
+    $this->assertSame('Indonesia', $properties[502]['value']);
   }
   
   /**

@@ -78,7 +78,7 @@ class AttributeCrudController extends CrudController
         // SET ATTRIBUTE TYPE
         $this->setType();
 
-        AttributeAdmin::saving(function($entry) {
+        AttributeAdmin::saved(function($entry) {
           AttributeSaved::dispatch($entry);        
         });
     }

@@ -304,6 +304,7 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->label('Доплата COD картой: процент от суммы заказа')
                         ->default(1.25)
                         ->cast('float')
+                        ->attributes(['step' => '0.01'])
                         ->tab('Наложенный платёж (COD)')
                         ->regionable(true));
                 })

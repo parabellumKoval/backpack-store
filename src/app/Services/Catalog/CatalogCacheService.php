@@ -99,7 +99,7 @@ class CatalogCacheService
             $this->productClass::query()
                 ->leafs()
                 ->available($countryCode)
-                ->with(['regionalContents', 'parent.regionalContents'])
+                ->with(['categories', 'regionalContents', 'parent.categories', 'parent.regionalContents'])
                 ->chunk($chunk, function ($products) use ($countryCode, &$processed, $heartbeat, &$iteration) {
                     $rows = [];
 
@@ -202,7 +202,7 @@ class CatalogCacheService
         \Store::withContext($countryCode, $currency, function () use ($productId, $countryCode, $storefrontCode) {
             DB::transaction(function () use ($productId, $countryCode, $storefrontCode) {
                 $product = $this->productClass::query()
-                    ->with(['regionalContents', 'parent.regionalContents'])
+                    ->with(['categories', 'regionalContents', 'parent.categories', 'parent.regionalContents'])
                     ->whereKey($productId)
                     ->first();
                 $indexAction = 'delete';
