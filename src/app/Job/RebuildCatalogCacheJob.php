@@ -28,6 +28,7 @@ class RebuildCatalogCacheJob implements ShouldQueue, ShouldBeUniqueUntilProcessi
         $this->storefronts = $storefronts ?: null;
         $this->chunk = $chunk;
 
+        $this->onQueue((string) config('queue.names.ak_catalog', 'ak_catalog'));
         $this->afterCommit();
     }
 

@@ -18,6 +18,7 @@ class TouchCategoryCatalogProductsJob implements ShouldQueue, ShouldBeUniqueUnti
 
     public function __construct(public int $categoryId)
     {
+        $this->onQueue((string) config('queue.names.ak_catalog', 'ak_catalog'));
         $this->afterCommit();
     }
 

@@ -20,6 +20,7 @@ class SyncCatalogProductJob implements ShouldQueue, ShouldBeUniqueUntilProcessin
     public function __construct(int $productId, int $delaySeconds = 5)
     {
         $this->productId = $productId;
+        $this->onQueue((string) config('queue.names.ak_catalog', 'ak_catalog'));
 
         // этот вызов безопасно выставляет флаг "после коммита"
         $this->afterCommit();

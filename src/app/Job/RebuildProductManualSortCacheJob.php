@@ -16,6 +16,7 @@ class RebuildProductManualSortCacheJob implements ShouldQueue, ShouldBeUniqueUnt
 
     public function __construct(int $delaySeconds = 5)
     {
+        $this->onQueue((string) config('queue.names.ak_catalog', 'ak_catalog'));
         $this->afterCommit();
         $this->delay(now()->addSeconds($delaySeconds));
     }
@@ -35,4 +36,3 @@ class RebuildProductManualSortCacheJob implements ShouldQueue, ShouldBeUniqueUnt
         $cacheService->rebuild();
     }
 }
-
