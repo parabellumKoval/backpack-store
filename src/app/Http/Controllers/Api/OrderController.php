@@ -355,7 +355,8 @@ class OrderController extends \App\Http\Controllers\Controller
 
     /** @var ShippingCalculator $calculator */
     $calculator = app(ShippingCalculator::class);
-    $isMessengerCod = $methodKey === 'messenger_address' && data_get($data, 'payment.method') === 'messenger_cod';
+    $isMessengerCod = in_array($methodKey, ['messenger_address', 'messenger_express'], true)
+      && data_get($data, 'payment.method') === 'messenger_cod';
     $quoteRequest = new ShippingQuoteRequest([
       'methodKey' => $methodKey,
       'destinationCountry' => $destination,

@@ -40,13 +40,12 @@ class MessengerProvider implements ShippingProviderInterface
         $codEnabled = (bool) \Settings::get('shipping.messenger.cod.enabled', true, $context);
         if ($r->codEnabled && $codEnabled) {
             $paymentType = strtolower((string) ($r->meta['cod_payment_type'] ?? 'cash'));
-            $cashFee = (float) \Settings::get('shipping.messenger.cod.cash_fee', 30, $context);
             $cardFeeFixed = (float) \Settings::get('shipping.messenger.cod.card_fee_fixed', 30, $context);
             $cardFeePercent = (float) \Settings::get('shipping.messenger.cod.card_fee_percent', 1.25, $context);
 
             $codBase = $paymentType === 'card'
                 ? $cardFeeFixed + ($r->codAmount * $cardFeePercent / 100.0)
-                : $cashFee;
+                : $this->resolveCashFee((float) $r->codAmount, $context);
 
             [$codNet, $codVat, $codGross] = $this->applyVat($codBase, $vatRate, $vatIncluded);
             $net += $codNet;
@@ -62,6 +61,14 @@ class MessengerProvider implements ShippingProviderInterface
             ];
         }
 
+        // Экспресс — тот же расчёт messenger + плоская надбавка к итогу.
+        $expressBreakdown = [];
+        if ($this->isExpress($r->methodKey) && (bool) \Settings::get('shipping.messenger.express.enabled', false, $context)) {
+            $expressSurcharge = (float) \Settings::get('shipping.messenger.express.surcharge', 200, $context);
+            $gross += $expressSurcharge;
+            $expressBreakdown = ['express_surcharge' => $this->round2($expressSurcharge)];
+        }
+
         return new ShippingQuoteResult('messenger', $r->methodKey, $currency, $this->round2($gross), [
             'shipments_count' => $shipmentsCount,
             'shipment_weight_g' => $shipmentWeightG,
@@ -73,7 +80,41 @@ class MessengerProvider implements ShippingProviderInterface
             'vat' => $this->round2($vat),
             'gross' => $this->round2($gross),
             'vat_rate' => $vatRate,
-        ] + $codBreakdown);
+        ] + $codBreakdown + $expressBreakdown);
+    }
+
+    protected function isExpress(string $methodKey): bool
+    {
+        return \str_ends_with($methodKey, '_express');
+    }
+
+    /**
+     * Доплата за наложенный платёж наличными выбирается по сумме заказа:
+     * первый порог `max_amount` (включительно), под который попадает сумма.
+     * Если пороги не заданы — используется фиксированная cash_fee.
+     */
+    protected function resolveCashFee(float $orderAmount, array $context): float
+    {
+        $tiers = collect($this->normalizeRates(\Settings::get('shipping.messenger.cod.cash_tiers', [], $context)))
+            ->map(fn ($row) => [
+                'max_amount' => (float) ($row['max_amount'] ?? 0),
+                'fee' => (float) ($row['fee'] ?? 0),
+            ])
+            ->filter(fn (array $row) => $row['max_amount'] > 0)
+            ->sortBy('max_amount')
+            ->values();
+
+        foreach ($tiers as $tier) {
+            if ($orderAmount <= $tier['max_amount']) {
+                return (float) $tier['fee'];
+            }
+        }
+
+        if ($tiers->isNotEmpty()) {
+            return (float) $tiers->last()['fee'];
+        }
+
+        return (float) \Settings::get('shipping.messenger.cod.cash_fee', 30, $context);
     }
 
     protected function normalizeRates(mixed $value): array

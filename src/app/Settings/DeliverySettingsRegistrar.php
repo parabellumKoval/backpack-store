@@ -186,6 +186,15 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->tab('Тарифы')
                         ->regionable(true));
 
+                    $page->add(Field::make('shipping.zasilkovna.pickup_eta', 'text')
+                        ->label('Срок доставки (пункт выдачи)')
+                        ->hint('Отображается в чекауте под способом доставки.')
+                        ->default('1–2 рабочих дня')
+                        ->cast('string')
+                        ->translatable(true)
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
                     $page->add(Field::make('shipping.zasilkovna.home_rates', 'repeatable_pure')
                         ->label('Тарифы на доставку домой')
                         ->fields([
@@ -196,6 +205,15 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                             ['max_weight_g' => 5000, 'price' => 89],
                             ['max_weight_g' => 15000, 'price' => 130],
                         ])
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.zasilkovna.home_eta', 'text')
+                        ->label('Срок доставки (домой)')
+                        ->hint('Отображается в чекауте под способом доставки.')
+                        ->default('2–3 рабочих дня')
+                        ->cast('string')
+                        ->translatable(true)
                         ->tab('Тарифы')
                         ->regionable(true));
                 })
@@ -277,6 +295,15 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->tab('Тарифы')
                         ->regionable(true));
 
+                    $page->add(Field::make('shipping.messenger.address_eta', 'text')
+                        ->label('Срок доставки (адрес)')
+                        ->hint('Отображается в чекауте под способом доставки.')
+                        ->default('1–2 рабочих дня')
+                        ->cast('string')
+                        ->translatable(true)
+                        ->tab('Тарифы')
+                        ->regionable(true));
+
                     $page->add(Field::make('shipping.messenger.cod.enabled', 'checkbox')
                         ->label('Разрешить наложенный платёж')
                         ->default(true)
@@ -284,8 +311,23 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->tab('Наложенный платёж (COD)')
                         ->regionable(true));
 
+                    $page->add(Field::make('shipping.messenger.cod.cash_tiers', 'repeatable_pure')
+                        ->label('Доплата COD наличными по сумме заказа')
+                        ->hint('Комиссия выбирается по первому порогу «Сумма заказа до», под который попадает сумма (включительно). Если суммы заказа больше всех порогов — берётся последний. Если пороги не заданы — используется фиксированная доплата ниже.')
+                        ->fields([
+                            ['name' => 'max_amount', 'type' => 'number', 'label' => 'Сумма заказа до (включительно)'],
+                            ['name' => 'fee', 'type' => 'number', 'label' => 'Доплата COD, CZK'],
+                        ])
+                        ->default([
+                            ['max_amount' => 1000, 'fee' => 30],
+                            ['max_amount' => 10000, 'fee' => 60],
+                        ])
+                        ->tab('Наложенный платёж (COD)')
+                        ->regionable(true));
+
                     $page->add(Field::make('shipping.messenger.cod.cash_fee', 'number')
-                        ->label('Доплата COD наличными')
+                        ->label('Доплата COD наличными (запасной вариант)')
+                        ->hint('Используется, если пороги выше не заданы.')
                         ->suffix('CZK')
                         ->default(30)
                         ->cast('float')
@@ -306,6 +348,31 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->cast('float')
                         ->attributes(['step' => '0.01'])
                         ->tab('Наложенный платёж (COD)')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.express.enabled', 'checkbox')
+                        ->label('Включить экспресс-доставку')
+                        ->hint('Отдельная вкладка «Messenger Express» на фронте: тот же расчёт + надбавка')
+                        ->default(false)
+                        ->cast('bool')
+                        ->tab('Экспресс-доставка')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.express.surcharge', 'number')
+                        ->label('Надбавка за экспресс')
+                        ->suffix('CZK')
+                        ->default(200)
+                        ->cast('float')
+                        ->tab('Экспресс-доставка')
+                        ->regionable(true));
+
+                    $page->add(Field::make('shipping.messenger.express_eta', 'text')
+                        ->label('Срок доставки (экспресс)')
+                        ->hint('Отображается в чекауте под способом доставки.')
+                        ->default('В течение дня')
+                        ->cast('string')
+                        ->translatable(true)
+                        ->tab('Экспресс-доставка')
                         ->regionable(true));
                 })
 
@@ -429,6 +496,14 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ])
                         ->tab('Тарифы'));
 
+                    $page->add(Field::make('shipping.novaposhta.branch_eta', 'text')
+                        ->label('Срок доставки (отделение)')
+                        ->hint('Отображается в чекауте под способом доставки.')
+                        ->default('1–2 дня')
+                        ->cast('string')
+                        ->translatable(true)
+                        ->tab('Тарифы'));
+
                     // Почтомат
                     $page->add(Field::make('shipping.novaposhta.locker_rates', 'repeatable_pure')
                         ->label('Тарифы: почтомат')
@@ -459,6 +534,14 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                             ['max_weight_g' => 10000, 'price' => 180],
                             ['max_weight_g' => 20000, 'price' => 280],
                         ])
+                        ->tab('Тарифы'));
+
+                    $page->add(Field::make('shipping.novaposhta.courier_eta', 'text')
+                        ->label('Срок доставки (курьер)')
+                        ->hint('Отображается в чекауте под способом доставки.')
+                        ->default('1–2 дня')
+                        ->cast('string')
+                        ->translatable(true)
                         ->tab('Тарифы'));
                 });
 
