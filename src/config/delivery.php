@@ -23,6 +23,16 @@ return [
             'label' => 'Отделение/почтомат Zasilkovna',
             'calculable' => true
         ],[
+            'name' => 'messenger',
+            'type' => 'address',
+            'label' => 'Курьер Messenger.cz',
+            'calculable' => true
+        ],[
+            'name' => 'messenger',
+            'type' => 'express',
+            'label' => 'Экспресс-курьер Messenger.cz',
+            'calculable' => true
+        ],[
             'name' => 'default',
             'type' => 'pickup',
             'label' => 'Самовывоз',

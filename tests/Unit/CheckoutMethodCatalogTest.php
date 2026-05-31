@@ -9,6 +9,20 @@ use Backpack\Store\Tests\TestCase;
 
 class CheckoutMethodCatalogTest extends TestCase
 {
+    public function test_delivery_methods_include_messenger_variants_from_config(): void
+    {
+        config()->set('dress.delivery.methods', config('dress.delivery.methods', []));
+
+        $methods = CheckoutMethodCatalog::deliveryMethods();
+        $keys = array_values(array_map(
+            fn (array $item) => $item['name'] . '_' . $item['type'],
+            $methods
+        ));
+
+        $this->assertContains('messenger_address', $keys);
+        $this->assertContains('messenger_express', $keys);
+    }
+
     public function test_payment_methods_skip_disabled_online_provider(): void
     {
         config()->set('dress.payment.package_methods', [

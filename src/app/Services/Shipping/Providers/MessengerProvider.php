@@ -8,6 +8,11 @@ use Backpack\Store\app\DTO\ShippingQuoteResult;
 
 class MessengerProvider implements ShippingProviderInterface
 {
+    protected const DEFAULT_CASH_TIERS = [
+        ['max_amount' => 1000, 'fee' => 30],
+        ['max_amount' => 999999, 'fee' => 60],
+    ];
+
     public function supports(string $methodKey): bool
     {
         return \str_starts_with($methodKey, 'messenger_');
@@ -47,9 +52,11 @@ class MessengerProvider implements ShippingProviderInterface
                 ? $cardFeeFixed + ($r->codAmount * $cardFeePercent / 100.0)
                 : $this->resolveCashFee((float) $r->codAmount, $context);
 
-            [$codNet, $codVat, $codGross] = $this->applyVat($codBase, $vatRate, $vatIncluded);
+            // COD surcharge in settings is treated as the final customer-facing amount.
+            $codNet = $this->round2($codBase);
+            $codVat = 0.0;
+            $codGross = $this->round2($codBase);
             $net += $codNet;
-            $vat += $codVat;
             $gross += $codGross;
 
             $codBreakdown = [
@@ -95,7 +102,7 @@ class MessengerProvider implements ShippingProviderInterface
      */
     protected function resolveCashFee(float $orderAmount, array $context): float
     {
-        $tiers = collect($this->normalizeRates(\Settings::get('shipping.messenger.cod.cash_tiers', [], $context)))
+        $tiers = collect($this->normalizeRates(\Settings::get('shipping.messenger.cod.cash_tiers', self::DEFAULT_CASH_TIERS, $context)))
             ->map(fn ($row) => [
                 'max_amount' => (float) ($row['max_amount'] ?? 0),
                 'fee' => (float) ($row['fee'] ?? 0),

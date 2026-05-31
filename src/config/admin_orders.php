@@ -59,6 +59,10 @@ return [
             'label' => 'backpack-store::shop.delivery_methods.messenger_address',
             'icon' => 'la la-truck-loading',
         ],
+        'messenger_express' => [
+            'label' => 'backpack-store::shop.delivery_methods.messenger_express',
+            'icon' => 'la la-bolt',
+        ],
         'default_pickup' => [
             'label' => 'backpack-store::shop.delivery_methods.default_pickup',
             'icon' => 'la la-store',

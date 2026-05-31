@@ -10,6 +10,35 @@ use Backpack\Store\Tests\TestCase;
 
 class DeliverySettingsRegistrarTest extends TestCase
 {
+    public function test_shipping_methods_field_hides_messenger_express_toggle_option(): void
+    {
+        $registry = new Registry();
+
+        (new DeliverySettingsRegistrar())->register($registry);
+
+        $group = $registry->get('delivery');
+
+        $this->assertNotNull($group);
+
+        $field = null;
+
+        foreach ($group->pages as $page) {
+            foreach ($page->fields as $candidate) {
+                if ($candidate->key === 'shipping.methods') {
+                    $field = $candidate;
+                    break 2;
+                }
+            }
+        }
+
+        $this->assertNotNull($field);
+
+        $options = $field->toBackpackArray()['options'] ?? [];
+
+        $this->assertArrayHasKey('messenger_address', $options);
+        $this->assertArrayNotHasKey('messenger_express', $options);
+    }
+
     public function test_messenger_cod_card_fee_percent_field_allows_decimal_step(): void
     {
         $registry = new Registry();

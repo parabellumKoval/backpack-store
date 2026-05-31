@@ -68,7 +68,10 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
                         ->tab('Бесплатная доставка')
                     );
 
-                    $deliveries = CheckoutMethodCatalog::deliveryMethods();
+                    $deliveries = array_values(array_filter(
+                        CheckoutMethodCatalog::deliveryMethods(),
+                        fn (array $item) => (($item['name'] ?? '') . '_' . ($item['type'] ?? '')) !== 'messenger_express'
+                    ));
 
                     $result_name_type_label = array_reduce($deliveries, function ($carry, $item) {
                         $key = $item['name'] . '_' . $item['type'];
@@ -313,7 +316,7 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
 
                     $page->add(Field::make('shipping.messenger.cod.cash_tiers', 'repeatable_pure')
                         ->label('Доплата COD наличными по сумме заказа')
-                        ->hint('Комиссия выбирается по первому порогу «Сумма заказа до», под который попадает сумма (включительно). Если суммы заказа больше всех порогов — берётся последний. Если пороги не заданы — используется фиксированная доплата ниже.')
+                        ->hint('Комиссия выбирается по первому порогу «Сумма заказа до», под который попадает сумма включительно. Для сценария 1000 CZK -> 30 CZK, свыше 1000 CZK -> 60 CZK добавьте строки: 1000/30 и 999999/60. Если пороги не заданы — используется фиксированная доплата ниже.')
                         ->fields([
                             ['name' => 'max_amount', 'type' => 'number', 'label' => 'Сумма заказа до (включительно)'],
                             ['name' => 'fee', 'type' => 'number', 'label' => 'Доплата COD, CZK'],
@@ -336,6 +339,7 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
 
                     $page->add(Field::make('shipping.messenger.cod.card_fee_fixed', 'number')
                         ->label('Доплата COD картой: фиксированная часть')
+                        ->hint('Используется только для сценария оплаты картой при вручении. Итоговая доплата = фиксированная часть + процент ниже.')
                         ->suffix('CZK')
                         ->default(30)
                         ->cast('float')
@@ -344,6 +348,7 @@ class DeliverySettingsRegistrar implements SettingsRegistrarInterface
 
                     $page->add(Field::make('shipping.messenger.cod.card_fee_percent', 'number')
                         ->label('Доплата COD картой: процент от суммы заказа')
+                        ->hint('Добавляется к фиксированной части выше и считается от суммы заказа.')
                         ->default(1.25)
                         ->cast('float')
                         ->attributes(['step' => '0.01'])

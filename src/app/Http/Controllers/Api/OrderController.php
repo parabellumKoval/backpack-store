@@ -46,11 +46,18 @@ class OrderController extends \App\Http\Controllers\Controller
     $this->ORDER_MODEL = \Settings::get('dress.order.model', 'Backpack\Store\app\Models\Order');
     $this->USER_MODEL = \Settings::get('dress.store.user_model', 'Backpack\Profile\app\Models\Profile');
 
-    // Rd 
-    $this->rd_fields = \Settings::get('dress.order.fields');
-    $this->rd_fields = $this->withDynamicPaymentMethodRules($this->rd_fields);
+    $this->bootstrapDynamicFieldRules();
 
     $this->bonusService = app(BonusService::class);
+  }
+
+  protected function bootstrapDynamicFieldRules(?Request $request = null): void
+  {
+    $fields = \Settings::get('dress.order.fields');
+    $fields = $this->withDynamicPaymentMethodRules($fields);
+    $fields = $this->withDynamicDeliveryMethodRules($fields, $request);
+
+    $this->rd_fields = $fields;
   }
 
   protected function withDynamicPaymentMethodRules(array $fields): array
@@ -71,6 +78,70 @@ class OrderController extends \App\Http\Controllers\Controller
     }
 
     return $fields;
+  }
+
+  protected function withDynamicDeliveryMethodRules(array $fields, ?Request $request = null): array
+  {
+    $methods = $this->resolveAllowedDeliveryMethodKeys($request);
+
+    if (!empty($methods)) {
+      $fields['delivery']['method']['rules'] = 'required|in:' . implode(',', $methods);
+    }
+
+    return $fields;
+  }
+
+  protected function resolveAllowedDeliveryMethodKeys(?Request $request = null): array
+  {
+    $storefront = $this->resolveRequestedStorefront($request);
+    $country = $this->resolveRequestedCountry($request);
+    $context = $country ? ['country' => $country] : [];
+
+    $configured = app(StorefrontSettings::class)->get('shipping.methods', [], $context, $storefront);
+    $allowed = CheckoutMethodCatalog::filterDeliveryMethodKeys($configured);
+
+    if (empty($allowed)) {
+      $allowed = array_values(array_filter(
+        CheckoutMethodCatalog::deliveryMethodKeys(),
+        fn (string $key) => $key !== 'messenger_express'
+      ));
+    }
+
+    $expressEnabled = (bool) app(StorefrontSettings::class)->get(
+      'shipping.messenger.express.enabled',
+      false,
+      $context,
+      $storefront
+    );
+
+    if (in_array('messenger_address', $allowed, true) && $expressEnabled) {
+      $allowed[] = 'messenger_express';
+    }
+
+    return array_values(array_unique(array_filter($allowed)));
+  }
+
+  protected function resolveRequestedCountry(?Request $request = null): ?string
+  {
+    $country = $request?->input('destinationCountry')
+      ?? $request?->input('shipping_country_code')
+      ?? \Store::country();
+
+    $country = $country ? strtoupper(trim((string) $country)) : null;
+
+    return $country ?: null;
+  }
+
+  protected function resolveRequestedStorefront(?Request $request = null): ?string
+  {
+    $requested = $request?->input('storefront_code')
+      ?? $request?->input('storefront');
+
+    if (!$requested) {
+      return null;
+    }
+
+    return \Backpack\Store\app\Services\Store::normalizeStorefrontCode($requested);
   }
   
   /**
@@ -185,6 +256,7 @@ class OrderController extends \App\Http\Controllers\Controller
    */
   public function validateOrder(Request $request) {
     try{
+      $this->bootstrapDynamicFieldRules($request);
       // Get only allowed fields
       $data = $this->validateData($request);
       $this->ensureCartProductsAvailable($data['products'] ?? []);
@@ -208,6 +280,7 @@ class OrderController extends \App\Http\Controllers\Controller
    * @return void
    */
   public function getRequestRules(Request $request) {
+    $this->bootstrapDynamicFieldRules($request);
     $parsed = $this->parseFieldsConfig($this->rd_fields);
 
     // 3) Отдаём клиенту
@@ -226,6 +299,7 @@ class OrderController extends \App\Http\Controllers\Controller
   public function create(Request $request){
     
     try {
+      $this->bootstrapDynamicFieldRules($request);
       // Get only allowed fields
       $data = $this->validateData($request);
       $user = $this->resolveOrderUser($data);

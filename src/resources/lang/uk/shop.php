@@ -48,6 +48,7 @@ return [
     'packeta_address' => 'Кур\'єр Packeta',
     'packeta_warehouse' => 'Пункт видачі Packeta',
     'messenger_address' => 'Кур\'єр Messenger.cz',
+    'messenger_express' => 'Експрес-кур\'єр Messenger.cz',
     'default_pickup' => 'Самовивіз',
   ],
 ];

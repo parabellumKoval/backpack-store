@@ -24,6 +24,14 @@ class CheckoutMethodCatalog
         ));
     }
 
+    public static function deliveryMethodKeys(): array
+    {
+        return array_values(array_map(
+            fn (array $item) => $item['name'] . '_' . $item['type'],
+            static::deliveryMethods()
+        ));
+    }
+
     public static function paymentMethodKeys(): array
     {
         return array_values(array_map(
@@ -35,6 +43,16 @@ class CheckoutMethodCatalog
     public static function filterPaymentMethodKeys(mixed $value): array
     {
         $allowed = array_flip(static::paymentMethodKeys());
+
+        return array_values(array_filter(
+            static::normalizeMethodKeys($value),
+            fn (string $key) => isset($allowed[$key])
+        ));
+    }
+
+    public static function filterDeliveryMethodKeys(mixed $value): array
+    {
+        $allowed = array_flip(static::deliveryMethodKeys());
 
         return array_values(array_filter(
             static::normalizeMethodKeys($value),

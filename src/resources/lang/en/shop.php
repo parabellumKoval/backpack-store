@@ -47,6 +47,7 @@ return [
     'packeta_address' => 'Packeta courier',
     'packeta_warehouse' => 'Packeta pickup point',
     'messenger_address' => 'Messenger.cz courier',
+    'messenger_express' => 'Messenger.cz express courier',
     'default_pickup' => 'Store pickup',
   ],
 ];
