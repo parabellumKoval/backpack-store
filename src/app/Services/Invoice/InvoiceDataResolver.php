@@ -252,7 +252,59 @@ class InvoiceDataResolver
             ];
         }
 
+        $shippingLine = $this->resolveShippingLine($order, count($lines) + 1, $currency);
+        if ($shippingLine !== null) {
+            $lines[] = $shippingLine;
+        }
+
         return $lines;
+    }
+
+    protected function resolveShippingLine(Order $order, int $position, string $currency): ?array
+    {
+        if (Arr::get($order->info, 'payment.method') !== 'bank_transfer') {
+            return null;
+        }
+
+        $shippingGross = round((float) ($order->shipping_total ?? 0), 2);
+        if ($shippingGross <= 0) {
+            return null;
+        }
+
+        $breakdown = Arr::get($order->info, 'shippingQuote.breakdown', []);
+        $vatRate = round((float) Arr::get($breakdown, 'vat_rate', 0), 2);
+        $gross = round((float) Arr::get($breakdown, 'gross', $shippingGross), 2);
+        $net = Arr::has($breakdown, 'net')
+            ? round((float) Arr::get($breakdown, 'net'), 2)
+            : $this->resolveNetAmountFromGross($gross, $vatRate);
+        $vat = Arr::has($breakdown, 'vat')
+            ? round((float) Arr::get($breakdown, 'vat'), 2)
+            : round($gross - $net, 2);
+
+        $deliveryMethod = Arr::get($order->info, 'delivery.method');
+        $deliveryLabel = $deliveryMethod ? store_delivery_method_label((string) $deliveryMethod) : null;
+
+        return [
+            'position' => $position,
+            'name' => $deliveryLabel ? sprintf('Doprava (%s)', $deliveryLabel) : 'Doprava',
+            'quantity' => 1.0,
+            'unit' => 'služba',
+            'unit_price' => $net,
+            'vat_rate' => $vatRate,
+            'total_ex_vat' => $net,
+            'total_vat' => $vat,
+            'total_inc_vat' => $gross,
+            'currency' => $currency,
+        ];
+    }
+
+    protected function resolveNetAmountFromGross(float $gross, float $vatRate): float
+    {
+        if ($gross <= 0 || $vatRate <= 0) {
+            return round($gross, 2);
+        }
+
+        return round($gross / (1 + ($vatRate / 100)), 2);
     }
 
     protected function calculateTotals(array $lines): array
