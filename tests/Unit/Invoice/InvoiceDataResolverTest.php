@@ -174,4 +174,58 @@ class InvoiceDataResolverTest extends TestCase
         $this->assertSame(100.0, $payload['totals']['grand_total']);
         $this->assertSame(100.0, $payload['qr_payload']['amount']);
     }
+
+    public function test_bank_transfer_invoice_handles_nested_delivery_method_payload(): void
+    {
+        /** @var InvoiceDataResolver $resolver */
+        $resolver = app(InvoiceDataResolver::class);
+
+        $order = new Order();
+        $order->setAttribute('id', 104);
+        $order->setAttribute('code', 'INV-104');
+        $order->setAttribute('currency_code', 'CZK');
+        $order->setAttribute('country_code', 'CZ');
+        $order->setAttribute('shipping_total', 121.0);
+        $order->setAttribute('info', [
+            'products' => [
+                [
+                    'name' => 'Test product',
+                    'price' => 100,
+                    'amount' => 1,
+                    'vat_rate' => 0,
+                ],
+            ],
+            'payment' => [
+                'method' => [
+                    'code' => 'bank_transfer',
+                ],
+            ],
+            'delivery' => [
+                'method' => [
+                    'code' => 'packeta_warehouse',
+                ],
+                'warehouse' => 'Praha 1',
+            ],
+            'shippingQuote' => [
+                'breakdown' => [
+                    'net' => 100.0,
+                    'vat' => 21.0,
+                    'gross' => 121.0,
+                    'vat_rate' => 21.0,
+                ],
+            ],
+        ]);
+
+        $payload = $resolver->build($order, [
+            'template' => 'cz_default',
+            'locale' => 'cs_CZ',
+            'number_pattern' => 'F{Y}{m}{order_id}',
+            'due_days' => 14,
+            'tax_offset_days' => 0,
+        ]);
+
+        $this->assertCount(2, $payload['lines']);
+        $this->assertStringStartsWith('Doprava', $payload['lines'][1]['name']);
+        $this->assertSame(221.0, $payload['qr_payload']['amount']);
+    }
 }

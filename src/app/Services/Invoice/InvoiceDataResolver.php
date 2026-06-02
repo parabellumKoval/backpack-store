@@ -262,7 +262,7 @@ class InvoiceDataResolver
 
     protected function resolveShippingLine(Order $order, int $position, string $currency): ?array
     {
-        if (Arr::get($order->info, 'payment.method') !== 'bank_transfer') {
+        if ($this->resolveMethodKey(Arr::get($order->info, 'payment')) !== 'bank_transfer') {
             return null;
         }
 
@@ -281,8 +281,16 @@ class InvoiceDataResolver
             ? round((float) Arr::get($breakdown, 'vat'), 2)
             : round($gross - $net, 2);
 
-        $deliveryMethod = Arr::get($order->info, 'delivery.method');
-        $deliveryLabel = $deliveryMethod ? store_delivery_method_label((string) $deliveryMethod) : null;
+        $deliveryLabel = null;
+        if (function_exists('store_delivery_lines')) {
+            $deliveryLines = store_delivery_lines(Arr::get($order->info, 'delivery'));
+            $deliveryLabel = $deliveryLines[0] ?? null;
+        }
+
+        if (!$deliveryLabel) {
+            $deliveryMethod = $this->resolveMethodKey(Arr::get($order->info, 'delivery'));
+            $deliveryLabel = $deliveryMethod ? store_delivery_method_label($deliveryMethod) : null;
+        }
 
         return [
             'position' => $position,
@@ -305,6 +313,59 @@ class InvoiceDataResolver
         }
 
         return round($gross / (1 + ($vatRate / 100)), 2);
+    }
+
+    protected function resolveMethodKey(mixed $payload): ?string
+    {
+        if (is_string($payload)) {
+            $payload = trim($payload);
+            return $payload !== '' ? $payload : null;
+        }
+
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        $keys = ['method', 'paymentMethod', 'payment_method', 'deliveryMethod', 'delivery_method', 'methodKey', 'method_key', 'code', 'key', 'name', 'label'];
+
+        $extractString = static function (array $source) use (&$extractString, $keys): ?string {
+            foreach ($keys as $key) {
+                if (!array_key_exists($key, $source)) {
+                    continue;
+                }
+
+                $value = $source[$key];
+
+                if (is_scalar($value) || is_bool($value)) {
+                    $value = trim((string) $value);
+                    if ($value !== '') {
+                        return $value;
+                    }
+                }
+
+                if (is_array($value)) {
+                    $nested = $extractString($value);
+                    if ($nested !== null) {
+                        return $nested;
+                    }
+                }
+            }
+
+            foreach ($source as $value) {
+                if (!is_array($value)) {
+                    continue;
+                }
+
+                $nested = $extractString($value);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
+
+            return null;
+        };
+
+        return $extractString($payload);
     }
 
     protected function calculateTotals(array $lines): array

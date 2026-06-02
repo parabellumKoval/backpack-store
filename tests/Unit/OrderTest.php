@@ -207,6 +207,25 @@ class OrderTest extends TestCase
       // 2.
       $this->assertTrue(count($order->payment) > 0);
     }
+
+    public function test_requires_invoice_handles_nested_payment_method_payload(): void
+    {
+      config([
+        'dress.invoice.auto_generate_payment_methods' => ['bank_transfer'],
+      ]);
+
+      $order = Order::factory()->suspended()->make([
+        'info' => [
+          'payment' => [
+            'method' => [
+              'code' => 'bank_transfer',
+            ],
+          ],
+        ],
+      ]);
+
+      $this->assertTrue($order->requiresInvoice());
+    }
     
     /**
      * test_products_anyway_attributes

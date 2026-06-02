@@ -516,9 +516,9 @@ class Order extends Model
 
     protected function invoicePaymentMethod(): ?string
     {
-        $method = data_get($this->info, 'payment.method');
+        $method = $this->extractMethodKey(data_get($this->info, 'payment'));
 
-        return $method !== null ? strtolower((string) $method) : null;
+        return $method !== null ? strtolower($method) : null;
     }
 
     protected function invoiceTriggerMethods(): array
@@ -543,6 +543,59 @@ class Order extends Model
         }
 
         return $value ?? $default;
+    }
+
+    protected function extractMethodKey(mixed $payload): ?string
+    {
+        if (is_string($payload)) {
+            $payload = trim($payload);
+            return $payload !== '' ? $payload : null;
+        }
+
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        $keys = ['method', 'paymentMethod', 'payment_method', 'deliveryMethod', 'delivery_method', 'methodKey', 'method_key', 'code', 'key', 'name', 'label'];
+
+        $extract = static function (array $source) use (&$extract, $keys): ?string {
+            foreach ($keys as $key) {
+                if (!array_key_exists($key, $source)) {
+                    continue;
+                }
+
+                $value = $source[$key];
+
+                if (is_scalar($value) || is_bool($value)) {
+                    $value = trim((string) $value);
+                    if ($value !== '') {
+                        return $value;
+                    }
+                }
+
+                if (is_array($value)) {
+                    $nested = $extract($value);
+                    if ($nested !== null) {
+                        return $nested;
+                    }
+                }
+            }
+
+            foreach ($source as $value) {
+                if (!is_array($value)) {
+                    continue;
+                }
+
+                $nested = $extract($value);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
+
+            return null;
+        };
+
+        return $extract($payload);
     }
 
 
