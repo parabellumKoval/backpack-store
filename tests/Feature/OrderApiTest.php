@@ -344,6 +344,44 @@ class OrderApiTest extends TestCase
     $this->assertDatabaseCount('ak_order_invoices', 0);
   }
 
+  public function test_signed_download_falls_back_to_latest_invoice_when_requested_invoice_is_missing(): void
+  {
+    Storage::fake('public');
+
+    config([
+      'dress.invoice.auto_generate_payment_methods' => ['bank_transfer'],
+      'app.url' => 'https://example.test',
+    ]);
+
+    $this->bindFakeInvoiceService();
+
+    $data = $this->getOrderData();
+    $data['payment'] = array_merge($data['payment'], [
+      'method' => 'bank_transfer',
+      'settlement' => 'Prague',
+      'street' => 'Main street',
+      'house' => '10A',
+      'room' => '5',
+      'zip' => '11000',
+    ]);
+
+    $response = $this->postJson('/api/order', $data);
+    $response->assertStatus(200);
+
+    $payload = $response->json();
+    $order = Order::query()->findOrFail($payload['id']);
+    $invoice = $order->invoices()->latest('id')->firstOrFail();
+
+    $download = $this->get(sprintf(
+      '/api/store/invoices/%d/signed/%d',
+      $order->getKey(),
+      $invoice->getKey() + 9999
+    ));
+
+    $download->assertStatus(200);
+    $download->assertHeader('content-type', 'application/pdf');
+  }
+
   public function test_create_with_bonus_applies_discount(): void
   {
     $product = Product::first();

@@ -82,8 +82,16 @@ class InvoiceController extends \App\Http\Controllers\Controller
 
     public function downloadSigned(Request $request, $order, $invoice)
     {
-        $invoice = OrderInvoice::findOrFail($invoice);
         $order = Order::findOrFail($order);
+        $invoice = OrderInvoice::find($invoice);
+
+        if (!$invoice) {
+            $invoice = $this->invoiceService->latestInvoice($order);
+        }
+
+        if (!$invoice) {
+            abort(404, 'Invoice file not found.');
+        }
 
         if ($invoice->order_id !== $order->getKey()) {
             abort(404);
