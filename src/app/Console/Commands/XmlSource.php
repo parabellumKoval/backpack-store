@@ -816,44 +816,43 @@ class XmlSource extends Command
      * @return void
      */
     private function searchInArray($search, $array) {
-      if(!is_array($array) || empty($array) || !is_string($search)) {
+      if(!is_array($array) || empty($array) || !is_scalar($search)) {
         return false;
       }
 
-      $search = trim($search);
+      $search = trim((string)$search);
+      $searchLower = mb_strtolower($search);
 
       for($i = 0; $i < count($array); $i++) {
-        $item = trim($array[$i]);
-        
-        // Try to find %% rule
-        preg_match('/^%(.+)%$/i', $item, $matches, PREG_UNMATCHED_AS_NULL);
-
-        if(!empty($matches[1])) {
-          $search_anywhere = mb_stripos($search, $matches[1]);
-
-          // if false continue to search
-          if($search_anywhere !== false) {
-            return true;
-          }
-        }
-        
-        $matches = null;
-        // Try find starts with rule
-        preg_match('/^\^(.+)/i', $item, $matches, PREG_UNMATCHED_AS_NULL);
-
-        if(!empty($matches[1])) {
-          $search_starts_with = str_starts_with(mb_strtolower($search), mb_strtolower($matches[1]));
-
-          // if false continue to search
-          if($search_starts_with) {
-            return true;
-          }
+        if(!is_scalar($array[$i])) {
+          continue;
         }
 
-        $matches = null;
-        // Search exactly
-        preg_match('/^' . $item. '$/i', $search, $matches, PREG_UNMATCHED_AS_NULL);
-        if(!empty($matches)) {
+        $item = trim((string)$array[$i]);
+        if($item === '') {
+          continue;
+        }
+
+        // Search anywhere by mask: %value%
+        if(str_starts_with($item, '%') && str_ends_with($item, '%') && mb_strlen($item) > 2) {
+          $needle = trim(mb_substr($item, 1, -1));
+          if($needle !== '' && mb_stripos($search, $needle) !== false) {
+            return true;
+          }
+          continue;
+        }
+
+        // Search by prefix mask: ^value
+        if(str_starts_with($item, '^') && mb_strlen($item) > 1) {
+          $needle = trim(mb_substr($item, 1));
+          if($needle !== '' && str_starts_with($searchLower, mb_strtolower($needle))) {
+            return true;
+          }
+          continue;
+        }
+
+        // Search exact, case-insensitive, without regex semantics
+        if($searchLower === mb_strtolower($item)) {
           return true;
         }
       }
