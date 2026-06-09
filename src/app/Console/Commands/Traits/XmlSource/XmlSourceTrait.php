@@ -326,7 +326,7 @@ trait XmlSourceTrait {
         }, $xml);
 
         if($this->IS_TEST_MODE) {
-            $this->totalRecords = $this->TEST_ITEMS === -1? count($item): $this->TEST_ITEMS;
+            $this->totalRecords = $this->TEST_ITEMS < 0 ? count($item) : $this->TEST_ITEMS;
         } else {
             $this->totalRecords = count($item);
         }
