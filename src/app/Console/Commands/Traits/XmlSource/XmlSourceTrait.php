@@ -260,10 +260,66 @@ trait XmlSourceTrait {
       return (string)$attributes[$attributeName];
     }
 
+    /**
+     * extractXmlCategoryMap
+     *
+     * @param  mixed $xml
+     * @return array
+     */
+    private function extractXmlCategoryMap($xml) {
+      $categoriesMap = [];
+
+      if(!$xml instanceof \SimpleXMLElement) {
+        return $categoriesMap;
+      }
+
+      $categories = $xml->xpath('//category[@id]');
+
+      if($categories === false) {
+        return $categoriesMap;
+      }
+
+      foreach($categories as $category) {
+        $attributes = $category->attributes();
+        $id = isset($attributes['id']) ? trim((string)$attributes['id']) : '';
+        $name = trim((string)$category);
+
+        if($id === '' || $name === '') {
+          continue;
+        }
+
+        $categoriesMap[$id] = $name;
+      }
+
+      return $categoriesMap;
+    }
+
+    /**
+     * resolveXmlCategoryValue
+     *
+     * @param  mixed $categoryValue
+     * @param  array $categoriesMap
+     * @return string|null
+     */
+    private function resolveXmlCategoryValue($categoryValue, array $categoriesMap) {
+      if ($categoryValue === null) {
+        return null;
+      }
+
+      $categoryValue = trim((string)$categoryValue);
+
+      if ($categoryValue === '') {
+        return $categoryValue;
+      }
+
+      return $categoriesMap[$categoryValue] ?? $categoryValue;
+    }
+
 
     private function loadFromXml($source) {
         $this->bootSource($source);
         $xml = $this->getXMLCatalog($source->link);
+        $categoriesMap = $this->extractXmlCategoryMap($xml);
 
         $item = array_reduce(explode('->', $this->settings['item']), function($model, $property) {
             return $model->{$property};
@@ -278,8 +334,10 @@ trait XmlSourceTrait {
         $this->totalUploadHistory($this->totalRecords);
 
         for($i = 0; $i < $this->totalRecords; $i++){
+            $categoryValue = $this->resolveFieldPath($item[$i], $this->settings['fieldCategory']) ?? null;
             $xml_product = [
-                'category' => $this->resolveFieldPath($item[$i], $this->settings['fieldCategory']) ?? null,
+                'category' => $categoryValue,
+                'category_name' => $this->resolveXmlCategoryValue($categoryValue, $categoriesMap),
                 'name'     => $this->resolveFieldPath($item[$i], $this->settings['fieldName']) ?? null,
                 'brand'    => $this->resolveFieldPath($item[$i], $this->settings['fieldBrand']) ?? null,
                 'inStock'  => $this->resolveFieldPath($item[$i], $this->settings['fieldInStock']) ?? null,

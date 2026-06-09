@@ -51,6 +51,10 @@ class Source extends BaseSource
                 $value->overprice = null;
             }
 
+            if ($value->type !== 'exchange') {
+                $value->exchange_coff = null;
+            }
+
             // clear by target
             if ($value->target !== 'brand') {
                 $value->brands = null;
@@ -64,9 +68,17 @@ class Source extends BaseSource
                 $value->names = null;
             }
 
+            if ($value->target !== 'category') {
+                $value->categories = null;
+            }
+
             if ($value->target !== 'price') {
                 $value->min_price = null;
                 $value->max_price = null;
+            }
+
+            if ($value->target !== 'inStock') {
+                $value->in_stock = null;
             }
 
             $filtered_value[] = $value;

@@ -745,8 +745,17 @@ class XmlSource extends Command
       }
 
       if($rule['target'] === 'category' && !empty($rule['categories']) && is_array($rule['categories'])) {
-        if($this->searchInArray($product['category'], $rule['categories'])) {
-          return true;
+        $categoryValues = array_filter([
+          $product['category_name'] ?? null,
+          $product['category'] ?? null,
+        ], function($value) {
+          return is_string($value) && trim($value) !== '';
+        });
+
+        foreach($categoryValues as $categoryValue) {
+          if($this->searchInArray($categoryValue, $rule['categories'])) {
+            return true;
+          }
         }
       }
 
@@ -785,6 +794,13 @@ class XmlSource extends Command
 
         if($points === 2) {
           return 2;
+        }
+      }
+
+      // IF BANNED BY IN STOCK VALUE
+      if($rule['target'] === 'inStock' && $rule['in_stock'] !== null) {
+        if((string)$product['inStock'] === (string)$rule['in_stock']) {
+          return true;
         }
       }
 
