@@ -4,6 +4,21 @@ namespace Backpack\Store\app\Console\Commands\Traits\XmlSource;
 
 trait XmlSourceTrait {
 
+  private function getXmlNodeAttributeValue(\SimpleXMLElement $ctx, string $attributeName): ?string
+  {
+      $attributeName = trim($attributeName);
+      if ($attributeName === '') {
+          return null;
+      }
+
+      $attributes = $ctx->attributes();
+      if (!$attributes || !isset($attributes[$attributeName])) {
+          return null;
+      }
+
+      return trim((string)$attributes[$attributeName]);
+  }
+
   private function getNodeValuesBySpec(\SimpleXMLElement $ctx, string $spec): array
   {
       if (!preg_match('/^([A-Za-z0-9_:\-]+)(?:\[(.+)\])?$/u', $spec, $m)) {
@@ -100,6 +115,10 @@ trait XmlSourceTrait {
     // Примеры спецификатора: "name", "param[name=Артикул]", "price[currency=UAH]"
     private function getNodeValueBySpec(\SimpleXMLElement $ctx, string $spec): ?string
     {
+        if (str_starts_with($spec, '@')) {
+            return $this->getXmlNodeAttributeValue($ctx, mb_substr($spec, 1));
+        }
+
         // tag[cond]?
         if (!preg_match('/^([A-Za-z0-9_:\-]+)(?:\[(.+)\])?$/u', $spec, $m)) {
             return null;
@@ -214,6 +233,11 @@ trait XmlSourceTrait {
         return $attributeValue === null ? $default : $attributeValue;
       }
 
+      if(str_contains($fieldName, '->') || str_contains($fieldName, '[') || str_starts_with($fieldName, '@')) {
+        $resolvedValue = $this->resolveFieldPath($item, $fieldName);
+        return $resolvedValue === null ? $default : $resolvedValue;
+      }
+
       if(!isset($item->{$fieldName})) {
         return $default;
       }
@@ -235,6 +259,11 @@ trait XmlSourceTrait {
 
       if($this->isFieldInAttributes('fieldImage')) {
         return $this->getItemAttributeValue($item, $fieldName);
+      }
+
+      if(str_contains($fieldName, '->') || str_contains($fieldName, '[') || str_starts_with($fieldName, '@')) {
+        $resolvedValue = $this->resolveFieldPathAll($item, $fieldName);
+        return empty($resolvedValue) ? null : $resolvedValue;
       }
 
       if(!isset($item->{$fieldName})) {
@@ -334,22 +363,23 @@ trait XmlSourceTrait {
         $this->totalUploadHistory($this->totalRecords);
 
         for($i = 0; $i < $this->totalRecords; $i++){
-            $categoryValue = $this->resolveFieldPath($item[$i], $this->settings['fieldCategory']) ?? null;
+            $categoryValue = $this->getItemFieldValue($item[$i], 'fieldCategory', null);
             $xml_product = [
                 'category' => $categoryValue,
                 'category_name' => $this->resolveXmlCategoryValue($categoryValue, $categoriesMap),
-                'name'     => $this->resolveFieldPath($item[$i], $this->settings['fieldName']) ?? null,
-                'brand'    => $this->resolveFieldPath($item[$i], $this->settings['fieldBrand']) ?? null,
-                'inStock'  => $this->resolveFieldPath($item[$i], $this->settings['fieldInStock']) ?? null,
-                'code'     => $this->resolveFieldPath($item[$i], $this->settings['fieldCode']) ?? null,
-                'barcode'  => $this->resolveFieldPath($item[$i], $this->settings['fieldBarcode']) ?? null,
-                'price'    => $this->resolveFieldPath($item[$i], $this->settings['fieldPrice']) ?? null,
+                'name'     => $this->getItemFieldValue($item[$i], 'fieldName', null),
+                'brand'    => $this->getItemFieldValue($item[$i], 'fieldBrand', null),
+                'inStock'  => $this->getItemFieldValue($item[$i], 'fieldInStock', null),
+                'code'     => $this->getItemFieldValue($item[$i], 'fieldCode', null),
+                'barcode'  => $this->getItemFieldValue($item[$i], 'fieldBarcode', null),
+                'price'    => $this->getItemFieldValue($item[$i], 'fieldPrice', null),
             ];
 
             if(isset($this->settings['fieldImage']) && !empty($this->settings['fieldImage'])) {
-                // если картинок много, вернуть массив строк через xpath
-                $imgs = $this->resolveFieldPathAll($item[$i], $this->settings['fieldImage']);
-                $xml_product['images'] = $imgs;
+                $imgs = $this->getItemImagesValue($item[$i]);
+                if($imgs !== null && $imgs !== '') {
+                    $xml_product['images'] = $imgs;
+                }
             }
 
             if($this->validateData($xml_product)) {
