@@ -872,6 +872,15 @@ class XmlSource extends Command
       // if(str_starts_with($xml_product['articul'], 'sale_'))
       //   continue;
 
+      // BLACKLIST ALWAYS HAS PRIORITY
+      if(isset($this->rules['blacklist']) && !empty($this->rules['blacklist'])) {
+        foreach($this->rules['blacklist'] as $blacklist){
+          if($this->isRuleForProduct($blacklist, $data)) {
+            return false;
+          }
+        }
+      }
+
       // ACCEPT ONLY IF IN WHITELIST
       if(isset($this->rules['whitelist']) && !empty($this->rules['whitelist'])) {
         foreach($this->rules['whitelist'] as $whitelist){
@@ -882,17 +891,6 @@ class XmlSource extends Command
         
         // If product is not in whitelists skip all next checks and return false
         return false;
-      }
-    
-      // SKIP IF IN BLACKLIST
-      if(isset($this->rules['blacklist']) && !empty($this->rules['blacklist'])) {
-        foreach($this->rules['blacklist'] as $blacklist){
-          if($this->isRuleForProduct($blacklist, $data)) {
-            return false;
-          }
-        }
-
-        return true;
       }
 
       return true;
