@@ -130,7 +130,7 @@ class XmlSource extends Command
             }else {
               $this->loadFromXml($source);
             }
-          }catch (\Exception $e) {
+          }catch (\Throwable $e) {
             \Log::channel('xml')->error($e->getMessage());
             $this->setStatusUploadHistory('error');
           }
@@ -288,14 +288,14 @@ class XmlSource extends Command
       
       try {
         $this->setProductImage($product, $data);
-      }catch(\Exception $e) {
+      }catch(\Throwable $e) {
         throw new \Exception('Set Image Error: ' . $e->getMessage());
       }
 
       try {
         // Set brand to product
         $this->attachProductBrand($product, $data);
-      }catch(\Exception $e) {
+      }catch(\Throwable $e) {
         throw new \Exception('Set Brand Error: ' . $e->getMessage());
       }
 
@@ -514,8 +514,17 @@ class XmlSource extends Command
      * @return void
      */
     private function setProductName(&$product, array $data) {
-      $product->setTranslation('name', $this->lang, $data['name']);
-      $product->slug = SlugService::createSlug($this->PRODUCT_CLASS, 'slug', $data['name']);
+      $name = $data['name'] ?? null;
+
+      if(!is_string($name) || trim($name) === '') {
+        $fallbackCode = $data['code'] ?? $data['barcode'] ?? 'unknown';
+        throw new \InvalidArgumentException('Product name is empty for item: ' . $fallbackCode);
+      }
+
+      $name = trim($name);
+
+      $product->setTranslation('name', $this->lang, $name);
+      $product->slug = SlugService::createSlug($this->PRODUCT_CLASS, 'slug', $name);
     }
 
         

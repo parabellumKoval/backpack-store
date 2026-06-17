@@ -103,7 +103,7 @@ trait FileSourceTrait {
           try {
             $response = $this->updateOrCreateItem($excel_product);
             $this->updateUploadHistory($response);
-          }catch(\Exception $e) {
+          }catch(\Throwable $e) {
             $this->errorUploadHistory();
 				    \Log::channel('xml')->error($e->getMessage());
             // throw new \Exception $e;

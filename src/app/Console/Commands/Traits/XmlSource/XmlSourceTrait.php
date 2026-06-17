@@ -386,7 +386,7 @@ trait XmlSourceTrait {
                 try {
                     $response = $this->updateOrCreateItem($xml_product);
                     $this->updateUploadHistory($response);
-                } catch(\Exception $e) {
+                } catch(\Throwable $e) {
                     $this->errorUploadHistory();
                     \Log::channel('xml')->error('updateOrCreateItem error: ' . $e->getMessage());
                     continue;
