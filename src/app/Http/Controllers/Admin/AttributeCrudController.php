@@ -496,7 +496,17 @@ class AttributeCrudController extends CrudController
      * @return void
      */
     private function getAttributeValuesArray(){
+      // При создании атрибута (и в любой операции кроме update) entry ещё нет
+      if(!$this->entry) {
+        return collect();
+      }
+
       $values = $this->entry->values;
+
+      if(!$values) {
+        return collect();
+      }
+
       return $values->map(function($item) {
         
         $value = $item->getTranslation('value', $this->lang, true);
