@@ -4,6 +4,66 @@ namespace Backpack\Store\app\Console\Commands\Traits\XmlSource;
 
 trait XmlSourceTrait {
 
+  /**
+   * Разбирает имя тега на префикс пространства имён и локальное имя.
+   * "g:price" => ['g', 'price'], "price" => [null, 'price']
+   *
+   * @param  string $tag
+   * @return array
+   */
+  private function splitNamespacedTag(string $tag): array
+  {
+      $position = strpos($tag, ':');
+
+      if ($position === false) {
+          return [null, $tag];
+      }
+
+      return [substr($tag, 0, $position), substr($tag, $position + 1)];
+  }
+
+  /**
+   * Возвращает список дочерних узлов по имени тега с поддержкой пространств имён.
+   * SimpleXML не умеет $node->{'g:price'}, поэтому для префиксных тегов
+   * переключаем контекст через children($namespaceUri).
+   *
+   * @param  \SimpleXMLElement $ctx
+   * @param  string $tag
+   * @return \SimpleXMLElement|null
+   */
+  private function getNamespacedNodes(\SimpleXMLElement $ctx, string $tag)
+  {
+      [$prefix, $localName] = $this->splitNamespacedTag($tag);
+
+      if ($prefix === null) {
+          return isset($ctx->{$localName})? $ctx->{$localName}: null;
+      }
+
+      $namespaces = $ctx->getDocNamespaces(true);
+
+      if (!isset($namespaces[$prefix])) {
+          return null;
+      }
+
+      $children = $ctx->children($namespaces[$prefix]);
+
+      return isset($children->{$localName})? $children->{$localName}: null;
+  }
+
+  /**
+   * Возвращает первый дочерний узел по имени тега (с поддержкой пространств имён).
+   *
+   * @param  \SimpleXMLElement $ctx
+   * @param  string $tag
+   * @return \SimpleXMLElement|null
+   */
+  private function getNamespacedNode(\SimpleXMLElement $ctx, string $tag)
+  {
+      $nodes = $this->getNamespacedNodes($ctx, $tag);
+
+      return $nodes === null? null: $nodes[0];
+  }
+
   private function getXmlNodeAttributeValue(\SimpleXMLElement $ctx, string $attributeName): ?string
   {
       $attributeName = trim($attributeName);
@@ -28,9 +88,10 @@ trait XmlSourceTrait {
 
       // Без условия: могут быть несколько одноимённых тегов
       if (empty($m[2])) {
-          if (!isset($ctx->{$tag})) return [];
+          $nodes = $this->getNamespacedNodes($ctx, $tag);
+          if ($nodes === null) return [];
           $out = [];
-          foreach ($ctx->{$tag} as $node) {
+          foreach ($nodes as $node) {
               $out[] = trim((string)$node);
           }
           return $out;
@@ -79,8 +140,9 @@ trait XmlSourceTrait {
                   return [];
               }
           } else {
-              if (!isset($node->{$part})) return [];
-              $node = $node->{$part};
+              $next = $this->getNamespacedNode($node, $part);
+              if ($next === null) return [];
+              $node = $next;
           }
       }
 
@@ -129,10 +191,11 @@ trait XmlSourceTrait {
         // Без условия: как раньше
         if (empty($m[2])) {
             // Узел может быть отсутствующим
-            if (!isset($ctx->{$tag})) {
+            $node = $this->getNamespacedNode($ctx, $tag);
+            if ($node === null) {
                 return null;
             }
-            return trim((string)$ctx->{$tag});
+            return trim((string)$node);
         }
 
         // С условием вида attr=value (поддержка пробелов и кириллицы)
@@ -205,10 +268,11 @@ trait XmlSourceTrait {
                 }
                 return null;
             } else {
-                if (!isset($node->{$tag})) {
+                $next = $this->getNamespacedNode($node, $tag);
+                if ($next === null) {
                     return null;
                 }
-                $node = $node->{$tag};
+                $node = $next;
             }
         }
         return null;
@@ -238,11 +302,13 @@ trait XmlSourceTrait {
         return $resolvedValue === null ? $default : $resolvedValue;
       }
 
-      if(!isset($item->{$fieldName})) {
+      $node = $this->getNamespacedNode($item, $fieldName);
+
+      if($node === null) {
         return $default;
       }
 
-      return $item->{$fieldName}->__toString();
+      return $node->__toString();
     }
 
     /**
@@ -266,11 +332,13 @@ trait XmlSourceTrait {
         return empty($resolvedValue) ? null : $resolvedValue;
       }
 
-      if(!isset($item->{$fieldName})) {
+      $nodes = $this->getNamespacedNodes($item, $fieldName);
+
+      if($nodes === null) {
         return null;
       }
 
-      return $item->{$fieldName};
+      return $nodes;
     }
 
     /**
@@ -351,8 +419,14 @@ trait XmlSourceTrait {
         $categoriesMap = $this->extractXmlCategoryMap($xml);
 
         $item = array_reduce(explode('->', $this->settings['item']), function($model, $property) {
-            return $model->{$property};
+            return $model === null? null: $this->getNamespacedNodes($model, trim($property));
         }, $xml);
+
+        if($item === null) {
+            $message = "Can't find items node by path: " . $this->settings['item'];
+            \Log::channel('xml')->error($message);
+            throw new \Exception($message);
+        }
 
         if($this->IS_TEST_MODE) {
             $this->totalRecords = $this->TEST_ITEMS < 0 ? count($item) : $this->TEST_ITEMS;
