@@ -338,7 +338,18 @@ trait XmlSourceTrait {
         return null;
       }
 
-      return $nodes;
+      // Приводим узлы к строкам: (array) на SimpleXMLElement даёт объекты, а не ссылки
+      $links = [];
+
+      foreach($nodes as $node) {
+        $link = trim((string)$node);
+
+        if($link !== '') {
+          $links[] = $link;
+        }
+      }
+
+      return empty($links) ? null : $links;
     }
 
     /**
