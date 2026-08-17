@@ -359,11 +359,16 @@ class ProductCrudController extends CrudController
           $results = $this->product_class::with('sp')->paginate(20);
       }
 
-      // Expose the admin label (name + id + all supplier codes/barcodes) to select2,
-      // so every option in the dropdown is identifiable by any of its codes.
+      // Reduce each result to exactly what select2 needs: the key + the option label.
+      // The field uses attribute => 'name', so we put the enriched label (name + id +
+      // every supplier code/barcode) into 'name'. Returning a plain array guarantees the
+      // label is serialized (an appended accessor gets dropped by the translatable model's
+      // toArray(), which left the dropdown empty and made select2 spam pagination).
       $results->getCollection()->transform(function($product) {
-        $product->append('admin_label');
-        return $product;
+        return [
+          'id' => $product->id,
+          'name' => $product->admin_label,
+        ];
       });
 
       return $results;

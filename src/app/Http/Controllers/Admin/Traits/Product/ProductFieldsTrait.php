@@ -376,7 +376,7 @@ trait ProductFieldsTrait
             'label' => trans('backpack-store::product-field.fields.modifications.related_products'),
             'type'    => 'relationship',
             'model'     => 'Backpack\Store\app\Models\Product',
-            'attribute' => 'admin_label',
+            'attribute' => 'name',
             'ajax' => true,
             'multiple' => true,
             'entity' => 'children',
