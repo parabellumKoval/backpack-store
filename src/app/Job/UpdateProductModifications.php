@@ -38,21 +38,22 @@ class UpdateProductModifications implements ShouldQueue, ShouldBeUnique
     {
       $this_id = $this->product->id;
 
-      // Reset old relations
-      Product::where('parent_id', $this->product->parent_id)
-        ->orWhere('parent_id', $this->product->id)
-        ->update([
-          'parent_id' => null
-        ]);
+      // Detach the products that are currently attached to THIS product as modifications.
+      Product::where('parent_id', $this_id)->update([
+        'parent_id' => null
+      ]);
 
+      // A product can never be its own modification.
       $modifications = array_filter($this->modifications, function($id) use($this_id) {
         return $id != $this_id;
       });
 
-      // Set new Relations
-      Product::whereIn('id', $modifications)->update([
-        'parent_id' => $this->product->id
-      ]);
+      // Attach the newly selected products as modifications of this product.
+      if(!empty($modifications)) {
+        Product::whereIn('id', $modifications)->update([
+          'parent_id' => $this_id
+        ]);
+      }
     }
     
 }

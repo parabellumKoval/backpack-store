@@ -643,8 +643,60 @@ class Product extends Model
     }
 
     /**
+     * getAdminLabelAttribute
+     *
+     * Human readable label used in admin relation pickers (e.g. the "Related products"
+     * field). Contains the product name, its id and every code/barcode across all
+     * suppliers, so a product can be found and identified by any of them.
+     *
+     * @return string
+     */
+    public function getAdminLabelAttribute()
+    {
+      $name = $this->name;
+
+      // $name may be a raw translations array when translations are not resolved to a
+      // single locale — fall back to the first available value in that case.
+      if(is_array($name)) {
+        $name = collect($name)->filter()->first();
+      }
+
+      $name = trim((string) $name);
+
+      $codes = [];
+
+      // Product own code
+      if(!empty($this->code)) {
+        $codes[] = $this->code;
+      }
+
+      // Codes & barcodes from every supplier
+      $supplierProducts = $this->relationLoaded('sp') ? $this->sp : $this->sp()->get();
+
+      foreach($supplierProducts as $sp) {
+        if(!empty($sp->code)) {
+          $codes[] = $sp->code;
+        }
+        if(!empty($sp->barcode)) {
+          $codes[] = $sp->barcode;
+        }
+      }
+
+      $codes = array_values(array_unique(array_filter($codes)));
+
+      $label = $name !== '' ? $name : ('#' . $this->id);
+      $label .= ' [ID: ' . $this->id . ']';
+
+      if(!empty($codes)) {
+        $label .= ' — ' . implode(', ', $codes);
+      }
+
+      return $label;
+    }
+
+    /**
      * getCategoryAttribute
-     * 
+     *
      * Get first category if exists
      *
      * @return void

@@ -42,13 +42,20 @@ class ProductSavedListener
       if(config('backpack.store.product.modifications.enable', true)) {
 
         // Save modifications
+        // NOTE: run these synchronously (dispatchSync) instead of pushing them onto the queue.
+        // Pushing tiny parent_id updates onto the queue made the "Related products" field
+        // silently stay empty after save whenever the queue worker was not processing this
+        // connection (or a stale ShouldBeUnique lock dropped the job). The work is 1-2 UPDATE
+        // queries, so doing it inline during the request is both reliable and cheap.
+        // $modificationsToSave is only populated when the "modifications" field is actually
+        // present in the submitted form (via setModificationsAttribute). An empty multiselect
+        // submits no key at all, so we deliberately DO NOT remove existing relations here —
+        // that keeps unrelated saves (e.g. XML imports, editing other fields) from wiping the
+        // related-products relation.
         $modifications = $event->product->modificationsToSave;
-        $old_modifications = $event->product->modifications;
 
         if(!empty($modifications) && is_array($modifications)) {
-          UpdateProductModifications::dispatch($modifications, $event->product);
-        }elseif(!empty($old_modifications) && empty($modifications)){
-          RemoveAllProductModifications::dispatch($event->product);
+          UpdateProductModifications::dispatchSync($modifications, $event->product);
         }
       }
 

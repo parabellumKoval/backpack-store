@@ -330,16 +330,23 @@ class ProductCrudController extends CrudController
       if ($search_term)
       {
         $locale = \Lang::locale();
+        $search_term = trim($search_term);
 
-        $results = $this->product_class::
+        $results = $this->product_class::with('sp')
             // where("name->{$locale}", 'LIKE', "%" . $search_term . "%")
-            where(function($query) use ($search_term, $langs_list){
+            ->where(function($query) use ($search_term, $langs_list){
               foreach($langs_list as $index => $lang_key) {
                 $function_name = $index === 0? 'whereRaw': 'orWhereRaw';
-                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.trim(mb_strtolower($search_term)).'%']);
+                $query->{$function_name}('LOWER(JSON_EXTRACT(name, "$.' . $lang_key . '")) LIKE ? ', ['%'.mb_strtolower($search_term).'%']);
               }
             })
+          // exact match by product id
+          ->when(ctype_digit($search_term), function($query) use ($search_term) {
+            $query->orWhere('id', (int) $search_term);
+          })
+          // product own article
           ->orWhere('code', 'LIKE', '%'.$search_term.'%')
+          // article / barcode of ANY supplier
           ->orWhereHas('sp', function($query) use($search_term) {
             $query->where('code', 'LIKE', '%'.$search_term.'%')->orWhere('barcode', 'LIKE', '%'.$search_term.'%');
           })
@@ -349,8 +356,15 @@ class ProductCrudController extends CrudController
       }
       else
       {
-          $results = $this->product_class::paginate(20);
+          $results = $this->product_class::with('sp')->paginate(20);
       }
+
+      // Expose the admin label (name + id + all supplier codes/barcodes) to select2,
+      // so every option in the dropdown is identifiable by any of its codes.
+      $results->getCollection()->transform(function($product) {
+        $product->append('admin_label');
+        return $product;
+      });
 
       return $results;
     }
