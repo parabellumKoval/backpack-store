@@ -499,7 +499,6 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'fake' => true,
           'store_in' => 'settings',
-          'hint' => 'Поле/тег с описанием товара у поставщика (для XML можно указать путь, например description или content->text). Сохраняется как исходное описание поставщика и используется генератором ИИ в режиме «глубокий рерайт».',
           'wrapper'   => [
             'class' => 'form-group col-md-4'
           ],
