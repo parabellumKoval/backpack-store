@@ -487,7 +487,20 @@ class SourceCrudController extends CrudController
           'type' => 'text',
           'fake' => true,
           'store_in' => 'settings',
-          'wrapper'   => [ 
+          'wrapper'   => [
+            'class' => 'form-group col-md-4'
+          ],
+          'tab' => 'Настройки'
+        ]);
+
+        $this->crud->addField([
+          'name' => 'fieldDescription',
+          'label' => 'Описание',
+          'type' => 'text',
+          'fake' => true,
+          'store_in' => 'settings',
+          'hint' => 'Поле/тег с описанием товара у поставщика (для XML можно указать путь, например description или content->text). Сохраняется как исходное описание поставщика и используется генератором ИИ в режиме «глубокий рерайт».',
+          'wrapper'   => [
             'class' => 'form-group col-md-4'
           ],
           'tab' => 'Настройки'
@@ -542,7 +555,8 @@ class SourceCrudController extends CrudController
             'fieldBrand' => 'Бренд',
             'fieldCategory' => 'Категория',
             'fieldInStock' => 'Наличие товара',
-            'fieldImage' => 'Картинка'
+            'fieldImage' => 'Картинка',
+            'fieldDescription' => 'Описание'
           ],
           'allows_null' => true,
           'default' => null,

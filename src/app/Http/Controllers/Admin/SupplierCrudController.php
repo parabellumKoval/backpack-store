@@ -54,6 +54,13 @@ class SupplierCrudController extends CrudController
         'label' => 'Тип'
       ]);
 
+      $this->crud->addColumn([
+        'name' => 'description_mode',
+        'label' => 'Режим ИИ-описаний',
+        'type' => 'model_function',
+        'function_name' => 'getDescriptionModeLabel'
+      ]);
+
 
       $this->crud->addColumn([
         'name' => 'adminColor',
@@ -129,6 +136,20 @@ class SupplierCrudController extends CrudController
             'dropshipping' => 'Дропшипинг',
             'common' => 'Общее',
           ]
+        ]);
+
+        // AI DESCRIPTION GENERATION MODE
+        $this->crud->addField([
+          'name' => 'description_mode',
+          'label' => 'Режим генерации описаний ИИ',
+          'type' => 'select_from_array',
+          'options' => [
+            'scratch' => 'С нуля (по названию и бренду)',
+            'rewrite' => 'Глубокий рерайт описания поставщика',
+          ],
+          'default' => 'scratch',
+          'allows_null' => false,
+          'hint' => 'Определяет, как генератор ИИ создаёт описание для товаров этого поставщика. «Глубокий рерайт» использует импортированное описание поставщика как основу (без выдуманных фактов); требует, чтобы в настройках выгрузки было указано поле «Описание».',
         ]);
 
 

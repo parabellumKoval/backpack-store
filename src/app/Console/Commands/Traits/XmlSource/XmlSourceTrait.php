@@ -458,6 +458,7 @@ trait XmlSourceTrait {
                 'code'     => $this->getItemFieldValue($item[$i], 'fieldCode', null),
                 'barcode'  => $this->getItemFieldValue($item[$i], 'fieldBarcode', null),
                 'price'    => $this->getItemFieldValue($item[$i], 'fieldPrice', null),
+                'description' => $this->getItemFieldValue($item[$i], 'fieldDescription', null),
             ];
 
             if(isset($this->settings['fieldImage']) && !empty($this->settings['fieldImage'])) {

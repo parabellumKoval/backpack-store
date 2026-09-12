@@ -88,7 +88,8 @@ trait FileSourceTrait {
           'inStock' => $this->getCellValue($sheet, $rowIndex, 'inStock'),
           'code' => $this->getCellValue($sheet, $rowIndex, 'code'),
           'barcode' => $this->getCellValue($sheet, $rowIndex, 'barcode'),
-          'price' => $this->getCellValue($sheet, $rowIndex, 'price')
+          'price' => $this->getCellValue($sheet, $rowIndex, 'price'),
+          'description' => $this->getCellValue($sheet, $rowIndex, 'description')
         ];
 
         // Format price data
@@ -492,7 +493,8 @@ trait FileSourceTrait {
         'code' => null,
         'barcode' => null,
         'price' => null,
-        'image' => null
+        'image' => null,
+        'description' => null
       ];
 
       $this->fieldLetters['category'] = ($category = trim($this->settings['categories_column_letter'] ?? '')) === '' ? null : mb_trim(mb_strtoupper($category));
@@ -504,5 +506,6 @@ trait FileSourceTrait {
       $this->fieldLetters['barcode'] = ($barcode = trim($this->settings['fieldBarcode'] ?? '')) === '' ? null : mb_trim(mb_strtoupper($barcode));
       $this->fieldLetters['price'] = ($price = trim($this->settings['fieldPrice'] ?? '')) === '' ? null : mb_trim(mb_strtoupper($price));
       $this->fieldLetters['image'] = ($image = trim($this->settings['fieldImage'] ?? '')) === '' ? null : mb_trim(mb_strtoupper($image));
+      $this->fieldLetters['description'] = ($description = trim($this->settings['fieldDescription'] ?? '')) === '' ? null : mb_trim(mb_strtoupper($description));
     }
 }

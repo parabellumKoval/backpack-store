@@ -493,6 +493,31 @@ class XmlSource extends Command
       $sp->barcode = $data['barcode'] ?? null;
       $sp->price = $this->getPrice($data);
       $sp->in_stock = $this->getInStock($data);
+
+      // Persist the supplier's raw description only when the source actually
+      // maps it (fieldDescription configured). This prevents imports from
+      // sources without a description mapping from wiping an existing value.
+      if(!empty($this->settings['fieldDescription'])) {
+        $sp->description = $this->normalizeDescription($data['description'] ?? null);
+      }
+    }
+
+    /**
+     * normalizeDescription
+     *
+     * Trims a raw feed description and normalises empty values to null.
+     *
+     * @param  mixed $description
+     * @return string|null
+     */
+    private function normalizeDescription($description) {
+      if(!is_string($description)) {
+        return $description === null ? null : $description;
+      }
+
+      $description = trim($description);
+
+      return $description === '' ? null : $description;
     }
 
 

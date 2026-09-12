@@ -72,6 +72,33 @@ class Supplier extends Model
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Supported AI description generation modes.
+     */
+    const DESCRIPTION_MODE_SCRATCH = 'scratch';
+    const DESCRIPTION_MODE_REWRITE = 'rewrite';
+
+    /**
+     * Whether the AI generator should deep-rewrite this supplier's imported
+     * description instead of generating one from scratch.
+     *
+     * @return bool
+     */
+    public function isRewriteMode() {
+      return ($this->description_mode ?? self::DESCRIPTION_MODE_SCRATCH) === self::DESCRIPTION_MODE_REWRITE;
+    }
+
+    /**
+     * Human readable label of the current description mode (for admin columns).
+     *
+     * @return string
+     */
+    public function getDescriptionModeLabel() {
+      return $this->isRewriteMode()
+        ? 'Глубокий рерайт описания поставщика'
+        : 'С нуля';
+    }
+
     public function getColorAttribute() {
       return $this->extras['color'] ?? '#000000';
     }
