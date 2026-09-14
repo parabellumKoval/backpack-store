@@ -54,12 +54,14 @@ class SupplierCrudController extends CrudController
         'label' => 'Тип'
       ]);
 
-      $this->crud->addColumn([
-        'name' => 'description_mode',
-        'label' => 'Режим ИИ-описаний',
-        'type' => 'model_function',
-        'function_name' => 'getDescriptionModeLabel'
-      ]);
+      if(\Illuminate\Support\Facades\Schema::hasColumn('ak_suppliers', 'description_mode')) {
+        $this->crud->addColumn([
+          'name' => 'description_mode',
+          'label' => 'Режим ИИ-описаний',
+          'type' => 'model_function',
+          'function_name' => 'getDescriptionModeLabel'
+        ]);
+      }
 
 
       $this->crud->addColumn([
@@ -139,18 +141,22 @@ class SupplierCrudController extends CrudController
         ]);
 
         // AI DESCRIPTION GENERATION MODE
-        $this->crud->addField([
-          'name' => 'description_mode',
-          'label' => 'Режим генерации описаний ИИ',
-          'type' => 'select_from_array',
-          'options' => [
-            'scratch' => 'С нуля (по названию и бренду)',
-            'rewrite' => 'Глубокий рерайт описания поставщика',
-          ],
-          'default' => 'scratch',
-          'allows_null' => false,
-          'hint' => 'Определяет, как генератор ИИ создаёт описание для товаров этого поставщика. «Глубокий рерайт» использует импортированное описание поставщика как основу; требует, чтобы в настройках выгрузки было указано поле «Описание».',
-        ]);
+        // Only expose the field when the column exists, so a not-yet-migrated
+        // environment does not error / silently drop the value on save.
+        if(\Illuminate\Support\Facades\Schema::hasColumn('ak_suppliers', 'description_mode')) {
+          $this->crud->addField([
+            'name' => 'description_mode',
+            'label' => 'Режим генерации описаний ИИ',
+            'type' => 'select_from_array',
+            'options' => [
+              'scratch' => 'С нуля (по названию и бренду)',
+              'rewrite' => 'Глубокий рерайт описания поставщика',
+            ],
+            'default' => 'scratch',
+            'allows_null' => false,
+            'hint' => 'Определяет, как генератор ИИ создаёт описание для товаров этого поставщика. «Глубокий рерайт» использует импортированное описание поставщика как основу; требует, чтобы в настройках выгрузки было указано поле «Описание».',
+          ]);
+        }
 
 
       $this->createOperation();

@@ -54,7 +54,8 @@ class XmlSource extends Command
     protected $cs = null;
 
     protected $isSuppliersEnabled = false;
-    
+    protected $spSupportsDescription = null;
+
     protected $SP_CLASS = null;
     protected $PRODUCT_CLASS = null;
     protected $IS_TEST_MODE = false;
@@ -495,11 +496,36 @@ class XmlSource extends Command
       $sp->in_stock = $this->getInStock($data);
 
       // Persist the supplier's raw description only when the source actually
-      // maps it (fieldDescription configured). This prevents imports from
-      // sources without a description mapping from wiping an existing value.
-      if(!empty($this->settings['fieldDescription'])) {
+      // maps it (fieldDescription configured) AND the column exists. The column
+      // check guards against an environment where the migration has not run yet:
+      // without it, assigning $sp->description makes the SupplierProduct save
+      // throw ("Unknown column 'description'"), which leaves the product without
+      // its supplier row — producing orphaned, duplicated, code-less, 0-stock
+      // products on every import run.
+      if(!empty($this->settings['fieldDescription']) && $this->supplierProductSupportsDescription()) {
         $sp->description = $this->normalizeDescription($data['description'] ?? null);
       }
+    }
+
+    /**
+     * supplierProductSupportsDescription
+     *
+     * Whether the supplier_product table has the `description` column. Cached
+     * for the whole run so we do not hit information_schema per item.
+     *
+     * @return bool
+     */
+    private function supplierProductSupportsDescription() {
+      if($this->spSupportsDescription === null) {
+        try {
+          $table = (new $this->SP_CLASS)->getTable();
+          $this->spSupportsDescription = \Illuminate\Support\Facades\Schema::hasColumn($table, 'description');
+        } catch(\Throwable $e) {
+          $this->spSupportsDescription = false;
+        }
+      }
+
+      return $this->spSupportsDescription;
     }
 
     /**
