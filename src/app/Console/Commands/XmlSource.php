@@ -214,85 +214,111 @@ class XmlSource extends Command
      * @return void
      */
     private function updateOrCreateSupplierProduct($data) {
-      $update_or_create = 'update';
-      
-      $sp = $this->SP_CLASS::
-              where('supplier_id', $this->currentSource->supplier_id);
+      $sp = $this->findSupplierProduct($data);
 
-      // Find already presented products's supplier in DB
-      $sp = $sp->where(function($query) use($data) {
-        $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
-
-        if(!empty($data['code'])) {
-          $query->where(function($query) use($data) {
-            $query->where('code', $data['code'])
-                  ->orWhere('barcode', $data['code']);
-          });
-        }
-
-        if(!empty($data['barcode'])) {
-          $query->{$function_name}(function($query) use($data) {
-                  $query->where('code', $data['barcode'])
-                        ->orWhere('barcode', $data['barcode']);
-          }); 
-        }
-
-      });
-
-      // Get first supplier was found
-      $sp = $sp->first();
-
-      // No supplier it means no product in DB. Create New Product
+      // No supplier row means the product is not in the DB yet — create it.
       if(!$sp) {
-        $update_or_create = 'create';
-
-        $sp = new $this->SP_CLASS;
-
-        // Build the product BEFORE opening the transaction — createProduct()
-        // downloads images (slow I/O) and we must not hold row locks during that.
-        $product = $this->createProduct($data);
-
-        // Persist the product together with its supplier row ATOMICALLY.
-        // Previously these were two separate un-transactioned saves: the product
-        // was committed immediately, so any failure before the supplier row was
-        // saved (a deadlock under overlapping runs, an event-listener error, a
-        // missing column, ...) left an orphaned product with NO supplier row.
-        // Because an existing product is only ever matched THROUGH its supplier
-        // row, the next occurrence found nothing and created the product again
-        // => duplicate. The transaction rolls the product insert back on any
-        // failure, so the item is retried cleanly next run instead of duplicated.
-        DB::transaction(function() use ($sp, $product, $data) {
-          $product->save();
-
-          // Set category to product
-          $this->attachProductCategory($product, $data);
-
-          // Update Code, Barcode, inStock, price + attach the supplier row
-          $this->setSupplierData($sp, $data);
-          $sp->product_id = $product->id;
-          $sp->checked_at = time();
-          $sp->saveWithEvent();
-        });
-
-        return $update_or_create;
+        try {
+          return $this->createSupplierProduct($data);
+        } catch (\Illuminate\Database\QueryException $e) {
+          // 23000 = integrity constraint violation. With the unique index on
+          // (supplier_id, code) / (supplier_id, barcode), a concurrent import
+          // that inserted the same supplier product first makes our insert fail;
+          // the transaction in createSupplierProduct() already rolled our product
+          // back. Recover by updating the row that won the race. Any other
+          // violation, or no matching row, is a real error — rethrow.
+          if($e->getCode() !== '23000' || !($sp = $this->findSupplierProduct($data))) {
+            throw $e;
+          }
+        }
       }
 
-      // Existing product — the product and its supplier row already exist, so
-      // there is no orphan risk here; behaviour is unchanged.
+      // Existing product — the product and its supplier row already exist.
       $product = $sp->product;
       $this->forceUpdateFields($product, $data);
 
-
       // Update Code, Barcode, inStock, price
       $this->setSupplierData($sp, $data);
-    
+
       // Attach Supplier Product to Product
       $sp->product_id = $product->id;
       $sp->checked_at = time();
-      
+
       $sp->saveWithEvent();
 
-      return $update_or_create;
+      return 'update';
+    }
+
+    /**
+     * findSupplierProduct
+     *
+     * Look up an existing supplier product for the current source by code /
+     * barcode (cross-matched, since feeds sometimes swap the two fields).
+     * Returns null when nothing matches — i.e. the product must be created.
+     *
+     * @param  mixed $data
+     * @return \Backpack\Store\app\Models\SupplierProduct|null
+     */
+    private function findSupplierProduct($data) {
+      return $this->SP_CLASS::
+              where('supplier_id', $this->currentSource->supplier_id)
+              ->where(function($query) use($data) {
+                $function_name = !empty($data['code']) && !empty($data['barcode'])? 'orWhere': 'where';
+
+                if(!empty($data['code'])) {
+                  $query->where(function($query) use($data) {
+                    $query->where('code', $data['code'])
+                          ->orWhere('barcode', $data['code']);
+                  });
+                }
+
+                if(!empty($data['barcode'])) {
+                  $query->{$function_name}(function($query) use($data) {
+                          $query->where('code', $data['barcode'])
+                                ->orWhere('barcode', $data['barcode']);
+                  });
+                }
+              })
+              ->first();
+    }
+
+    /**
+     * createSupplierProduct
+     *
+     * Create a brand-new product together with its supplier row ATOMICALLY.
+     * Previously the product and the supplier row were saved separately without
+     * a transaction: the product was committed immediately, so any failure
+     * before the supplier row was saved left an orphaned product with NO
+     * supplier row. Because an existing product is only ever matched THROUGH its
+     * supplier row, the next occurrence found nothing and created the product
+     * again => duplicate. The transaction rolls the product insert back on any
+     * failure (including a unique-index violation from a concurrent run), so the
+     * item is retried cleanly instead of duplicated.
+     *
+     * The product is built BEFORE the transaction because createProduct()
+     * downloads images (slow I/O) and we must not hold row locks during that.
+     *
+     * @param  mixed $data
+     * @return string 'create'
+     */
+    private function createSupplierProduct($data) {
+      $sp = new $this->SP_CLASS;
+      $product = $this->createProduct($data);
+
+      DB::transaction(function() use ($sp, $product, $data) {
+        $product->save();
+
+        // Set category to product
+        $this->attachProductCategory($product, $data);
+
+        // Update Code, Barcode, inStock, price + attach the supplier row
+        $this->setSupplierData($sp, $data);
+        $sp->product_id = $product->id;
+        $sp->checked_at = time();
+        $sp->saveWithEvent();
+      });
+
+      return 'create';
     }
     
     
@@ -512,8 +538,12 @@ class XmlSource extends Command
     private function setSupplierData(&$sp, $data) {
       $sp->supplier_id = $this->currentSource->supplier_id;
 
-      $sp->code = $data['code'] ?? null;
-      $sp->barcode = $data['barcode'] ?? null;
+      // Store NULL (not '') for a missing code/barcode so the unique indexes on
+      // (supplier_id, code) / (supplier_id, barcode) allow many code-less rows
+      // per supplier: MySQL unique indexes treat NULLs as distinct but empty
+      // strings as equal. Mirrors the !empty() checks used when matching.
+      $sp->code = !empty($data['code']) ? $data['code'] : null;
+      $sp->barcode = !empty($data['barcode']) ? $data['barcode'] : null;
       $sp->price = $this->getPrice($data);
       $sp->in_stock = $this->getInStock($data);
 
