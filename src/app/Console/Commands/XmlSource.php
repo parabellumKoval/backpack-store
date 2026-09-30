@@ -17,6 +17,7 @@ use Backpack\Store\app\Jobs\uploadFromXmlSource;
 
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 use Backpack\Store\app\Traits\Exchange;
 
@@ -247,18 +248,39 @@ class XmlSource extends Command
 
         $sp = new $this->SP_CLASS;
 
-        // Is Not SupplierProduct means is not Product also
+        // Build the product BEFORE opening the transaction — createProduct()
+        // downloads images (slow I/O) and we must not hold row locks during that.
         $product = $this->createProduct($data);
 
-        // Save product
-        $product->save();
+        // Persist the product together with its supplier row ATOMICALLY.
+        // Previously these were two separate un-transactioned saves: the product
+        // was committed immediately, so any failure before the supplier row was
+        // saved (a deadlock under overlapping runs, an event-listener error, a
+        // missing column, ...) left an orphaned product with NO supplier row.
+        // Because an existing product is only ever matched THROUGH its supplier
+        // row, the next occurrence found nothing and created the product again
+        // => duplicate. The transaction rolls the product insert back on any
+        // failure, so the item is retried cleanly next run instead of duplicated.
+        DB::transaction(function() use ($sp, $product, $data) {
+          $product->save();
 
-        // Set category to product
-        $this->attachProductCategory($product, $data);
-      }else {
-        $product = $sp->product;
-        $this->forceUpdateFields($product, $data);
+          // Set category to product
+          $this->attachProductCategory($product, $data);
+
+          // Update Code, Barcode, inStock, price + attach the supplier row
+          $this->setSupplierData($sp, $data);
+          $sp->product_id = $product->id;
+          $sp->checked_at = time();
+          $sp->saveWithEvent();
+        });
+
+        return $update_or_create;
       }
+
+      // Existing product — the product and its supplier row already exist, so
+      // there is no orphan risk here; behaviour is unchanged.
+      $product = $sp->product;
+      $this->forceUpdateFields($product, $data);
 
 
       // Update Code, Barcode, inStock, price
